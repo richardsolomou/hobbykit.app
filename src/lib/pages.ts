@@ -70,6 +70,16 @@ export const PAGES = [
     description:
       'Make round, square or hex tokens for objectives and game effects, with wrapped text or a traced image, raised or engraved. Export STL or 3MF.',
   },
+  {
+    value: 'counter' as const,
+    part: 'counter' as const,
+    label: 'Counters',
+    mobileLabel: 'Counters',
+    href: '/counters',
+    title: 'Dial counter generator',
+    description:
+      'Print a 00–99 dial counter for wounds, victory points or command points, with ten-sided drums that click into place, a pointer marking the count and raised digits in a second colour. Export STL or 3MF.',
+  },
 ]
 
 export type Page = (typeof PAGES)[number]

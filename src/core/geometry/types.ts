@@ -276,6 +276,30 @@ export interface TokenConfig {
   segments: number
 }
 
+/** Each part of a counter, laid flat for printing on its own. */
+export type CounterPart = 'tens' | 'pointer' | 'units' | 'inserts'
+
+export interface CounterConfig {
+  kind: 'counter'
+  /** Across the corners of each ten-sided drum. */
+  drumDiameter: number
+  /** Length of each drum along the hub. */
+  drumWidth: number
+  /** Print each face as a tile with its digit or arrows raised, which presses into a pocket; otherwise they are engraved. */
+  inserts: boolean
+  /** The raised digits' and arrows' filament colour, shown in the preview and carried into the 3MF. */
+  insertColour: string
+  /** Gap left all round each tile inside its pocket. */
+  insertClearance: number
+  /** Radial play around the hub, and the gap either side of the pointer. */
+  clearance: number
+  /** How far the hub's barb gives as a drum's bumps ride out of the pointer's dimples; more holds each count harder. */
+  click: number
+  segments: number
+  /** Export-only: build one part flat on the plate instead of the assembly. */
+  part?: CounterPart
+}
+
 export interface BasePartConfig extends BaseConfig {
   kind?: 'base'
 }
@@ -288,4 +312,5 @@ export type PartConfig =
   | PaintRackConfig
   | FlightStemConfig
   | TokenConfig
+  | CounterConfig
 export type BuildConfig = PartConfig | PaintingHandleConfig

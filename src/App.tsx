@@ -16,6 +16,7 @@ import {
 } from '@/components/panels/shared'
 import { StemPanel } from '@/components/panels/StemPanel'
 import { TokenPanel } from '@/components/panels/TokenPanel'
+import { CounterPanel } from '@/components/panels/CounterPanel'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -35,6 +36,7 @@ import {
 } from '@/core/geometry/paintingTray'
 import { paintRackLayout, paintRackName } from '@/core/geometry/paintRack'
 import { stemMaximumDiameter, stemName, stemOverallHeight } from '@/core/geometry/stem'
+import { counterLayout, counterName } from '@/core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -43,6 +45,7 @@ import type {
   MovementTrayConfig,
   PaintingTrayConfig,
   PaintRackConfig,
+  CounterConfig,
 } from '@/core/geometry/types'
 import { loadTokenImage } from '@/lib/tokenImage'
 import { batchBaseConfig, batchName } from '@/lib/batch'
@@ -79,7 +82,9 @@ const modelLabel = (model: Generator) =>
             ? 'Paint rack'
             : model === 'stem'
               ? 'Stem'
-              : 'Token'
+              : model === 'token'
+                ? 'Token'
+                : 'Dial counter'
 
 const SHARE_NOTICE_MS = 5000
 
@@ -101,6 +106,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const paintRack = workspace.paintRack
   const stem = workspace.stem
   const token = workspace.token
+  const counter = workspace.counter
   const setWorkspace = (next: WorkspaceState | ((current: WorkspaceState) => WorkspaceState)) =>
     setWorkspaceState((current) => synchronizeWorkspace(typeof next === 'function' ? next(current) : next))
   const setConfig = (next: BaseConfig | ((current: BaseConfig) => BaseConfig)) =>
@@ -116,6 +122,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const setPaintRack = (next: PaintRackConfig) => setWorkspace((current) => ({ ...current, paintRack: next }))
   const setStem = (next: FlightStemConfig | ((current: FlightStemConfig) => FlightStemConfig)) =>
     setWorkspace((current) => ({ ...current, stem: typeof next === 'function' ? next(current.stem) : next }))
+  const setCounter = (next: CounterConfig) => setWorkspace((current) => ({ ...current, counter: next }))
   const patchToken = (changes: Partial<TokenConfig>) =>
     setWorkspace((current) => {
       const next = { ...current.token, ...changes }
@@ -178,7 +185,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? paintRack
               : model === 'stem'
                 ? stem
-                : token
+                : model === 'token'
+                  ? token
+                  : counter
   const { preview, grams, error } = useGenerator(partConfig)
 
   useEffect(() => {
@@ -244,6 +253,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const maxSharedDepthClearance = Math.max(0, Math.min(0.5, maxBaseDepthClearance, maxHolderDepthClearance))
   const plan = useMemo(() => holderPlan(holder), [holder])
   const stemDiameter = stemMaximumDiameter(stem)
+  const counterSize = counterLayout(counter)
   const partWidth =
     model === 'base'
       ? width
@@ -257,7 +267,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? rackSize.width
               : model === 'stem'
                 ? stemDiameter
-                : tokenFootprint(token).width
+                : model === 'token'
+                  ? tokenFootprint(token).width
+                  : counterSize.width
   const partLength =
     model === 'base'
       ? length
@@ -271,7 +283,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? rackSize.length
               : model === 'stem'
                 ? stemDiameter
-                : tokenFootprint(token).length
+                : model === 'token'
+                  ? tokenFootprint(token).length
+                  : counterSize.length
   const partHeight =
     model === 'base'
       ? config.height
@@ -285,7 +299,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? rackSize.height
               : model === 'stem'
                 ? stemOverallHeight(stem)
-                : tokenHeight(token)
+                : model === 'token'
+                  ? tokenHeight(token)
+                  : counterSize.height
   const partName =
     model === 'base'
       ? baseName(config)
@@ -299,7 +315,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? paintRackName(paintRack)
               : model === 'stem'
                 ? stemName(stem)
-                : tokenName(token)
+                : model === 'token'
+                  ? tokenName(token)
+                  : counterName(counter)
   const batch = useMemo(
     () => workspace.batch.map((entry) => ({ config: batchBaseConfig(workspace, entry), quantity: entry.quantity })),
     [workspace],
@@ -321,6 +339,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     paintRack,
     stem,
     token,
+    counter,
     width: partWidth,
     length: partLength,
     batch,
@@ -458,6 +477,8 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
       />
     ) : model === 'stem' ? (
       <StemPanel stem={stem} setStem={setStem} resets={[resetPart('stem', 'stem', false)]} />
+    ) : model === 'counter' ? (
+      <CounterPanel counter={counter} setCounter={setCounter} resets={[resetPart('counter', 'dial counter', false)]} />
     ) : (
       <TokenPanel
         token={token}
@@ -544,6 +565,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
           <Viewer
             viewKey={model}
             mesh={preview}
+            insertColour={model === 'counter' ? counter.insertColour : undefined}
             width={partWidth}
             length={partLength}
             height={partHeight}

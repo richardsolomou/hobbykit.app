@@ -141,7 +141,7 @@ test('starts every dimension on a value its own input accepts', async ({ page })
       .evaluateAll((inputs) =>
         inputs.filter((input) => !(input as HTMLInputElement).checkValidity()).map((input) => input.getAttribute('aria-label')),
       )
-  for (const name of ['Holders', 'Movement trays', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Bases']) {
+  for (const name of ['Holders', 'Movement trays', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Counters', 'Bases']) {
     await visit(page, name)
     expect(await invalid(), name).toEqual([])
   }
@@ -173,7 +173,7 @@ test('estimates solid filament weight for every generator', { tag: '@ci' }, asyn
   await rebuilt(page, before)
   await expect.poll(async () => Number((await filament.textContent())?.match(/[\d.]+/)?.[0])).toBeGreaterThan(1.6)
 
-  for (const generator of ['Holders', 'Spray tray', 'Paint racks', 'Stems', 'Tokens']) {
+  for (const generator of ['Holders', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Counters']) {
     await visit(page, generator)
     await expect(filament).toHaveText(/^[≈<][\d.]+ g solid PLA$/)
   }
@@ -367,6 +367,7 @@ test('opens the retired adapters address on bases with a saved workspace intact'
     'Paint racks',
     'Stems',
     'Tokens',
+    'Counters',
   ])
 })
 
@@ -508,6 +509,57 @@ test('builds a matching printable flying stem', async ({ page }) => {
   await expect(footer(page)).toContainText('flying-stem-20mm-ball')
   await expect(footer(page)).toContainText('Ball joint')
   await expect(footer(page)).toContainText('Ø4 mm')
+})
+
+test('builds a dial counter and downloads each part with its tiles', async ({ page }) => {
+  await visit(page, 'Counters')
+
+  await expect(tall(page)).toHaveText('32.34')
+  await expect(footer(page)).toContainText('counter-34mm')
+  await expect(footer(page)).toContainText('Press-in tiles')
+
+  // Resizing scales every face without adding triangles, so the footer's name shows the rebuild.
+  await setDimension(page, 'Drum diameter in mm', '36')
+  await expect(footer(page)).toContainText('counter-36mm')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download STL' }).click()
+  const saved = await pending
+  expect(saved.suggestedFilename()).toBe('counter-36mm.zip')
+  const path = await saved.path()
+  if (!path) throw new Error('download has no local path')
+  expect(Object.keys(unzipSync(await readFile(path))).sort()).toEqual([
+    'counter-36mm-inserts-marks.stl',
+    'counter-36mm-inserts.stl',
+    'counter-36mm-pointer.stl',
+    'counter-36mm-tens-drum.stl',
+    'counter-36mm-units-drum.stl',
+  ])
+})
+
+test('prints the dial counter tiles on their own plate, changing to the chosen colour once', async ({ page }) => {
+  await visit(page, 'Counters')
+  await page.getByLabel('Insert colour').fill('#c0392b')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download 3MF' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  const archive = unzipSync(await readFile(path))
+  const text = (file: string) => new TextDecoder().decode(archive[file])
+  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toEqual(['#CBCED3', '#C0392B'])
+  expect(text('Metadata/model_settings.config')).toContain('value="counter-34mm-inserts"')
+  expect(text('Metadata/model_settings.config')).toMatch(/value="counter-34mm-inserts-marks"\/>.*?<metadata key="extruder" value="2"\/>/)
+})
+
+test('engraves the dial counter without inserts', async ({ page }) => {
+  await visit(page, 'Counters')
+  const inserted = await triangles(page)
+
+  await page.getByRole('switch', { name: 'Colour inserts' }).click()
+  await rebuilt(page, inserted)
+  await expect(page.getByLabel('Insert colour')).toHaveCount(0)
+  expect(await triangles(page)).toBeLessThan(inserted)
 })
 
 const SHIELD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="120" viewBox="0 0 100 120">
@@ -1068,9 +1120,11 @@ test('adds another miniature size to the holder', async ({ page }) => {
   expect(archive['3D/Objects/object_1.model']).toBeDefined()
   expect(archive['3D/Objects/object_2.model']).toBeDefined()
   expect(JSON.parse(project)).toEqual({
-    filament_settings_id: ['Bambu PLA Basic @BBL X1C'],
-    print_settings_id: '0.20mm Standard @BBL X1C',
-    printer_settings_id: 'Bambu Lab X1 Carbon 0.4 nozzle',
+    filament_settings_id: ['Bambu PLA Basic @BBL P2S'],
+    print_settings_id: '0.20mm Standard @BBL P2S',
+    printer_settings_id: 'Bambu Lab P2S 0.4 nozzle',
+    printer_model: 'Bambu Lab P2S',
+    nozzle_diameter: ['0.4'],
   })
 })
 

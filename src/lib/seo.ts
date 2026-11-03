@@ -3,7 +3,7 @@ import { PAGES, type Page } from './pages.ts'
 
 const ORIGIN = packageJson.homepage
 const NAME = 'HobbyKit'
-const DESCRIPTION = 'Generate exact, support-free miniature bases, holders, trays, paint racks, and tokens as STL or 3MF.'
+const DESCRIPTION = 'Generate exact, support-free miniature bases, holders, trays, paint racks, tokens, and counters as STL or 3MF.'
 
 const url = (href: string) => `${ORIGIN}${href}`
 

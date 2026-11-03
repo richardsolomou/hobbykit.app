@@ -51,11 +51,25 @@ const RELS = `<?xml version="1.0" encoding="UTF-8"?>
 <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`
 
-const PROJECT_SETTINGS = JSON.stringify({
-  filament_settings_id: ['Bambu PLA Basic @BBL X1C'],
-  print_settings_id: '0.20mm Standard @BBL X1C',
-  printer_settings_id: 'Bambu Lab X1 Carbon 0.4 nozzle',
-})
+/** One object for the slicer, printed in filament 1, with an optional second part printed in filament 2. */
+export interface ExportPart {
+  mesh: MeshLike
+  name: string
+  secondFilament?: { mesh: MeshLike; name: string }
+}
+
+function projectSettings(secondColour?: string): string {
+  const filament = 'Bambu PLA Basic @BBL P2S'
+  return JSON.stringify({
+    filament_settings_id: secondColour ? [filament, filament] : [filament],
+    ...(secondColour ? { filament_colour: ['#CBCED3', secondColour] } : {}),
+    print_settings_id: '0.20mm Standard @BBL P2S',
+    printer_settings_id: 'Bambu Lab P2S 0.4 nozzle',
+    // Bambu Studio loads only the geometry of a project whose printer it cannot place or whose extruders it cannot count.
+    printer_model: 'Bambu Lab P2S',
+    nozzle_diameter: ['0.4'],
+  })
+}
 const PLATE_SIZE = 256
 const PLATE_STRIDE = PLATE_SIZE * 1.2
 const PLATE_MARGIN = 30
@@ -159,7 +173,7 @@ export function packPlates(meshes: MeshLike[], copies: number[]): PlateItem[][] 
   return plates.filter((items) => items.length > 0)
 }
 
-function modelXml(meshes: { mesh: MeshLike; name: string }[], plates?: Plate[]): string {
+function modelXml(meshes: ExportPart[], plates?: Plate[]): string {
   if (!plates) {
     const objects = meshes.map(({ mesh, name }, index) => `<object id="${index + 1}" type="model" name="${name}">${meshXml(mesh)}</object>`)
     const items = meshes.map((_, index) => `<item objectid="${index + 1}"/>`)
@@ -173,10 +187,12 @@ function modelXml(meshes: { mesh: MeshLike; name: string }[], plates?: Plate[]):
 
   const objects = meshes.map(({ name }, index) => {
     const objectId = (index + 1) * 2
-    const partId = objectId - 1
     const uuid = (index + 1).toString(16).padStart(8, '0')
-    const partUuid = `${(index + 1).toString(16).padStart(4, '0')}0000`
-    return `<object id="${objectId}" p:UUID="${uuid}-61cb-4c03-9d28-80fed5dfa1dc" type="model" name="${name}"><components><component p:path="/3D/Objects/object_${index + 1}.model" objectid="${partId}" p:UUID="${partUuid}-b206-40ff-9872-83e8017abed1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/></components></object>`
+    const components = volumeIds(meshes, index).map((partId, volume) => {
+      const partUuid = `${(index + 1).toString(16).padStart(4, '0')}${volume.toString(16).padStart(4, '0')}`
+      return `<component p:path="/3D/Objects/object_${index + 1}.model" objectid="${partId}" p:UUID="${partUuid}-b206-40ff-9872-83e8017abed1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>`
+    })
+    return `<object id="${objectId}" p:UUID="${uuid}-61cb-4c03-9d28-80fed5dfa1dc" type="model" name="${name}"><components>${components.join('')}</components></object>`
   })
   const items = placeItems(meshes, plates).map(({ object, transform }, index) => {
     const uuid = ((index + 1) * 2).toString(16).padStart(8, '0')
@@ -192,13 +208,29 @@ function modelXml(meshes: { mesh: MeshLike; name: string }[], plates?: Plate[]):
 </model>`
 }
 
-function objectModelXml(mesh: MeshLike, index: number): string {
-  const objectId = index * 2 + 1
-  const uuid = `${(index + 1).toString(16).padStart(4, '0')}0000`
+/** An object's parts: its own mesh, then any second-filament part. */
+function volumesOf({ mesh, name, secondFilament }: ExportPart): { mesh: MeshLike; name: string }[] {
+  return [{ mesh, name }, ...(secondFilament ? [secondFilament] : [])]
+}
+
+/**
+ * Ids of an object's parts in its object file: the first sits just under the object's own id, and a second takes an id
+ * past every object's, so none collide.
+ */
+function volumeIds(meshes: ExportPart[], index: number): number[] {
+  return meshes[index].secondFilament ? [index * 2 + 1, meshes.length * 2 + index + 1] : [index * 2 + 1]
+}
+
+function objectModelXml(meshes: ExportPart[], index: number): string {
+  const volumes = volumesOf(meshes[index])
+  const objects = volumeIds(meshes, index).map((id, volume) => {
+    const uuid = `${(index + 1).toString(16).padStart(4, '0')}${volume.toString(16).padStart(4, '0')}`
+    return `<object id="${id}" p:UUID="${uuid}-81cb-4c03-9d28-80fed5dfa1dc" type="model">${meshXml(volumes[volume].mesh)}</object>`
+  })
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p">
 <metadata name="BambuStudio:3mfVersion">1</metadata>
-<resources><object id="${objectId}" p:UUID="${uuid}-81cb-4c03-9d28-80fed5dfa1dc" type="model">${meshXml(mesh)}</object></resources>
+<resources>${objects.join('')}</resources>
 <build/>
 </model>`
 }
@@ -213,11 +245,14 @@ function modelRelationshipsXml(count: number): string {
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relationships.join('')}</Relationships>`
 }
 
-function plateSettingsXml(meshes: { mesh: MeshLike; name: string }[], plates: Plate[]): string {
-  const objects = meshes.map(({ mesh, name }, index) => {
-    const objectId = (index + 1) * 2
-    const partId = objectId - 1
-    return `<object id="${objectId}"><metadata key="name" value="${name}"/><metadata key="extruder" value="1"/><part id="${partId}" subtype="normal_part"><metadata key="name" value="${name}"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><mesh_stat face_count="${mesh.triVerts.length / 3}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part></object>`
+function plateSettingsXml(meshes: ExportPart[], plates: Plate[]): string {
+  const objects = meshes.map((part, index) => {
+    const volumes = volumesOf(part)
+    const parts = volumeIds(meshes, index).map((partId, volume) => {
+      const { mesh, name } = volumes[volume]
+      return `<part id="${partId}" subtype="normal_part"><metadata key="name" value="${name}"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="extruder" value="${volume + 1}"/><mesh_stat face_count="${mesh.triVerts.length / 3}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>`
+    })
+    return `<object id="${(index + 1) * 2}"><metadata key="name" value="${part.name}"/><metadata key="extruder" value="1"/>${parts.join('')}</object>`
   })
   const placed = placeItems(meshes, plates)
   const instances = placed.map(
@@ -248,7 +283,7 @@ ${plateXml.join('\n')}
 }
 
 /** 3MF keeps the mesh topology intact and carries millimetre units explicitly. */
-export function to3mf(meshes: { mesh: MeshLike; name: string }[], separateBuildPlates = false): Uint8Array {
+export function to3mf(meshes: ExportPart[], separateBuildPlates = false): Uint8Array {
   return separateBuildPlates
     ? to3mfPlates(
         meshes,
@@ -257,15 +292,19 @@ export function to3mf(meshes: { mesh: MeshLike; name: string }[], separateBuildP
     : package3mf(meshes)
 }
 
-/** A Bambu Studio project with each plate holding its own copies of the objects. */
-export function to3mfPlates(meshes: { mesh: MeshLike; name: string }[], plates: Plate[]): Uint8Array {
-  return package3mf(meshes, plates)
+/**
+ * A Bambu Studio project with each plate holding its own copies of the objects. An object's second part prints in
+ * filament 2, coloured `secondColour`; give it layers of its own and a plate of its own, so the filament changes once.
+ */
+export function to3mfPlates(meshes: ExportPart[], plates: Plate[], secondColour?: string): Uint8Array {
+  return package3mf(meshes, plates, secondColour)
 }
 
-function package3mf(meshes: { mesh: MeshLike; name: string }[], plates?: Plate[]): Uint8Array {
+function package3mf(meshes: ExportPart[], plates?: Plate[], secondColour?: string): Uint8Array {
   const enc = new TextEncoder()
+  const colour = meshes.some(({ secondFilament }) => secondFilament) ? (secondColour ?? '#FFFFFF').toUpperCase() : undefined
   const objectModels = Object.fromEntries(
-    meshes.map(({ mesh }, index) => [`object_${index + 1}.model`, enc.encode(objectModelXml(mesh, index))]),
+    meshes.map((_part, index) => [`object_${index + 1}.model`, enc.encode(objectModelXml(meshes, index))]),
   )
   const files = {
     '[Content_Types].xml': enc.encode(CONTENT_TYPES),
@@ -278,7 +317,7 @@ function package3mf(meshes: { mesh: MeshLike; name: string }[], plates?: Plate[]
       ? {
           Metadata: {
             'model_settings.config': enc.encode(plateSettingsXml(meshes, plates)),
-            'project_settings.config': enc.encode(PROJECT_SETTINGS),
+            'project_settings.config': enc.encode(projectSettings(colour)),
           },
         }
       : {}),

@@ -10,7 +10,7 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/richardsolomou/hobbykit.app/ci.yml?branch=main)](https://github.com/richardsolomou/hobbykit.app/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/richardsolomou/hobbykit.app)](LICENSE)
 </div>
 
-HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matching flying stems, Gridfinity holders, movement trays, low-profile spray trays, stepped paint racks, and gaming tokens. Pick a standard footprint or enter an exact one, choose the magnets you have, and export a model ready for the slicer. A base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
+HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matching flying stems, Gridfinity holders, movement trays, low-profile spray trays, stepped paint racks, gaming tokens, and dial counters. Pick a standard footprint or enter an exact one, choose the magnets you have, and export a model ready for the slicer. A base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
 
 Everything runs in the browser. Models are built locally and nothing is uploaded.
 
@@ -50,6 +50,10 @@ Stand your paints in stepped rows so every label shows. Read the [paint racks gu
 
 Make a round, square, or hex token for objectives, Oath of Moment, or anything else a game tracks. Read the [tokens guide](docs/generators/tokens.md).
 
+## Dial counters 🎲
+
+Track wounds, victory points, or command points from 00 to 99 on two ten-sided drums that rest on their flats and click into place, with raised digits on press-in tiles in a second colour. Read the [dial counters guide](docs/generators/counters.md).
+
 ## Designed for one job 🎯
 
 - Round, oval, pill, rectangle, and regular polygon bases.
@@ -57,6 +61,7 @@ Make a round, square, or hex token for objectives, Oath of Moment, or anything e
 - Printable 15, 20, 30, and 35mm flying stems with adjustable peg or ball-joint connections.
 - Round, square, and hex tokens with wrapped text and traced image silhouettes.
 - Stepped honeycomb paint racks for dropper bottles and pots.
+- Two-drum 00–99 dial counters held at each count by printed click detents, joined by a snap-fit hub, with a pointer marking the count and raised digits on press-in tiles in a second colour or engraved for paint.
 - Shared magnet dimensions across bases, holders, movement trays, and spray trays.
 - Balanced or five-pocket cross magnet arrangements for bases and holders. Saved cross layouts keep one centre pocket and four outer pockets on both axes, including elongated footprints.
 - Exact size labels, filenames, dimensions, and high-quality exports.

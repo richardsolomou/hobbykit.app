@@ -61,6 +61,8 @@ function themeColor(name: string, fallback: string): THREE.Color {
 interface Props {
   viewKey: string
   mesh?: MeshData
+  /** Colour of the mesh's inserts, which stands for a second filament. */
+  insertColour?: string
   width: number
   length: number
   height: number
@@ -77,7 +79,7 @@ interface CameraView {
   zoom: number
 }
 
-export function Viewer({ viewKey, mesh, width, length, height, minZ = 0, orbitTarget, round, fitToPart = false }: Props) {
+export function Viewer({ viewKey, mesh, insertColour, width, length, height, minZ = 0, orbitTarget, round, fitToPart = false }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const overlay = useRef<SVGSVGElement>(null)
   const part = useRef<THREE.Group>(null)
@@ -323,6 +325,23 @@ export function Viewer({ viewKey, mesh, width, length, height, minZ = 0, orbitTa
     solid.receiveShadow = true
     group.add(solid)
 
+    if (mesh.inserts) {
+      const insertGeometry = new THREE.BufferGeometry()
+      insertGeometry.setAttribute('position', new THREE.BufferAttribute(mesh.inserts.positions, 3))
+      insertGeometry.setIndex(new THREE.BufferAttribute(mesh.inserts.indices, 1))
+      const inserts = new THREE.Mesh(
+        insertGeometry,
+        new THREE.MeshStandardMaterial({
+          color: new THREE.Color(insertColour ?? '#ffffff'),
+          roughness: 0.85,
+          metalness: 0,
+          flatShading: true,
+        }),
+      )
+      inserts.receiveShadow = true
+      group.add(inserts)
+    }
+
     // Fit the shadow frustum to the part so a 25mm base gets the same texel
     // density as a 180mm one — the label is smallest exactly where the base is.
     const light = shadowLight.current
@@ -355,8 +374,8 @@ export function Viewer({ viewKey, mesh, width, length, height, minZ = 0, orbitTa
     // The triangle count of what is actually in the scene, which is the only
     // honest signal that a rebuild has landed — the status word reads "ready"
     // from the build before the one being waited on. The e2e suite polls it.
-    if (host.current) host.current.dataset.triangles = String(mesh.indices.length / 3)
-  }, [mesh, width, length, height, minZ, fitToPart, targetX, targetY, targetZ])
+    if (host.current) host.current.dataset.triangles = String((mesh.indices.length + (mesh.inserts?.indices.length ?? 0)) / 3)
+  }, [mesh, insertColour, width, length, height, minZ, fitToPart, targetX, targetY, targetZ])
 
   useEffect(() => {
     const camera = cameraRef.current
