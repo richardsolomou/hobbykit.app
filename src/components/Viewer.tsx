@@ -71,6 +71,8 @@ interface Props {
   fitToPart?: boolean
   /** Dimension leaders measure the part as assembled, so an exploded view hides them. */
   leaders?: boolean
+  /** Shows a part printed face down the way it is used, turned over within its own height. */
+  flipped?: boolean
 }
 
 interface CameraView {
@@ -80,7 +82,19 @@ interface CameraView {
   zoom: number
 }
 
-export function Viewer({ viewKey, mesh, width, length, height, minZ = 0, orbitTarget, round, fitToPart = false, leaders = true }: Props) {
+export function Viewer({
+  viewKey,
+  mesh,
+  width,
+  length,
+  height,
+  minZ = 0,
+  orbitTarget,
+  round,
+  fitToPart = false,
+  leaders = true,
+  flipped = false,
+}: Props) {
   const host = useRef<HTMLDivElement>(null)
   const overlay = useRef<SVGSVGElement>(null)
   const part = useRef<THREE.Group>(null)
@@ -309,6 +323,9 @@ export function Viewer({ viewKey, mesh, width, length, height, minZ = 0, orbitTa
       group.remove(child)
       if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) child.geometry.dispose()
     }
+    // A half turn about X maps z to -z, so lifting by the part's span lands it back where it was.
+    group.rotation.set(flipped ? Math.PI : 0, 0, 0)
+    group.position.set(0, 0, flipped ? 2 * minZ + height : 0)
 
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3))
@@ -376,7 +393,7 @@ export function Viewer({ viewKey, mesh, width, length, height, minZ = 0, orbitTa
     // honest signal that a rebuild has landed — the status word reads "ready"
     // from the build before the one being waited on. The e2e suite polls it.
     if (host.current) host.current.dataset.triangles = String((mesh.indices.length + (mesh.inserts?.indices.length ?? 0)) / 3)
-  }, [mesh, width, length, height, minZ, fitToPart, targetX, targetY, targetZ])
+  }, [mesh, width, length, height, minZ, fitToPart, targetX, targetY, targetZ, flipped])
 
   useEffect(() => {
     const camera = cameraRef.current

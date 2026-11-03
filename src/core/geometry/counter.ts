@@ -46,6 +46,8 @@ const ARROW_GAP = 0.5
 const INSERT_SPACING = 3
 /** How far an exploded preview lifts each tile clear of its pocket. */
 const EXPLODED_LIFT = 4
+/** How far an exploded preview moves each drum along the hub, as a share of its width; three quarters keeps the barb clear of both the tens drum and the pointer, even at the narrowest drums. */
+const EXPLODED_SPREAD = 0.75
 
 type DetentFit = Pick<CounterConfig, 'clearance' | 'click'>
 /** A bump clears the play either side of the pointer, then pushes the barb in by `click` as it rides over. */
@@ -94,16 +96,22 @@ export function minimumCounterDrumDiameter(config: DetentFit): number {
   )
 }
 
-export function counterLayout(config: Pick<CounterConfig, 'drumDiameter' | 'drumWidth' | 'clearance'>) {
+/** The assembly's extents, which grow to take in an exploded view's spread drums and lifted tiles. */
+export function counterLayout(config: Pick<CounterConfig, 'drumDiameter' | 'drumWidth' | 'clearance' | 'exploded'>) {
   const corner = config.drumDiameter / 2
   const flat = corner * Math.cos(HALF_FACE)
+  const spread = config.exploded ? EXPLODED_SPREAD * config.drumWidth : 0
+  const lift = config.exploded ? EXPLODED_LIFT : 0
   return {
     corner,
     flat,
+    spread,
+    lift,
     pointer: POINTER,
-    width: 2 * (config.drumWidth + config.clearance) + POINTER,
-    length: 2 * corner,
-    height: 2 * flat,
+    width: 2 * (config.drumWidth + config.clearance + spread) + POINTER,
+    length: 2 * (corner + lift),
+    height: 2 * (flat + lift),
+    minZ: -lift,
   }
 }
 
@@ -155,7 +163,7 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
     if (config.insertClearance < 0) throw new Error('Inserts need a clearance of zero or more')
 
     const { segments, drumWidth: width } = config
-    const { corner, flat, pointer: thickness } = counterLayout(config)
+    const { corner, flat, pointer: thickness, spread, lift } = counterLayout(config)
     const gap = config.clearance
     /** From the middle to the inner face of each drum. */
     const inner = thickness / 2 + gap
@@ -292,11 +300,11 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
       config.inserts ? below(pocket(x), COUNTER_POCKET) : below(engraving(mark), COUNTER_ENGRAVING)
 
     /** Digit `k` on the flat rolled `36k°` from the top, so rolling a drum on by one flat counts one. */
-    const digits = (centre: number, solid: (mark: CrossSection) => Manifold, lift = 0) =>
+    const digits = (centre: number, solid: (mark: CrossSection) => Manifold, rise = 0) =>
       own(
         Manifold.union(
           digitSections.map((section, digit) =>
-            own(own(solid(section).translate([centre, 0, flat + lift])).transform(rollX((360 * digit) / FACES))),
+            own(own(solid(section).translate([centre, 0, flat + rise])).transform(rollX((360 * digit) / FACES))),
           ),
         ),
       )
@@ -347,9 +355,6 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
     if (part === 'inserts') ({ bases: solid, marks: inserts } = insertPlate())
     else if (part) solid = onPlate(own(bodies[part].transform(printed[part])))
     else {
-      // Three quarters of a drum's width keeps the barb clear of both the tens drum and the pointer, even at the narrowest drums.
-      const spread = config.exploded ? 0.75 * width : 0
-      const lift = config.exploded ? EXPLODED_LIFT : 0
       const onFaces = (drum: (mark: CrossSection) => Manifold, pointerMark: Manifold) => [
         digits(-unitsCentre - spread, drum, lift),
         own(pointerMark.translate([0, 0, flat + lift])),

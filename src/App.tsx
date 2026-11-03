@@ -9,6 +9,7 @@ import {
   AUTOMATIC_MAGNET_COUNT,
   fitSlotDepth,
   safeEdgeSize,
+  safeTextureDepth,
   type MagnetCountChoice,
   type ResetAction,
   type SharedMagnetChanges,
@@ -26,12 +27,14 @@ import { Viewer } from '@/components/Viewer'
 import { holderLayout, holderName, holderPlan, maxHolderMagnetThickness } from '@/core/geometry/holder'
 import { baseName, footprint, isElongated } from '@/core/geometry/outline'
 import { footprintKey, SIZES_BY_SHAPE } from '@/core/geometry/presets'
+import { isRelief } from '@/core/geometry/texture'
 import { movementTrayHeight, movementTrayLayout, movementTrayName } from '@/core/geometry/movementTray'
 import { maxTokenEdgeSize, tokenFootprint, tokenHeight, tokenName } from '@/core/geometry/token'
 import {
   paintingHandleAxisCenter,
   paintingTrayAssemblyHeight,
   paintingTrayAssemblyMinZ,
+  paintingTrayExplodedFrame,
   paintingTrayLayout,
   paintingTrayName,
 } from '@/core/geometry/paintingTray'
@@ -243,7 +246,11 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const patch = (changes: Partial<BaseConfig>) =>
     setConfig((current) => {
       const next = { ...current, ...changes }
-      return { ...next, profileSize: Math.min(next.profileSize, safeEdgeSize(next)) }
+      return {
+        ...next,
+        profileSize: Math.min(next.profileSize, safeEdgeSize(next)),
+        texture: { ...next.texture, depth: Math.min(next.texture.depth, safeTextureDepth(next)) },
+      }
     })
   const { width, length } = footprint(config)
   const holderSize = useMemo(() => holderLayout(holder), [holder])
@@ -306,6 +313,21 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
                 : model === 'token'
                   ? tokenHeight(token)
                   : counterSize.height
+  /** What the viewer frames, which takes in the parts' new positions while exploded. */
+  const framed = (() => {
+    if (model === 'painting' && exploded) {
+      const frame = paintingTrayExplodedFrame(paintingTray)
+      return { ...frame, minZ: frame.target[2] - frame.height / 2, orbitTarget: frame.target }
+    }
+    if (model === 'counter' && exploded) return counterLayout({ ...counter, exploded })
+    return {
+      width: partWidth,
+      length: partLength,
+      height: partHeight,
+      minZ: model === 'painting' ? paintingTrayAssemblyMinZ(paintingTray) : 0,
+      orbitTarget: model === 'painting' ? paintingHandleAxisCenter(paintingTray) : undefined,
+    }
+  })()
   const partName =
     model === 'base'
       ? baseName(config)
@@ -569,14 +591,15 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
           <Viewer
             viewKey={model}
             mesh={preview}
-            width={partWidth}
-            length={partLength}
-            height={partHeight}
-            minZ={model === 'painting' ? paintingTrayAssemblyMinZ(paintingTray) : 0}
-            orbitTarget={model === 'painting' ? paintingHandleAxisCenter(paintingTray) : undefined}
+            width={framed.width}
+            length={framed.length}
+            height={framed.height}
+            minZ={framed.minZ}
+            orbitTarget={'orbitTarget' in framed ? framed.orbitTarget : undefined}
             round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
             fitToPart={model !== 'base'}
             leaders={!(explodable && exploded)}
+            flipped={model === 'base' && config.texture.pattern !== 'none' && !isRelief(config.texture.pattern)}
           />
           {explodable && (
             <Toggle

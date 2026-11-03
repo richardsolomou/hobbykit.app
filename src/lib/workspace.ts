@@ -9,6 +9,7 @@ import {
 import { supportsFivePocketCross } from '../core/geometry/base'
 import { defaultPaintRackConfig } from '../core/geometry/paintRack'
 import { defaultTokenConfig } from '../core/geometry/token'
+import { TEXTURE_PATTERNS } from '../core/geometry/texture'
 import { automaticMagnetCount, DEFAULT_PRESET, footprintKey, presetFor, ribCountFor } from '../core/geometry/presets'
 import { defaultFlightStemConfig } from '../core/geometry/stem'
 import { defaultCounterConfig } from '../core/geometry/counter'
@@ -25,7 +26,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 14
+const WORKSPACE_VERSION = 15
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -206,6 +207,7 @@ const MIGRATIONS = [
   migrateWorkspaceV11,
   migrateWorkspaceV12,
   migrateWorkspaceV13,
+  migrateWorkspaceV14,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -286,6 +288,13 @@ export function applyWorkspaceSetup(
   const kept = Object.entries(workspace.shared.magnetCounts).filter(([footprint]) => !replaced.includes(footprint))
   const magnetCounts = { ...Object.fromEntries(kept), ...candidate.shared.magnetCounts }
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
+}
+
+function migrateWorkspaceV14(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  if (typeof workspace.base !== 'object' || workspace.base === null) return value
+  return { ...workspace, base: { ...workspace.base, texture: presetFor(DEFAULT_PRESET).texture } }
 }
 
 function migrateWorkspaceV13(value: unknown): unknown {
@@ -434,6 +443,7 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
   const workspace = value as WorkspaceState
   return (
     SHAPES.has(workspace.base.shape) &&
+    TEXTURE_PATTERNS.includes(workspace.base.texture.pattern) &&
     ['balanced', 'five-cross'].includes(workspace.shared.magnets.layout) &&
     [1, 2].includes(workspace.shared.magnets.patternVersion) &&
     workspace.stem.kind === 'stem' &&

@@ -1,7 +1,7 @@
 import { RotateCcw } from 'lucide-react'
 import { useId, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 
@@ -31,6 +31,8 @@ interface DimensionProps {
   compact?: boolean
   compactLabel?: string
   defaultValue?: number
+  /** A button inside the input, such as one that picks a value at random. */
+  action?: { label: string; icon: ReactNode; onClick: () => void }
   onChange: (value: number) => void
 }
 
@@ -80,6 +82,7 @@ export function Dimension({
   compact,
   compactLabel,
   defaultValue,
+  action,
   onChange,
 }: DimensionProps) {
   // Values snap to multiples of step, but a number input counts steps from its min, so the bounds move onto the same grid.
@@ -170,6 +173,22 @@ export function Dimension({
           {unit && (
             <InputGroupAddon align="inline-end">
               <InputGroupText className="text-xs">{unit}</InputGroupText>
+            </InputGroupAddon>
+          )}
+          {action && (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-xs"
+                aria-label={action.label}
+                title={action.label}
+                disabled={disabled}
+                onClick={() => {
+                  setText(undefined)
+                  action.onClick()
+                }}
+              >
+                {action.icon}
+              </InputGroupButton>
             </InputGroupAddon>
           )}
         </InputGroup>

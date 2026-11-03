@@ -15,6 +15,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { maxHolderSlotDepth, minHolderHeight } from '@/core/geometry/holder'
 import { DEFAULT_PRESET, presetFor } from '@/core/geometry/presets'
 import { maxProfileSize } from '@/core/geometry/profile'
+import { maxTextureDepth } from '@/core/geometry/texture'
 import type { BaseConfig, EdgeProfile, HolderConfig, MagnetLayout } from '@/core/geometry/types'
 
 export const PROFILES: { value: EdgeProfile; label: string }[] = [
@@ -36,6 +37,7 @@ export type SharedMagnetChanges = Partial<Pick<BaseConfig['magnets'], 'layout' |
 export type SharedMagnetPlacementChanges = Partial<Pick<BaseConfig, 'wallThickness'> & { bossWall: number }>
 
 export const safeEdgeSize = (next: BaseConfig) => Math.floor((maxProfileSize(next) + 1e-6) * 10) / 10
+export const safeTextureDepth = (next: BaseConfig) => Math.floor((maxTextureDepth(next) + 1e-6) * 10) / 10
 
 export const fitSlotDepth = (next: HolderConfig) => ({
   ...next,

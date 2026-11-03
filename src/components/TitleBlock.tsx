@@ -55,12 +55,7 @@ function PartRows({ config }: { config: PartConfig }) {
     )
   }
   if (config.kind === 'counter') {
-    return (
-      <>
-        <Row label="Counts" value="00–99" />
-        <Row label="Digits" value={config.inserts ? 'Press-in tiles' : 'Engraved'} />
-      </>
-    )
+    return <Row label="Counts" value="00–99" />
   }
   if (config.kind === 'paint-rack') {
     return (

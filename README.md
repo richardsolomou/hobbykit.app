@@ -65,10 +65,11 @@ Track wounds, victory points, or command points from 00 to 99 on two ten-sided d
 - Shared magnet dimensions across bases, holders, movement trays, and spray trays.
 - Balanced or five-pocket cross magnet arrangements for bases and holders. Saved cross layouts keep one centre pocket and four outer pockets on both axes, including elongated footprints.
 - Exact size labels, filenames, dimensions, and high-quality exports.
+- Optional textures for the face a model stands on, all without supports: eight paving and plating patterns cut with 45° joints, or seven ground reliefs such as rock, rubble, and snow on a base that prints face up. Every random pattern can be rerolled and made tidier or wilder.
 - Browser-saved settings with shared base and holder preferences, and a confirmed reset for each generator or for the shared settings.
 - Copyable links that open the current generator with the same settings.
 
-HobbyKit generates bases and the hobby accessories around them. It does not sculpt miniatures, add textures or heightmaps, slice models, or control a printer.
+HobbyKit generates bases and the hobby accessories around them. It does not sculpt miniatures, import heightmaps, slice models, or control a printer.
 
 ## Private by design 🔒
 
