@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0e0f12" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- The prerendered summary is for readers that run no JavaScript; inline, so it is hidden before any stylesheet loads. -->
+    <style>
+      [data-summary] {
+        visibility: hidden;
+      }
+    </style>
+    <noscript
+      ><style>
+        #root > [data-summary] {
+          visibility: visible;
+        }
+      </style></noscript
+    >
   </head>
   <body>
     <div id="root"></div>

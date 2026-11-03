@@ -1308,3 +1308,19 @@ test('moves the controls into a drawer on a phone', { tag: '@ci' }, async ({ pag
   await rebuilt(page, before)
   await expect(across(page)).toHaveText('Ø60')
 })
+
+test('keeps the crawler summary out of sight until the app replaces it', async ({ page }) => {
+  await page.route('**/*.js', (route) => route.abort())
+  await page.goto('/holders')
+
+  await expect(page.getByRole('heading', { name: 'Gridfinity miniature holder generator' })).toBeHidden()
+})
+
+test('shows the crawler summary to a browser without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false })
+  const page = await context.newPage()
+  await page.goto('/holders')
+
+  await expect(page.getByRole('heading', { name: 'Gridfinity miniature holder generator' })).toBeVisible()
+  await context.close()
+})

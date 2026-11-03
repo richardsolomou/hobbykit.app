@@ -57,11 +57,12 @@ const generatorList = () =>
   `<ul class="flex flex-col gap-1">${PAGES.map((entry) => `<li><a class="underline" href="${entry.href}">${escape(entry.title)}</a></li>`).join('')}</ul>`
 
 const content = (heading: string, description: string) =>
-  `<main class="mx-auto flex max-w-prose flex-col gap-4 p-8"><h1 class="text-2xl">${escape(heading)}</h1><p class="text-muted-foreground">${escape(description)}</p><nav aria-label="Generators">${generatorList()}</nav><p class="text-muted-foreground">Free and open source. Models are built in your browser and nothing is uploaded.</p></main>`
+  `<main data-summary class="mx-auto flex max-w-prose flex-col gap-4 p-8"><h1 class="text-2xl">${escape(heading)}</h1><p class="text-muted-foreground">${escape(description)}</p><nav aria-label="Generators">${generatorList()}</nav><p class="text-muted-foreground">Free and open source. Models are built in your browser and nothing is uploaded.</p></main>`
 
 /**
  * A page of the built app with its own head and a readable summary inside `#root`.
- * React replaces the summary when it mounts; until then, and for any reader that runs no JavaScript, it says what the page makes.
+ * React replaces the summary when it mounts. A browser hides it until then, so it does not flash before the app; readers that run no
+ * JavaScript, crawlers included, still read it.
  */
 export function pageHtml(template: string, page: Page) {
   const title = `${page.title} — ${NAME}`

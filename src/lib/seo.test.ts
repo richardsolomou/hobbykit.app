@@ -34,6 +34,10 @@ describe('pageHtml', () => {
     expect(pageHtml(TEMPLATE, holders)).toMatch(/<div id="root"><main[^>]*><h1[^>]*>Gridfinity miniature holder generator<\/h1>/)
   })
 
+  it('marks the summary so a browser running the app hides it until React replaces it', () => {
+    expect(pageHtml(TEMPLATE, holders)).toMatch(/<div id="root"><main data-summary /)
+  })
+
   it('links every generator from every page', () => {
     const html = pageHtml(TEMPLATE, holders)
     expect(PAGES.filter((page) => !html.includes(`href="${page.href}"`))).toEqual([])
