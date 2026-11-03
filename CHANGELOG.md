@@ -1,5 +1,11 @@
 # hobbykit
 
+## 0.21.1
+
+### Patch Changes
+
+- 6deb542: Drop the dial counter title block's Digits row, which repeated the Press-in tiles toggle, and refresh the counter and spray tray link previews.
+
 ## 0.21.0
 
 ### Minor Changes
