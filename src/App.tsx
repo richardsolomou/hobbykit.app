@@ -1,4 +1,4 @@
-import { Box, Download, Link, PanelLeft } from 'lucide-react'
+import { Box, Download, Link, PanelLeft, UnfoldHorizontal } from 'lucide-react'
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { BasePanel } from '@/components/panels/BasePanel'
 import { HolderPanel } from '@/components/panels/HolderPanel'
@@ -20,6 +20,7 @@ import { CounterPanel } from '@/components/panels/CounterPanel'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Toggle } from '@/components/ui/toggle'
 import { TitleBlock } from '@/components/TitleBlock'
 import { Viewer } from '@/components/Viewer'
 import { holderLayout, holderName, holderPlan, maxHolderMagnetThickness } from '@/core/geometry/holder'
@@ -142,6 +143,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   })
   const [customMovementSize, setCustomMovementSize] = useState(() => !isStandardMovementSize(workspace.movementTray))
   const [model, setModel] = useState<Generator>(opened.model)
+  /** A view of the preview, not part of the design, so it is neither saved nor shared. */
+  const [exploded, setExploded] = useState(false)
+  const explodable = model === 'painting' || model === 'counter'
   const page = PAGES.find((item) => item.value === model)!
   const [tokenImageError, setTokenImageError] = useState<string>()
   const addTokenImage = async (file: File) => {
@@ -180,14 +184,14 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
         : model === 'movement'
           ? movementTray
           : model === 'painting'
-            ? paintingTray
+            ? { ...paintingTray, exploded }
             : model === 'rack'
               ? paintRack
               : model === 'stem'
                 ? stem
                 : model === 'token'
                   ? token
-                  : counter
+                  : { ...counter, exploded }
   const { preview, grams, error } = useGenerator(partConfig)
 
   useEffect(() => {
@@ -565,7 +569,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
           <Viewer
             viewKey={model}
             mesh={preview}
-            insertColour={model === 'counter' ? counter.insertColour : undefined}
             width={partWidth}
             length={partLength}
             height={partHeight}
@@ -573,7 +576,20 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
             orbitTarget={model === 'painting' ? paintingHandleAxisCenter(paintingTray) : undefined}
             round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
             fitToPart={model !== 'base'}
+            leaders={!(explodable && exploded)}
           />
+          {explodable && (
+            <Toggle
+              variant="outline"
+              size="sm"
+              pressed={exploded}
+              onPressedChange={setExploded}
+              className="absolute bottom-8 left-8 bg-card/90 backdrop-blur-sm aria-pressed:border-measure/50 aria-pressed:text-measure"
+            >
+              <UnfoldHorizontal />
+              Explode
+            </Toggle>
+          )}
           <div className="pointer-events-none absolute inset-x-12 top-5 flex flex-col gap-2">
             {(error || exportError) && (
               <div role="alert" className="border border-destructive/50 bg-card/90 px-3 py-2 backdrop-blur-sm text-xs text-destructive">

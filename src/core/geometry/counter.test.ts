@@ -45,6 +45,8 @@ const CONFIGS: [string, CounterConfig][] = [
   ['a loose fit', counter({ clearance: 0.4 })],
   ['no inserts', counter({ inserts: false })],
   ['inserts with no clearance', counter({ insertClearance: 0 })],
+  ['an exploded view', counter({ exploded: true })],
+  ['an exploded view of the narrowest drums', counter({ drumWidth: MIN_COUNTER_DRUM_WIDTH, exploded: true })],
 ]
 
 function vertices(mesh: Mesh) {
@@ -257,6 +259,25 @@ describe('buildCounter', () => {
     const config = counter()
 
     expect(minimumCounterDrumDiameter(config)).toBeLessThanOrEqual(config.drumDiameter)
+  })
+
+  it('pulls every part and tile apart when exploded', () => {
+    const solid = new wasm.Manifold(build(counter({ exploded: true })).mesh)
+    const bodies = solid.decompose()
+
+    expect(bodies.length).toBe(BODIES.length + 21)
+    for (const body of bodies) body.delete()
+    solid.delete()
+  })
+
+  it('keeps every part whole when exploded', () => {
+    expect(build(counter({ exploded: true })).stats.volume).toBeCloseTo(build(counter()).stats.volume, 3)
+  })
+
+  it('spreads the drums along the hub when exploded', () => {
+    const across = (config: CounterConfig) => bounds(build(config).mesh).max[0] - bounds(build(config).mesh).min[0]
+
+    expect(across(counter({ exploded: true }))).toBeGreaterThan(across(counter()) + 10)
   })
 
   it('names the file after the drum size', () => {

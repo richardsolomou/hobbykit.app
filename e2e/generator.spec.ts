@@ -537,9 +537,8 @@ test('builds a dial counter and downloads each part with its tiles', async ({ pa
   ])
 })
 
-test('prints the dial counter tiles on their own plate, changing to the chosen colour once', async ({ page }) => {
+test('prints the dial counter tiles on their own plate, changing filament once', async ({ page }) => {
   await visit(page, 'Counters')
-  await page.getByLabel('Insert colour').fill('#c0392b')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download 3MF' }).click()
@@ -547,7 +546,7 @@ test('prints the dial counter tiles on their own plate, changing to the chosen c
   if (!path) throw new Error('download has no local path')
   const archive = unzipSync(await readFile(path))
   const text = (file: string) => new TextDecoder().decode(archive[file])
-  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toEqual(['#CBCED3', '#C0392B'])
+  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(2)
   expect(text('Metadata/model_settings.config')).toContain('value="counter-34mm-inserts"')
   expect(text('Metadata/model_settings.config')).toMatch(/value="counter-34mm-inserts-marks"\/>.*?<metadata key="extruder" value="2"\/>/)
 })
@@ -558,7 +557,7 @@ test('engraves the dial counter without inserts', async ({ page }) => {
 
   await page.getByRole('switch', { name: 'Colour inserts' }).click()
   await rebuilt(page, inserted)
-  await expect(page.getByLabel('Insert colour')).toHaveCount(0)
+  await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
   expect(await triangles(page)).toBeLessThan(inserted)
 })
 
@@ -571,7 +570,7 @@ test('builds a token from text and an uploaded image', async ({ page }) => {
 
   await expect(across(page)).toHaveText('Ø40')
   await expect(tall(page)).toHaveText('4')
-  await expect(footer(page)).toContainText('token-round-40mm-1')
+  await expect(footer(page)).toContainText('token-round-40mm-objective')
 
   const numbered = await triangles(page)
   await page.getByLabel('Token text').fill('Oath of Moment')
@@ -590,7 +589,22 @@ test('builds a token from text and an uploaded image', async ({ page }) => {
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
-  expect((await download).suggestedFilename()).toBe('token-round-40mm-shield.stl')
+  expect((await download).suggestedFilename()).toBe('token-round-40mm-shield.zip')
+})
+
+test('prints raised token artwork in a second colour, changing filament once', async ({ page }) => {
+  await visit(page, 'Tokens')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download 3MF' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  const archive = unzipSync(await readFile(path))
+  const text = (file: string) => new TextDecoder().decode(archive[file])
+  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(2)
+  expect(text('Metadata/model_settings.config')).toMatch(
+    /value="token-round-40mm-objective-artwork"\/>.*?<metadata key="extruder" value="2"\/>/,
+  )
 })
 
 test('reshapes a token into a hex measured across its flats', async ({ page }) => {
@@ -600,18 +614,18 @@ test('reshapes a token into a hex measured across its flats', async ({ page }) =
   await pickChoice(page, 'Shape', 'Hex')
   await rebuilt(page, round)
   await expect(across(page)).toHaveText('46.19 × 40')
-  await expect(footer(page)).toContainText('token-hex-40mm-1')
+  await expect(footer(page)).toContainText('token-hex-40mm-objective')
 
   // Resizing keeps the hex's topology, so the triangle count cannot signal the rebuild.
   const acrossFlats = page.getByLabel('Across flats in mm')
   await acrossFlats.fill('25.4')
   await acrossFlats.press('Enter')
   await expect(across(page)).toHaveText('29.33 × 25.4', { timeout: 15_000 })
-  await expect(footer(page)).toContainText('token-hex-25.4mm-1')
+  await expect(footer(page)).toContainText('token-hex-25.4mm-objective')
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
-  expect((await download).suggestedFilename()).toBe('token-hex-25.4mm-1.stl')
+  expect((await download).suggestedFilename()).toBe('token-hex-25.4mm-objective.zip')
 })
 
 test('engraves token artwork for stacking and saves its relief', async ({ page }) => {
@@ -1323,4 +1337,26 @@ test('shows the crawler summary to a browser without JavaScript', async ({ brows
 
   await expect(page.getByRole('heading', { name: 'Gridfinity miniature holder generator' })).toBeVisible()
   await context.close()
+})
+
+test.describe('explodes the parts that print apart', () => {
+  for (const name of ['Spray tray', 'Counters']) {
+    test(`on the ${name} page`, async ({ page }) => {
+      await visit(page, name)
+      const explode = page.getByRole('button', { name: 'Explode' })
+
+      await explode.click()
+      await expect(explode).toHaveAttribute('aria-pressed', 'true')
+      await expect(across(page)).toBeHidden()
+
+      await explode.click()
+      await expect(across(page)).toBeVisible()
+    })
+  }
+
+  test('offers no explode for a single part', async ({ page }) => {
+    await visit(page, 'Tokens')
+
+    await expect(page.getByRole('button', { name: 'Explode' })).toHaveCount(0)
+  })
 })

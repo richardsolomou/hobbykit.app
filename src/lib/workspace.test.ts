@@ -50,7 +50,7 @@ describe('workspace state', () => {
         },
       },
       stem: { kind: 'stem', bodyHeight: 15, bodyDiameter: 4.8, connection: 'peg', modelPegDiameter: 1.8, ballDiameter: 4 },
-      token: { kind: 'token', shape: 'round', size: 40, thickness: 3, text: '1' },
+      token: { kind: 'token', shape: 'round', size: 40, thickness: 3, text: 'Objective' },
     })
   })
 
@@ -236,7 +236,7 @@ describe('workspace state', () => {
 
     expect(loadWorkspace(storage)).toMatchObject({
       stem: { bodyHeight: 20 },
-      token: { kind: 'token', shape: 'round', size: 40, text: '1' },
+      token: { kind: 'token', shape: 'round', size: 40, text: 'Objective' },
     })
   })
 
@@ -323,7 +323,7 @@ describe('workspace state', () => {
     const image = { name: 'skull.png', width: 20, height: 20, luminance: btoa('\0\xff\xff\0') }
     saveWorkspace(storage, { ...workspace, token: { ...workspace.token, text: 'kept?', image } })
 
-    expect(loadWorkspace(storage).token.text).toBe('1')
+    expect(loadWorkspace(storage).token.text).toBe(defaultWorkspace().token.text)
   })
 
   it('adds the painting-tray generator to saved workspaces', () => {

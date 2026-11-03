@@ -147,6 +147,8 @@ export interface PaintingTrayConfig {
   segments: number
   /** Export-only: omit the detachable handle from the assembled preview mesh. */
   assembly?: boolean
+  /** Preview-only: hang the grip below the tray instead of against it. */
+  exploded?: boolean
 }
 
 export type MovementTrayShape = 'round' | 'rect'
@@ -287,8 +289,6 @@ export interface CounterConfig {
   drumWidth: number
   /** Print each face as a tile with its digit or arrows raised, which presses into a pocket; otherwise they are engraved. */
   inserts: boolean
-  /** The raised digits' and arrows' filament colour, shown in the preview and carried into the 3MF. */
-  insertColour: string
   /** Gap left all round each tile inside its pocket. */
   insertClearance: number
   /** Radial play around the hub, and the gap either side of the pointer. */
@@ -298,6 +298,8 @@ export interface CounterConfig {
   segments: number
   /** Export-only: build one part flat on the plate instead of the assembly. */
   part?: CounterPart
+  /** Preview-only: spread the drums along the hub and lift each tile out of its pocket. */
+  exploded?: boolean
 }
 
 export interface BasePartConfig extends BaseConfig {

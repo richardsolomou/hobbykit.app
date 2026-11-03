@@ -445,7 +445,6 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
     ['round', 'rect'].includes(workspace.movementTray.shape) &&
     workspace.paintingTray.kind === 'painting-tray' &&
     workspace.counter.kind === 'counter' &&
-    /^#[0-9a-f]{6}$/i.test(workspace.counter.insertColour) &&
     workspace.paintRack.kind === 'paint-rack' &&
     workspace.paintRack.items.length > 0 &&
     workspace.paintRack.items.every((item) => ['module', 'corner'].includes(item.kind)) &&

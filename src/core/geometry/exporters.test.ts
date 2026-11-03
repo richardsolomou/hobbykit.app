@@ -1,6 +1,6 @@
 import { unzipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
-import { packPlates, to3mfPlates, type MeshLike } from './exporters'
+import { packPlates, SECOND_FILAMENT_COLOUR, to3mfPlates, type MeshLike } from './exporters'
 
 const PLATE = 256
 
@@ -96,14 +96,10 @@ describe('to3mfPlates with a second filament', () => {
     { mesh: slab(10, 10), name: 'counter-inserts', secondFilament: { mesh: slab(4, 4), name: 'counter-inserts-marks' } },
   ]
   const archive = unzipSync(
-    to3mfPlates(
-      meshes,
-      [
-        { name: 'counter', items: [{ object: 0, x: 10, y: 10 }] },
-        { name: 'counter-inserts', items: [{ object: 1, x: 10, y: 10 }] },
-      ],
-      '#ff0000',
-    ),
+    to3mfPlates(meshes, [
+      { name: 'counter', items: [{ object: 0, x: 10, y: 10 }] },
+      { name: 'counter-inserts', items: [{ object: 1, x: 10, y: 10 }] },
+    ]),
   )
   const text = (path: string) => new TextDecoder().decode(archive[path])
 
@@ -131,8 +127,8 @@ describe('to3mfPlates with a second filament', () => {
     ).toEqual(['1', '3', '6'])
   })
 
-  it('gives the second filament its colour', () => {
-    expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toEqual(['#CBCED3', '#FF0000'])
+  it('gives the second filament its own colour', () => {
+    expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toEqual(['#CBCED3', SECOND_FILAMENT_COLOUR])
   })
 
   it('names a Bambu printer, so Bambu Studio loads the project settings', () => {
@@ -144,7 +140,7 @@ describe('to3mfPlates with a second filament', () => {
   })
 
   it('declares one filament when nothing asks for the second', () => {
-    const plain = unzipSync(to3mfPlates([meshes[0]], [{ name: 'tens-drum', items: [{ object: 0, x: 10, y: 10 }] }], '#ff0000'))
+    const plain = unzipSync(to3mfPlates([meshes[0]], [{ name: 'tens-drum', items: [{ object: 0, x: 10, y: 10 }] }]))
     expect(JSON.parse(new TextDecoder().decode(plain['Metadata/project_settings.config'])).filament_settings_id).toHaveLength(1)
   })
 })

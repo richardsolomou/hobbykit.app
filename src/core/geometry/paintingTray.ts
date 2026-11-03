@@ -9,6 +9,8 @@ const MIN_FLOOR_THICKNESS = 0.6
 const MIN_POCKET_WEB = 0.8
 const PLA_DENSITY = 1.24e-3
 const HANDLE_PREVIEW_OVERLAP = 0.1
+/** Space between the tray's edge and the grip in an exploded preview. */
+const EXPLODED_HANDLE_GAP = 15
 const HANDLE_RIB_COUNT = 8
 const CENTER_MARK_DEPTH = 0.3
 const CENTER_MARK_WIDTH = 1
@@ -287,7 +289,9 @@ export function buildPaintingTray(wasm: ManifoldToplevel, config: PaintingTrayCo
     let solid = tray
     if (config.assembly !== false) {
       const handle = paintingHandleSolid(wasm, paintingHandleConfig(config), own, own, segmentsFor)
-      const attachedHandle = solidOf(handle.translate([0, 0, HANDLE_PREVIEW_OVERLAP]))
+      // Exploded, the grip stands beside the tray rather than under it, where the tray hides it from above.
+      const beside = -layout.length / 2 - EXPLODED_HANDLE_GAP - handle.boundingBox().max[1]
+      const attachedHandle = solidOf(handle.translate(config.exploded ? [0, beside, 0] : [0, 0, HANDLE_PREVIEW_OVERLAP]))
       solid = solidOf(Manifold.union([tray, attachedHandle]))
     }
     const volume = solid.volume()

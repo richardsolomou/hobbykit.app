@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { SECOND_FILAMENT_COLOUR } from '@/core/geometry/exporters'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { trimNumber } from '@/core/geometry/outline'
 import { cn } from 'cn'
@@ -61,8 +62,6 @@ function themeColor(name: string, fallback: string): THREE.Color {
 interface Props {
   viewKey: string
   mesh?: MeshData
-  /** Colour of the mesh's inserts, which stands for a second filament. */
-  insertColour?: string
   width: number
   length: number
   height: number
@@ -70,6 +69,8 @@ interface Props {
   orbitTarget?: readonly [number, number, number]
   round: boolean
   fitToPart?: boolean
+  /** Dimension leaders measure the part as assembled, so an exploded view hides them. */
+  leaders?: boolean
 }
 
 interface CameraView {
@@ -79,7 +80,7 @@ interface CameraView {
   zoom: number
 }
 
-export function Viewer({ viewKey, mesh, insertColour, width, length, height, minZ = 0, orbitTarget, round, fitToPart = false }: Props) {
+export function Viewer({ viewKey, mesh, width, length, height, minZ = 0, orbitTarget, round, fitToPart = false, leaders = true }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const overlay = useRef<SVGSVGElement>(null)
   const part = useRef<THREE.Group>(null)
@@ -332,7 +333,7 @@ export function Viewer({ viewKey, mesh, insertColour, width, length, height, min
       const inserts = new THREE.Mesh(
         insertGeometry,
         new THREE.MeshStandardMaterial({
-          color: new THREE.Color(insertColour ?? '#ffffff'),
+          color: new THREE.Color(SECOND_FILAMENT_COLOUR),
           roughness: 0.85,
           metalness: 0,
           flatShading: true,
@@ -375,7 +376,7 @@ export function Viewer({ viewKey, mesh, insertColour, width, length, height, min
     // honest signal that a rebuild has landed — the status word reads "ready"
     // from the build before the one being waited on. The e2e suite polls it.
     if (host.current) host.current.dataset.triangles = String((mesh.indices.length + (mesh.inserts?.indices.length ?? 0)) / 3)
-  }, [mesh, insertColour, width, length, height, minZ, fitToPart, targetX, targetY, targetZ])
+  }, [mesh, width, length, height, minZ, fitToPart, targetX, targetY, targetZ])
 
   useEffect(() => {
     const camera = cameraRef.current
@@ -428,7 +429,7 @@ export function Viewer({ viewKey, mesh, insertColour, width, length, height, min
           <span key={corner} className={cn('absolute size-5 border-measure/45', corner)} />
         ))}
       </div>
-      <svg ref={overlay} className="pointer-events-none absolute inset-0 h-full w-full">
+      <svg ref={overlay} className={cn('pointer-events-none absolute inset-0 h-full w-full', !leaders && 'hidden')}>
         <defs>
           <marker id="tick" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
             <path d="M 3 0 L 3 6" stroke="var(--measure)" strokeWidth="1" />

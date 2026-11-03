@@ -44,6 +44,8 @@ const ARROW_WIDTH = 6
 const ARROW_GAP = 0.5
 /** Space between inserts laid out on their plate. */
 const INSERT_SPACING = 3
+/** How far an exploded preview lifts each tile clear of its pocket. */
+const EXPLODED_LIFT = 4
 
 type DetentFit = Pick<CounterConfig, 'clearance' | 'click'>
 /** A bump clears the play either side of the pointer, then pushes the barb in by `click` as it rides over. */
@@ -69,7 +71,6 @@ export function defaultCounterConfig(): CounterConfig {
     drumDiameter: 34,
     drumWidth: 12,
     inserts: true,
-    insertColour: '#1d1d1f',
     insertClearance: 0.05,
     clearance: 0.2,
     click: 0.3,
@@ -291,11 +292,11 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
       config.inserts ? below(pocket(x), COUNTER_POCKET) : below(engraving(mark), COUNTER_ENGRAVING)
 
     /** Digit `k` on the flat rolled `36k°` from the top, so rolling a drum on by one flat counts one. */
-    const digits = (centre: number, solid: (mark: CrossSection) => Manifold) =>
+    const digits = (centre: number, solid: (mark: CrossSection) => Manifold, lift = 0) =>
       own(
         Manifold.union(
           digitSections.map((section, digit) =>
-            own(own(solid(section).translate([centre, 0, flat])).transform(rollX((360 * digit) / FACES))),
+            own(own(solid(section).translate([centre, 0, flat + lift])).transform(rollX((360 * digit) / FACES))),
           ),
         ),
       )
@@ -346,14 +347,18 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
     if (part === 'inserts') ({ bases: solid, marks: inserts } = insertPlate())
     else if (part) solid = onPlate(own(bodies[part].transform(printed[part])))
     else {
+      // Three quarters of a drum's width keeps the barb clear of both the tens drum and the pointer, even at the narrowest drums.
+      const spread = config.exploded ? 0.75 * width : 0
+      const lift = config.exploded ? EXPLODED_LIFT : 0
       const onFaces = (drum: (mark: CrossSection) => Manifold, pointerMark: Manifold) => [
-        digits(-unitsCentre, drum),
-        own(pointerMark.translate([0, 0, flat])),
-        digits(unitsCentre, drum),
+        digits(-unitsCentre - spread, drum, lift),
+        own(pointerMark.translate([0, 0, flat + lift])),
+        digits(unitsCentre + spread, drum, lift),
       ]
       const inPocket = (tilePart: Manifold) => below(tilePart, COUNTER_POCKET)
       const bases = config.inserts ? onFaces(() => inPocket(tileBase(pocketX)), inPocket(tileBase(pointerTileX))) : []
-      solid = own(own(Manifold.union([tens, pointer, units, ...bases])).translate([0, 0, flat]))
+      const drums = [own(tens.translate([-spread, 0, 0])), pointer, own(units.translate([spread, 0, 0]))]
+      solid = own(own(Manifold.union([...drums, ...bases])).translate([0, 0, flat]))
       inserts = config.inserts
         ? own(own(Manifold.union(onFaces((mark) => inPocket(tileMark(mark)), inPocket(tileMark(arrows))))).translate([0, 0, flat]))
         : undefined

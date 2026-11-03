@@ -1,5 +1,5 @@
 import { Dimension, Section, ToggleSetting } from '@/components/controls'
-import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
+import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { CounterConfig } from '@/core/geometry/types'
 import { defaultCounterConfig, MAX_COUNTER_CLICK, MIN_COUNTER_DRUM_WIDTH, minimumCounterDrumDiameter } from '@/core/geometry/counter'
@@ -56,12 +56,7 @@ export function CounterPanel({ counter, setCounter, resets }: Props) {
             defaultValue={COUNTER_DEFAULTS.click}
             onChange={(click) => patch({ click })}
           />
-          <FieldDescription>
-            Tens on the left, units on the right. Each drum rests on a flat with the count on top, marked by the pointer's arrows; roll it
-            onto the next flat to count. Bumps on each drum's inner face drop into dimples in the pointer, so every count clicks and holds;
-            raise the click if the drums turn too easily, lower it if they will not turn. Push the units drum's hub through the pointer and
-            the tens drum until its barb snaps home.
-          </FieldDescription>
+          <FieldDescription>Roll a drum onto its next flat to count. Raise the click if the drums turn too easily.</FieldDescription>
         </Section>
 
         <Section title="Inserts">
@@ -72,34 +67,18 @@ export function CounterPanel({ counter, setCounter, resets }: Props) {
             onChange={(inserts) => patch({ inserts })}
           />
           {counter.inserts && (
-            <>
-              <Field orientation="horizontal" className="justify-between">
-                <FieldLabel htmlFor="counter-insert-colour" className="font-normal">
-                  Insert colour
-                </FieldLabel>
-                <input
-                  id="counter-insert-colour"
-                  type="color"
-                  value={counter.insertColour}
-                  onChange={(e) => patch({ insertColour: e.currentTarget.value })}
-                  className="h-8 w-28 cursor-pointer border border-input bg-transparent p-0.5"
-                />
-              </Field>
-              <Dimension
-                label="Insert clearance"
-                value={counter.insertClearance}
-                min={0}
-                max={0.2}
-                step={0.01}
-                defaultValue={COUNTER_DEFAULTS.insertClearance}
-                onChange={(insertClearance) => patch({ insertClearance })}
-              />
-            </>
+            <Dimension
+              label="Insert clearance"
+              value={counter.insertClearance}
+              min={0}
+              max={0.2}
+              step={0.01}
+              defaultValue={COUNTER_DEFAULTS.insertClearance}
+              onChange={(insertClearance) => patch({ insertClearance })}
+            />
           )}
           <FieldDescription>
-            {counter.inserts
-              ? 'Each face is a tile with its digit raised, printed face up on a plate of its own that changes to the insert colour once, above the tiles. Press each tile into its pocket; loosen the clearance if they will not go in, or add a drop of glue if they fall out.'
-              : 'The digits and arrows are engraved, ready to paint.'}
+            {counter.inserts ? 'Press each tile into its pocket. Raise the clearance if they will not go in.' : 'Engraved, ready to paint.'}
           </FieldDescription>
         </Section>
 

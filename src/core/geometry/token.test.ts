@@ -93,7 +93,7 @@ describe('buildToken', () => {
   })
 
   it('raises the artwork above the disc by the relief height', () => {
-    expect(bounds(build().mesh).max[2]).toBeCloseTo(tokenHeight(defaultTokenConfig()), 5)
+    expect(bounds(build().inserts!).max[2]).toBeCloseTo(tokenHeight(defaultTokenConfig()), 5)
   })
 
   it('adds volume for the text', () => {
@@ -161,7 +161,7 @@ describe('buildToken', () => {
 
   it('wraps a long phrase onto several lines rather than shrinking it onto one', () => {
     const config = { ...defaultTokenConfig(), text: 'Oath of Moment' }
-    const ys = raised(buildToken(wasm, config, font).mesh, config.thickness).map(([, y]) => y)
+    const ys = raised(buildToken(wasm, config, font).inserts!, config.thickness).map(([, y]) => y)
 
     expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(12)
   })
@@ -172,8 +172,8 @@ describe('buildToken', () => {
 
   it('puts the image above the text when the token has both', () => {
     const config = { ...defaultTokenConfig(), text: 'ABC', image: discImage() }
-    const withImage = raised(buildToken(wasm, config, font).mesh, config.thickness)
-    const textOnly = raised(buildToken(wasm, { ...config, image: null }, font).mesh, config.thickness)
+    const withImage = raised(buildToken(wasm, config, font).inserts!, config.thickness)
+    const textOnly = raised(buildToken(wasm, { ...config, image: null }, font).inserts!, config.thickness)
 
     expect(Math.max(...withImage.map(([, y]) => y))).toBeGreaterThan(Math.max(...textOnly.map(([, y]) => y)) + 3)
   })
@@ -298,5 +298,34 @@ describe('tokenName', () => {
 
   it('omits a blank label', () => {
     expect(tokenName({ ...defaultTokenConfig(), text: ' ' })).toBe('token-round-40mm')
+  })
+})
+
+describe('raised artwork', () => {
+  const withImage = { image: discImage() }
+
+  it('raises the artwork as its own part from the top face', () => {
+    const { inserts } = build(withImage)
+
+    expect(bounds(inserts!).min[2]).toBeCloseTo(defaultTokenConfig().thickness, 6)
+  })
+
+  it('stands the artwork its full relief height', () => {
+    const { inserts } = build(withImage)
+    const { thickness, emboss } = defaultTokenConfig()
+
+    expect(bounds(inserts!).max[2]).toBeCloseTo(thickness + emboss, 6)
+  })
+
+  it('leaves the body no taller than its thickness', () => {
+    expect(bounds(build(withImage).mesh).max[2]).toBeCloseTo(defaultTokenConfig().thickness, 6)
+  })
+
+  it('keeps engraved artwork in the body', () => {
+    expect(build({ ...withImage, emboss: -1 }).inserts).toBeUndefined()
+  })
+
+  it('keeps one part without artwork', () => {
+    expect(build({ text: '' }).inserts).toBeUndefined()
   })
 })

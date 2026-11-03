@@ -214,6 +214,17 @@ export function useExport({
         return
       }
       const mesh = await build()
+      if (mesh.inserts) {
+        const files = [
+          { mesh, name },
+          { mesh: mesh.inserts, name: `${name}-artwork` },
+        ]
+        download(
+          `${name}.zip`,
+          zipSync(Object.fromEntries(files.map((file) => [`${file.name}.stl`, toStl(asMeshLike(file.mesh), file.name)]))),
+        )
+        return
+      }
       const filename = `${name}.stl`
       download(filename, toStl(asMeshLike(mesh), filename))
     })
@@ -238,7 +249,7 @@ export function useExport({
           bodies.map(() => 1),
         ).map((items, index, all) => ({ name: all.length === 1 ? name : `${name}-plate-${index + 1}`, items }))
         if (inserts >= 0) plates.push({ name: `${name}-inserts`, items: [{ object: inserts, x: 30, y: 30 }] })
-        download(`${name}.3mf`, to3mfPlates(parts, plates, counter.insertColour))
+        download(`${name}.3mf`, to3mfPlates(parts, plates))
         return
       }
       if (plan && plan.modules.length > 1) {
@@ -251,6 +262,11 @@ export function useExport({
         return
       }
       const mesh = await build()
+      if (mesh.inserts) {
+        const part = { mesh: asMeshLike(mesh), name, secondFilament: { mesh: asMeshLike(mesh.inserts), name: `${name}-artwork` } }
+        download(`${name}.3mf`, to3mf([part], true))
+        return
+      }
       download(`${name}.3mf`, to3mf([{ mesh: asMeshLike(mesh), name }]))
     })
 

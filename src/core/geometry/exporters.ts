@@ -58,11 +58,14 @@ export interface ExportPart {
   secondFilament?: { mesh: MeshLike; name: string }
 }
 
-function projectSettings(secondColour?: string): string {
+/** The colour of every second-filament part, in the 3MF and the preview; the slicer is where to change it. */
+export const SECOND_FILAMENT_COLOUR = '#1D1D1F'
+
+function projectSettings(twoFilaments: boolean): string {
   const filament = 'Bambu PLA Basic @BBL P2S'
   return JSON.stringify({
-    filament_settings_id: secondColour ? [filament, filament] : [filament],
-    ...(secondColour ? { filament_colour: ['#CBCED3', secondColour] } : {}),
+    filament_settings_id: twoFilaments ? [filament, filament] : [filament],
+    ...(twoFilaments ? { filament_colour: ['#CBCED3', SECOND_FILAMENT_COLOUR] } : {}),
     print_settings_id: '0.20mm Standard @BBL P2S',
     printer_settings_id: 'Bambu Lab P2S 0.4 nozzle',
     // Bambu Studio loads only the geometry of a project whose printer it cannot place or whose extruders it cannot count.
@@ -294,15 +297,15 @@ export function to3mf(meshes: ExportPart[], separateBuildPlates = false): Uint8A
 
 /**
  * A Bambu Studio project with each plate holding its own copies of the objects. An object's second part prints in
- * filament 2, coloured `secondColour`; give it layers of its own and a plate of its own, so the filament changes once.
+ * filament 2; give it layers of its own and a plate of its own, so the filament changes once.
  */
-export function to3mfPlates(meshes: ExportPart[], plates: Plate[], secondColour?: string): Uint8Array {
-  return package3mf(meshes, plates, secondColour)
+export function to3mfPlates(meshes: ExportPart[], plates: Plate[]): Uint8Array {
+  return package3mf(meshes, plates)
 }
 
-function package3mf(meshes: ExportPart[], plates?: Plate[], secondColour?: string): Uint8Array {
+function package3mf(meshes: ExportPart[], plates?: Plate[]): Uint8Array {
   const enc = new TextEncoder()
-  const colour = meshes.some(({ secondFilament }) => secondFilament) ? (secondColour ?? '#FFFFFF').toUpperCase() : undefined
+  const twoFilaments = meshes.some(({ secondFilament }) => secondFilament)
   const objectModels = Object.fromEntries(
     meshes.map((_part, index) => [`object_${index + 1}.model`, enc.encode(objectModelXml(meshes, index))]),
   )
@@ -317,7 +320,7 @@ function package3mf(meshes: ExportPart[], plates?: Plate[], secondColour?: strin
       ? {
           Metadata: {
             'model_settings.config': enc.encode(plateSettingsXml(meshes, plates)),
-            'project_settings.config': enc.encode(projectSettings(colour)),
+            'project_settings.config': enc.encode(projectSettings(twoFilaments)),
           },
         }
       : {}),
