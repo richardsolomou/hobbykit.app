@@ -19,6 +19,8 @@ What you can change:
 - Fit: the clearance around the hub, and the click, which you raise if the drums turn too easily
 - Inserts: colour tiles or engraved digits, and the tile clearance
 
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like a 3MF with the tiles already set to a second filament, the full version is at hobbykit.app.
+
 ## Print settings
 
 - Every part lies flat on its outer face

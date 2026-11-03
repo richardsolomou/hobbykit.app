@@ -23,7 +23,7 @@ What you can change:
 - Supports: number, thickness and height
 - Fit: magnet clearances, the wall around each pocket, and the label's emboss depth
 
-These bases come from HobbyKit, a free generator I made. The listing shows one base per file; the app also exports batches of sizes and matching holders.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like exporting a whole batch of sizes at once with holders and trays that share your magnet settings, the full version is at hobbykit.app.
 
 ## Print settings
 

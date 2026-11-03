@@ -23,7 +23,9 @@ What you can change:
 - Dropper seats: bore diameter and depth, and a push-out hole to free a stuck bottle
 - Wall thickness
 
-On MakerWorld this makes one straight module with optional ends. The HobbyKit app also chains modules into longer runs, turns corners, and adds brush holders.
+On MakerWorld this makes one straight module with optional ends.
+
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like chaining modules into a longer run, turning corners, or adding brush holders, the full version is at hobbykit.app.
 
 ## Print settings
 

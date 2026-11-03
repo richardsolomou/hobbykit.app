@@ -19,6 +19,8 @@ What you can change:
 - Magnets: size and clearances
 - Handle: round, oval barrel, flared base or pistol grip, with length, width, lean, a rounded end, and ribs
 
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like a 3MF with the tray and handle on separate plates, ready to slice, the full version is at hobbykit.app.
+
 ## Print settings
 
 - Tray: flat, with the pockets facing up

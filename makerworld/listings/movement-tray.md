@@ -20,6 +20,8 @@ What you can change:
 - Magnets: on or off, size, count per base, and the pocket layout
 - Fit: magnet clearances and the base settings that decide where their magnets sit
 
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like magnet settings that carry over automatically from your bases and holders, the full version is at hobbykit.app.
+
 ## Print settings
 
 - Prints flat on its table face with the slots facing up

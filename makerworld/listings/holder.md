@@ -20,7 +20,9 @@ What you can change:
 - Magnets: on or off, size, count per slot, and the pocket layout
 - Matching bases: the wall settings your bases were printed with, so the pockets line up with their magnets
 
-This holder takes one size of miniature. The HobbyKit app can mix base sizes in one holder and split a large group across several modules. If the miniatures do not all fit in the largest size you allow, the extra ones are left out, so check the count in the preview.
+This holder takes one size of miniature. If the miniatures do not all fit in the largest size you allow, the extra ones are left out, so check the count in the preview.
+
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like mixing base sizes in one holder or splitting a big army across several modules, the full version is at hobbykit.app.
 
 ## Print settings
 

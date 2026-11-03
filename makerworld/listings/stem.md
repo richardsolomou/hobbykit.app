@@ -17,6 +17,8 @@ What you can change:
 - Stem height and the foot's diameter
 - Connection: a peg (diameter and length) or a ball (diameter)
 
+This comes from HobbyKit, a free browser generator I made. Magnetised bases to stand it on, and holders and trays to match, are at hobbykit.app.
+
 ## Print settings
 
 - Upright on its foot

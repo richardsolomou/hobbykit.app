@@ -20,7 +20,9 @@ What you can change:
 - Thickness, and a taper, bevel, round or straight top edge
 - Export: the body and text together, or each part on its own
 
-Tokens on MakerWorld take text only. The HobbyKit app also traces your own image onto the face.
+Tokens on MakerWorld take text only.
+
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like putting your own image on the face, the full version is at hobbykit.app.
 
 ## Print settings
 
