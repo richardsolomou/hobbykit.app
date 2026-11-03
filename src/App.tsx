@@ -32,6 +32,7 @@ import {
   paintingHandleAxisCenter,
   paintingTrayAssemblyHeight,
   paintingTrayAssemblyMinZ,
+  paintingTrayExplodedFrame,
   paintingTrayLayout,
   paintingTrayName,
 } from '@/core/geometry/paintingTray'
@@ -306,6 +307,21 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
                 : model === 'token'
                   ? tokenHeight(token)
                   : counterSize.height
+  /** What the viewer frames, which takes in the parts' new positions while exploded. */
+  const framed = (() => {
+    if (model === 'painting' && exploded) {
+      const frame = paintingTrayExplodedFrame(paintingTray)
+      return { ...frame, minZ: frame.target[2] - frame.height / 2, orbitTarget: frame.target }
+    }
+    if (model === 'counter' && exploded) return counterLayout({ ...counter, exploded })
+    return {
+      width: partWidth,
+      length: partLength,
+      height: partHeight,
+      minZ: model === 'painting' ? paintingTrayAssemblyMinZ(paintingTray) : 0,
+      orbitTarget: model === 'painting' ? paintingHandleAxisCenter(paintingTray) : undefined,
+    }
+  })()
   const partName =
     model === 'base'
       ? baseName(config)
@@ -569,11 +585,11 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
           <Viewer
             viewKey={model}
             mesh={preview}
-            width={partWidth}
-            length={partLength}
-            height={partHeight}
-            minZ={model === 'painting' ? paintingTrayAssemblyMinZ(paintingTray) : 0}
-            orbitTarget={model === 'painting' ? paintingHandleAxisCenter(paintingTray) : undefined}
+            width={framed.width}
+            length={framed.length}
+            height={framed.height}
+            minZ={framed.minZ}
+            orbitTarget={'orbitTarget' in framed ? framed.orbitTarget : undefined}
             round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
             fitToPart={model !== 'base'}
             leaders={!(explodable && exploded)}

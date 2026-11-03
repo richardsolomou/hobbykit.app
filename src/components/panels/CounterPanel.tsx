@@ -61,7 +61,7 @@ export function CounterPanel({ counter, setCounter, resets }: Props) {
 
         <Section title="Inserts">
           <ToggleSetting
-            label="Colour inserts"
+            label="Press-in tiles"
             checked={counter.inserts}
             defaultChecked={COUNTER_DEFAULTS.inserts}
             onChange={(inserts) => patch({ inserts })}

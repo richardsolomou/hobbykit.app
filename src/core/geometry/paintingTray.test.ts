@@ -13,6 +13,7 @@ import {
   paintingTrayAssemblyHeight,
   paintingTrayAssemblyMinZ,
   paintingTrayCenterMarkSpan,
+  paintingTrayExplodedFrame,
   paintingTrayLayout,
   paintingTrayMagnetPocketCount,
 } from './paintingTray'
@@ -87,6 +88,26 @@ describe('painting tray', () => {
     expect(bodies.length).toBe(2)
     for (const body of bodies) body.delete()
     solid.delete()
+  })
+
+  it.each([
+    ['a straight grip', defaultPaintingTrayConfig()],
+    [
+      'a leaning ribbed pistol grip',
+      { ...defaultPaintingTrayConfig(), handle: { ...defaultPaintingTrayConfig().handle, shape: 'pistol', angle: 20, ribs: true } },
+    ],
+  ] as const)('frames the exploded tray and %s together', (_name, config) => {
+    const mesh = buildPaintingTray(wasm, { ...config, exploded: true }).mesh
+    const { width, length, height, target } = paintingTrayExplodedFrame(config)
+    const half = [width / 2, length / 2, height / 2]
+    const outside: number[][] = []
+    for (let index = 0; index < mesh.vertProperties.length; index += mesh.numProp) {
+      const point = [0, 1, 2].map((axis) => mesh.vertProperties[index + axis])
+      // A framing box, so a millimetre of slack is invisible; the grip's nominal depth runs a fraction short of a ribbed pistol grip.
+      if (point.some((value, axis) => Math.abs(value - target[axis]) > half[axis] + 1)) outside.push(point)
+    }
+
+    expect(outside).toEqual([])
   })
 
   it('centres the spray-tray orbit on the handle axis', () => {
