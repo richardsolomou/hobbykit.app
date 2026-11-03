@@ -3,6 +3,8 @@ import type { BuildConfig } from '@/core/geometry/types'
 export interface MeshData {
   positions: Float32Array
   indices: Uint32Array
+  /** Pieces printed separately in another filament, shown in place. */
+  inserts?: MeshData
 }
 
 /** One config in, one preview out; there is nothing else to ask the worker for. */

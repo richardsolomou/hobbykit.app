@@ -80,6 +80,15 @@ describe('painting tray', () => {
     expect(measured.size[2]).toBeCloseTo(paintingTrayAssemblyHeight(config), 1)
   })
 
+  it('drops the grip clear of the tray when exploded', () => {
+    const solid = new wasm.Manifold(buildPaintingTray(wasm, { ...defaultPaintingTrayConfig(), exploded: true }).mesh)
+    const bodies = solid.decompose()
+
+    expect(bodies.length).toBe(2)
+    for (const body of bodies) body.delete()
+    solid.delete()
+  })
+
   it('centres the spray-tray orbit on the handle axis', () => {
     const config = defaultPaintingTrayConfig()
     const angled = { ...config, handle: { ...config.handle, shape: 'pistol' as const, angle: 20 } }

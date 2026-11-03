@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { zipSync } from 'fflate'
-import { packPlates, to3mf, to3mfPlates, toStl } from '@/core/geometry/exporters'
+import { packPlates, to3mf, to3mfPlates, toStl, type ExportPart } from '@/core/geometry/exporters'
 import { holderName, holderPlan } from '@/core/geometry/holder'
 import { movementTrayHeight, movementTrayName } from '@/core/geometry/movementTray'
 import { tokenHeight, tokenName } from '@/core/geometry/token'
@@ -9,6 +9,7 @@ import { paintingHandleConfig, paintingHandleDimensions, paintingHandleName, pai
 import { paintRackLayout, paintRackName, paintRackPieceName } from '@/core/geometry/paintRack'
 import { exportSegmentsFor } from '@/core/geometry/quality'
 import { stemName, stemOverallHeight } from '@/core/geometry/stem'
+import { counterLayout, counterName, counterParts } from '@/core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -18,6 +19,7 @@ import type {
   PaintingTrayConfig,
   PaintRackConfig,
   PartConfig,
+  CounterConfig,
 } from '@/core/geometry/types'
 import posthog from '@/lib/posthog'
 import { batchFileName } from './batch'
@@ -32,7 +34,7 @@ interface BatchPart {
 }
 
 interface ExportOptions {
-  model: 'base' | 'holder' | 'movement' | 'painting' | 'rack' | 'stem' | 'token'
+  model: 'base' | 'holder' | 'movement' | 'painting' | 'rack' | 'stem' | 'token' | 'counter'
   base: BaseConfig
   holder: HolderConfig
   movementTray: MovementTrayConfig
@@ -40,6 +42,7 @@ interface ExportOptions {
   paintRack: PaintRackConfig
   stem: FlightStemConfig
   token: TokenConfig
+  counter: CounterConfig
   width: number
   length: number
   batch: BatchPart[]
@@ -55,6 +58,7 @@ export function useExport({
   paintRack,
   stem,
   token,
+  counter,
   width,
   length,
   batch,
@@ -75,7 +79,9 @@ export function useExport({
               ? paintRack
               : model === 'stem'
                 ? stem
-                : token
+                : model === 'token'
+                  ? token
+                  : counter
   const name =
     model === 'base'
       ? baseName(base)
@@ -89,7 +95,9 @@ export function useExport({
               ? paintRackName(paintRack)
               : model === 'stem'
                 ? stemName(stem)
-                : tokenName(token)
+                : model === 'token'
+                  ? tokenName(token)
+                  : counterName(counter)
 
   const run = async (
     format: ExportFormat,
@@ -107,7 +115,9 @@ export function useExport({
               ? movementTrayHeight(config)
               : config.kind === 'paint-rack'
                 ? paintRackLayout(config).height
-                : config.height,
+                : config.kind === 'counter'
+                  ? counterLayout(config).height
+                  : config.height,
     },
   ) => {
     setExporting(format)
@@ -144,6 +154,18 @@ export function useExport({
     ]
   }
 
+  const buildCounterParts = () =>
+    Promise.all(
+      counterParts(counter).map(async ({ part, name: partName }): Promise<ExportPart> => {
+        const mesh = await buildMesh({ ...counter, part, segments: exportSegmentsFor(counter.drumDiameter) })
+        return {
+          mesh: asMeshLike(mesh),
+          name: `${name}-${partName}`,
+          ...(mesh.inserts ? { secondFilament: { mesh: asMeshLike(mesh.inserts), name: `${name}-${partName}-marks` } } : {}),
+        }
+      }),
+    )
+
   const rackPieces = model === 'rack' ? paintRackLayout(paintRack).pieces : []
   // Numbered left to right, which also keeps two modules of the same size from sharing a filename.
   const buildRackPiece = async (index: number) => ({
@@ -165,6 +187,15 @@ export function useExport({
         download(`${name}.zip`, zipSync(Object.fromEntries(parts.map((part) => [`${part.name}.stl`, toStl(part.mesh, part.name)]))))
         return
       }
+      if (model === 'counter') {
+        const parts = await buildCounterParts()
+        const files = parts.flatMap(({ mesh, name: partName, secondFilament }) => [
+          { mesh, name: partName },
+          ...(secondFilament ? [secondFilament] : []),
+        ])
+        download(`${name}.zip`, zipSync(Object.fromEntries(files.map((file) => [`${file.name}.stl`, toStl(file.mesh, file.name)]))))
+        return
+      }
       if (model === 'painting') {
         const parts = await buildPaintingParts()
         const files = Object.fromEntries(parts.map((part) => [`${part.name}.stl`, toStl(part.mesh, part.name)]))
@@ -183,6 +214,17 @@ export function useExport({
         return
       }
       const mesh = await build()
+      if (mesh.inserts) {
+        const files = [
+          { mesh, name },
+          { mesh: mesh.inserts, name: `${name}-artwork` },
+        ]
+        download(
+          `${name}.zip`,
+          zipSync(Object.fromEntries(files.map((file) => [`${file.name}.stl`, toStl(asMeshLike(file.mesh), file.name)]))),
+        )
+        return
+      }
       const filename = `${name}.stl`
       download(filename, toStl(asMeshLike(mesh), filename))
     })
@@ -197,6 +239,19 @@ export function useExport({
         download(`${name}.3mf`, to3mf(await buildPaintingParts(), true))
         return
       }
+      if (model === 'counter') {
+        const parts = await buildCounterParts()
+        // The inserts come last and take a plate of their own, the only one that changes filament.
+        const inserts = parts.findIndex(({ secondFilament }) => secondFilament)
+        const bodies = inserts < 0 ? parts : parts.slice(0, inserts)
+        const plates = packPlates(
+          bodies.map(({ mesh }) => mesh),
+          bodies.map(() => 1),
+        ).map((items, index, all) => ({ name: all.length === 1 ? name : `${name}-plate-${index + 1}`, items }))
+        if (inserts >= 0) plates.push({ name: `${name}-inserts`, items: [{ object: inserts, x: 30, y: 30 }] })
+        download(`${name}.3mf`, to3mfPlates(parts, plates))
+        return
+      }
       if (plan && plan.modules.length > 1) {
         const meshes = await buildModules()
         const modules = meshes.map((mesh, index) => ({
@@ -207,6 +262,11 @@ export function useExport({
         return
       }
       const mesh = await build()
+      if (mesh.inserts) {
+        const part = { mesh: asMeshLike(mesh), name, secondFilament: { mesh: asMeshLike(mesh.inserts), name: `${name}-artwork` } }
+        download(`${name}.3mf`, to3mf([part], true))
+        return
+      }
       download(`${name}.3mf`, to3mf([{ mesh: asMeshLike(mesh), name }]))
     })
 

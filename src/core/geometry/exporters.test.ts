@@ -1,6 +1,6 @@
 import { unzipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
-import { packPlates, to3mfPlates, type MeshLike } from './exporters'
+import { packPlates, SECOND_FILAMENT_COLOUR, to3mfPlates, type MeshLike } from './exporters'
 
 const PLATE = 256
 
@@ -87,5 +87,60 @@ describe('to3mfPlates', () => {
 
   it('moves each copy to its corner on its plate', () => {
     expect(model).toContain('transform="1 0 0 0 1 0 0 0 1 66 26 0"')
+  })
+})
+
+describe('to3mfPlates with a second filament', () => {
+  const meshes = [
+    { mesh: slab(30, 30), name: 'counter-tens-drum' },
+    { mesh: slab(10, 10), name: 'counter-inserts', secondFilament: { mesh: slab(4, 4), name: 'counter-inserts-marks' } },
+  ]
+  const archive = unzipSync(
+    to3mfPlates(meshes, [
+      { name: 'counter', items: [{ object: 0, x: 10, y: 10 }] },
+      { name: 'counter-inserts', items: [{ object: 1, x: 10, y: 10 }] },
+    ]),
+  )
+  const text = (path: string) => new TextDecoder().decode(archive[path])
+
+  it('prints the second part of an object in the second filament', () => {
+    expect(text('Metadata/model_settings.config')).toMatch(
+      /<part id="6" subtype="normal_part"><metadata key="name" value="counter-inserts-marks"\/>.*?<metadata key="extruder" value="2"\/>/,
+    )
+  })
+
+  it('prints the first part of that object in the first filament', () => {
+    expect(text('Metadata/model_settings.config')).toMatch(
+      /<part id="3" subtype="normal_part"><metadata key="name" value="counter-inserts"\/>.*?<metadata key="extruder" value="1"\/>/,
+    )
+  })
+
+  it('stores both parts in the object file', () => {
+    expect(text('3D/Objects/object_2.model').match(/<object id="(\d+)"/g)).toEqual(['<object id="3"', '<object id="6"'])
+  })
+
+  it('assembles the object from both parts', () => {
+    expect(
+      text('3D/3dmodel.model')
+        .match(/<component [^>]*objectid="\d+"/g)
+        ?.map((tag) => tag.match(/objectid="(\d+)"/)?.[1]),
+    ).toEqual(['1', '3', '6'])
+  })
+
+  it('gives the second filament its own colour', () => {
+    expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toEqual(['#CBCED3', SECOND_FILAMENT_COLOUR])
+  })
+
+  it('names a Bambu printer, so Bambu Studio loads the project settings', () => {
+    expect(JSON.parse(text('Metadata/project_settings.config')).printer_model).toBe('Bambu Lab P2S')
+  })
+
+  it('counts the extruders, so Bambu Studio accepts the project settings', () => {
+    expect(JSON.parse(text('Metadata/project_settings.config')).nozzle_diameter).toEqual(['0.4'])
+  })
+
+  it('declares one filament when nothing asks for the second', () => {
+    const plain = unzipSync(to3mfPlates([meshes[0]], [{ name: 'tens-drum', items: [{ object: 0, x: 10, y: 10 }] }]))
+    expect(JSON.parse(new TextDecoder().decode(plain['Metadata/project_settings.config'])).filament_settings_id).toHaveLength(1)
   })
 })

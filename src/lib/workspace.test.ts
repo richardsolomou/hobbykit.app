@@ -50,7 +50,7 @@ describe('workspace state', () => {
         },
       },
       stem: { kind: 'stem', bodyHeight: 15, bodyDiameter: 4.8, connection: 'peg', modelPegDiameter: 1.8, ballDiameter: 4 },
-      token: { kind: 'token', shape: 'round', size: 40, thickness: 3, text: '1' },
+      token: { kind: 'token', shape: 'round', size: 40, thickness: 3, text: 'Objective' },
     })
   })
 
@@ -188,6 +188,24 @@ describe('workspace state', () => {
     expect(loadWorkspace(storage)).toMatchObject({ stem: { bodyHeight: 20 }, paintRack: defaultWorkspace().paintRack })
   })
 
+  it('adds the counter generator to saved workspaces', () => {
+    const storage = memoryStorage()
+    const legacy = JSON.parse(JSON.stringify(defaultWorkspace()))
+    legacy.stem.bodyHeight = 20
+    delete legacy.counter
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 13, workspace: legacy }))
+
+    expect(loadWorkspace(storage)).toMatchObject({ stem: { bodyHeight: 20 }, counter: defaultWorkspace().counter })
+  })
+
+  it('keeps a saved counter drum width', () => {
+    const storage = memoryStorage()
+    const workspace = defaultWorkspace()
+    saveWorkspace(storage, { ...workspace, counter: { ...workspace.counter, drumWidth: 16 } })
+
+    expect(loadWorkspace(storage).counter.drumWidth).toBe(16)
+  })
+
   it('drops the removed adapter generator from a version 11 workspace', () => {
     const storage = memoryStorage()
     storage.setItem('mini-bases.workspace', JSON.stringify({ version: 11, workspace: { ...defaultWorkspace(), adapter: SAVED_ADAPTER } }))
@@ -218,7 +236,7 @@ describe('workspace state', () => {
 
     expect(loadWorkspace(storage)).toMatchObject({
       stem: { bodyHeight: 20 },
-      token: { kind: 'token', shape: 'round', size: 40, text: '1' },
+      token: { kind: 'token', shape: 'round', size: 40, text: 'Objective' },
     })
   })
 
@@ -305,7 +323,7 @@ describe('workspace state', () => {
     const image = { name: 'skull.png', width: 20, height: 20, luminance: btoa('\0\xff\xff\0') }
     saveWorkspace(storage, { ...workspace, token: { ...workspace.token, text: 'kept?', image } })
 
-    expect(loadWorkspace(storage).token.text).toBe('1')
+    expect(loadWorkspace(storage).token.text).toBe(defaultWorkspace().token.text)
   })
 
   it('adds the painting-tray generator to saved workspaces', () => {
@@ -489,13 +507,14 @@ function customizedWorkspace() {
   state.paintRack = { ...state.paintRack, leftEnd: true, rise: 20 }
   state.stem = { ...state.stem, bodyDiameter: 6 }
   state.token = { ...state.token, text: 'A', shape: 'hex', size: 32 }
+  state.counter = { ...state.counter, drumWidth: 16, insertClearance: 0.1 }
   state.shared = { ...state.shared, labelsEnabled: false, magnets: { ...state.shared.magnets, diameter: 6 } }
   state.batch = [{ shape: 'round', width: 40, length: 40, quantity: 3 }]
   return synchronizeWorkspace(state)
 }
 
 describe('resetting settings', () => {
-  const parts = ['base', 'holder', 'movementTray', 'paintingTray', 'paintRack', 'stem', 'token'] as const
+  const parts = ['base', 'holder', 'movementTray', 'paintingTray', 'paintRack', 'stem', 'token', 'counter'] as const
 
   it.each([
     ['base', (state: WorkspaceState) => state.base.height],
@@ -505,6 +524,7 @@ describe('resetting settings', () => {
     ['paintRack', (state: WorkspaceState) => state.paintRack],
     ['stem', (state: WorkspaceState) => state.stem],
     ['token', (state: WorkspaceState) => state.token],
+    ['counter', (state: WorkspaceState) => [state.counter.drumWidth, state.counter.insertClearance]],
   ] as const)('restores the %s settings to their defaults', (part, read) => {
     expect(read(resetGenerator(customizedWorkspace(), part))).toEqual(read(defaultWorkspace()))
   })

@@ -141,7 +141,7 @@ test('starts every dimension on a value its own input accepts', async ({ page })
       .evaluateAll((inputs) =>
         inputs.filter((input) => !(input as HTMLInputElement).checkValidity()).map((input) => input.getAttribute('aria-label')),
       )
-  for (const name of ['Holders', 'Movement trays', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Bases']) {
+  for (const name of ['Holders', 'Movement trays', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Counters', 'Bases']) {
     await visit(page, name)
     expect(await invalid(), name).toEqual([])
   }
@@ -173,7 +173,7 @@ test('estimates solid filament weight for every generator', { tag: '@ci' }, asyn
   await rebuilt(page, before)
   await expect.poll(async () => Number((await filament.textContent())?.match(/[\d.]+/)?.[0])).toBeGreaterThan(1.6)
 
-  for (const generator of ['Holders', 'Spray tray', 'Paint racks', 'Stems', 'Tokens']) {
+  for (const generator of ['Holders', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Counters']) {
     await visit(page, generator)
     await expect(filament).toHaveText(/^[≈<][\d.]+ g solid PLA$/)
   }
@@ -367,6 +367,7 @@ test('opens the retired adapters address on bases with a saved workspace intact'
     'Paint racks',
     'Stems',
     'Tokens',
+    'Counters',
   ])
 })
 
@@ -510,6 +511,56 @@ test('builds a matching printable flying stem', async ({ page }) => {
   await expect(footer(page)).toContainText('Ø4 mm')
 })
 
+test('builds a dial counter and downloads each part with its tiles', async ({ page }) => {
+  await visit(page, 'Counters')
+
+  await expect(tall(page)).toHaveText('32.34')
+  await expect(footer(page)).toContainText('counter-34mm')
+  await expect(footer(page)).toContainText('Press-in tiles')
+
+  // Resizing scales every face without adding triangles, so the footer's name shows the rebuild.
+  await setDimension(page, 'Drum diameter in mm', '36')
+  await expect(footer(page)).toContainText('counter-36mm')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download STL' }).click()
+  const saved = await pending
+  expect(saved.suggestedFilename()).toBe('counter-36mm.zip')
+  const path = await saved.path()
+  if (!path) throw new Error('download has no local path')
+  expect(Object.keys(unzipSync(await readFile(path))).sort()).toEqual([
+    'counter-36mm-inserts-marks.stl',
+    'counter-36mm-inserts.stl',
+    'counter-36mm-pointer.stl',
+    'counter-36mm-tens-drum.stl',
+    'counter-36mm-units-drum.stl',
+  ])
+})
+
+test('prints the dial counter tiles on their own plate, changing filament once', async ({ page }) => {
+  await visit(page, 'Counters')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download 3MF' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  const archive = unzipSync(await readFile(path))
+  const text = (file: string) => new TextDecoder().decode(archive[file])
+  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(2)
+  expect(text('Metadata/model_settings.config')).toContain('value="counter-34mm-inserts"')
+  expect(text('Metadata/model_settings.config')).toMatch(/value="counter-34mm-inserts-marks"\/>.*?<metadata key="extruder" value="2"\/>/)
+})
+
+test('engraves the dial counter without inserts', async ({ page }) => {
+  await visit(page, 'Counters')
+  const inserted = await triangles(page)
+
+  await page.getByRole('switch', { name: 'Colour inserts' }).click()
+  await rebuilt(page, inserted)
+  await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
+  expect(await triangles(page)).toBeLessThan(inserted)
+})
+
 const SHIELD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="120" viewBox="0 0 100 120">
   <path d="M50 4 L94 20 L90 70 Q80 104 50 116 Q20 104 10 70 L6 20 Z" fill="#000"/>
 </svg>`
@@ -519,7 +570,7 @@ test('builds a token from text and an uploaded image', async ({ page }) => {
 
   await expect(across(page)).toHaveText('Ø40')
   await expect(tall(page)).toHaveText('4')
-  await expect(footer(page)).toContainText('token-round-40mm-1')
+  await expect(footer(page)).toContainText('token-round-40mm-objective')
 
   const numbered = await triangles(page)
   await page.getByLabel('Token text').fill('Oath of Moment')
@@ -538,7 +589,22 @@ test('builds a token from text and an uploaded image', async ({ page }) => {
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
-  expect((await download).suggestedFilename()).toBe('token-round-40mm-shield.stl')
+  expect((await download).suggestedFilename()).toBe('token-round-40mm-shield.zip')
+})
+
+test('prints raised token artwork in a second colour, changing filament once', async ({ page }) => {
+  await visit(page, 'Tokens')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download 3MF' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  const archive = unzipSync(await readFile(path))
+  const text = (file: string) => new TextDecoder().decode(archive[file])
+  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(2)
+  expect(text('Metadata/model_settings.config')).toMatch(
+    /value="token-round-40mm-objective-artwork"\/>.*?<metadata key="extruder" value="2"\/>/,
+  )
 })
 
 test('reshapes a token into a hex measured across its flats', async ({ page }) => {
@@ -548,18 +614,18 @@ test('reshapes a token into a hex measured across its flats', async ({ page }) =
   await pickChoice(page, 'Shape', 'Hex')
   await rebuilt(page, round)
   await expect(across(page)).toHaveText('46.19 × 40')
-  await expect(footer(page)).toContainText('token-hex-40mm-1')
+  await expect(footer(page)).toContainText('token-hex-40mm-objective')
 
   // Resizing keeps the hex's topology, so the triangle count cannot signal the rebuild.
   const acrossFlats = page.getByLabel('Across flats in mm')
   await acrossFlats.fill('25.4')
   await acrossFlats.press('Enter')
   await expect(across(page)).toHaveText('29.33 × 25.4', { timeout: 15_000 })
-  await expect(footer(page)).toContainText('token-hex-25.4mm-1')
+  await expect(footer(page)).toContainText('token-hex-25.4mm-objective')
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
-  expect((await download).suggestedFilename()).toBe('token-hex-25.4mm-1.stl')
+  expect((await download).suggestedFilename()).toBe('token-hex-25.4mm-objective.zip')
 })
 
 test('engraves token artwork for stacking and saves its relief', async ({ page }) => {
@@ -1068,9 +1134,11 @@ test('adds another miniature size to the holder', async ({ page }) => {
   expect(archive['3D/Objects/object_1.model']).toBeDefined()
   expect(archive['3D/Objects/object_2.model']).toBeDefined()
   expect(JSON.parse(project)).toEqual({
-    filament_settings_id: ['Bambu PLA Basic @BBL X1C'],
-    print_settings_id: '0.20mm Standard @BBL X1C',
-    printer_settings_id: 'Bambu Lab X1 Carbon 0.4 nozzle',
+    filament_settings_id: ['Bambu PLA Basic @BBL P2S'],
+    print_settings_id: '0.20mm Standard @BBL P2S',
+    printer_settings_id: 'Bambu Lab P2S 0.4 nozzle',
+    printer_model: 'Bambu Lab P2S',
+    nozzle_diameter: ['0.4'],
   })
 })
 
@@ -1253,4 +1321,42 @@ test('moves the controls into a drawer on a phone', { tag: '@ci' }, async ({ pag
   await page.getByLabel('Diameter in mm', { exact: true }).press('Enter')
   await rebuilt(page, before)
   await expect(across(page)).toHaveText('Ø60')
+})
+
+test('keeps the crawler summary out of sight until the app replaces it', async ({ page }) => {
+  await page.route('**/*.js', (route) => route.abort())
+  await page.goto('/holders')
+
+  await expect(page.getByRole('heading', { name: 'Gridfinity miniature holder generator' })).toBeHidden()
+})
+
+test('shows the crawler summary to a browser without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false })
+  const page = await context.newPage()
+  await page.goto('/holders')
+
+  await expect(page.getByRole('heading', { name: 'Gridfinity miniature holder generator' })).toBeVisible()
+  await context.close()
+})
+
+test.describe('explodes the parts that print apart', () => {
+  for (const name of ['Spray tray', 'Counters']) {
+    test(`on the ${name} page`, async ({ page }) => {
+      await visit(page, name)
+      const explode = page.getByRole('button', { name: 'Explode' })
+
+      await explode.click()
+      await expect(explode).toHaveAttribute('aria-pressed', 'true')
+      await expect(across(page)).toBeHidden()
+
+      await explode.click()
+      await expect(across(page)).toBeVisible()
+    })
+  }
+
+  test('offers no explode for a single part', async ({ page }) => {
+    await visit(page, 'Tokens')
+
+    await expect(page.getByRole('button', { name: 'Explode' })).toHaveCount(0)
+  })
 })

@@ -11,6 +11,7 @@ import { defaultPaintRackConfig } from '../core/geometry/paintRack'
 import { defaultTokenConfig } from '../core/geometry/token'
 import { automaticMagnetCount, DEFAULT_PRESET, footprintKey, presetFor, ribCountFor } from '../core/geometry/presets'
 import { defaultFlightStemConfig } from '../core/geometry/stem'
+import { defaultCounterConfig } from '../core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -20,10 +21,11 @@ import type {
   ShapeKind,
   TokenConfig,
   PaintingTrayConfig,
+  CounterConfig,
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 13
+const WORKSPACE_VERSION = 14
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -40,6 +42,7 @@ export interface WorkspaceState {
   paintRack: PaintRackConfig
   stem: FlightStemConfig
   token: TokenConfig
+  counter: CounterConfig
   /** Values exposed by multiple generators have one canonical owner. */
   shared: SharedSettings
   /** Base footprints exported together, each built with the current base settings. */
@@ -86,6 +89,10 @@ function sharedFromBase(base: BaseConfig): SharedSettings {
     },
   }
 }
+
+/** Rounds a minimum up to the 0.1mm the controls step in, so a value raised to it still builds. */
+export const tenthAbove = (minimum: number) => Math.ceil((minimum - 1e-6) * 10) / 10
+const atLeast = (value: number, minimum: number) => Math.max(value, tenthAbove(minimum))
 
 export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
   const { shared } = state
@@ -146,16 +153,13 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
     },
     movementTray: {
       ...movementTray,
-      floorThickness: Math.max(movementTray.floorThickness, Math.ceil((minimumMovementTrayFloor(movementTray) - 1e-6) * 10) / 10),
+      floorThickness: atLeast(movementTray.floorThickness, minimumMovementTrayFloor(movementTray)),
     },
     paintingTray: {
       ...state.paintingTray,
-      height: Math.max(state.paintingTray.height, Math.ceil((minimumPaintingTrayHeight({ magnets: shared.magnets }) - 1e-6) * 10) / 10),
-      spacing: Math.max(state.paintingTray.spacing, Math.ceil((minimumPaintingTraySpacing({ magnets: shared.magnets }) - 1e-6) * 10) / 10),
-      edgeMargin: Math.max(
-        state.paintingTray.edgeMargin,
-        Math.ceil((minimumPaintingTrayEdgeMargin({ magnets: shared.magnets }) - 1e-6) * 10) / 10,
-      ),
+      height: atLeast(state.paintingTray.height, minimumPaintingTrayHeight({ magnets: shared.magnets })),
+      spacing: atLeast(state.paintingTray.spacing, minimumPaintingTraySpacing({ magnets: shared.magnets })),
+      edgeMargin: atLeast(state.paintingTray.edgeMargin, minimumPaintingTrayEdgeMargin({ magnets: shared.magnets })),
       magnets: { ...state.paintingTray.magnets, ...shared.magnets, enabled: true },
     },
   }
@@ -171,6 +175,7 @@ export function defaultWorkspace(): WorkspaceState {
     paintRack: defaultPaintRackConfig(),
     stem: defaultFlightStemConfig(),
     token: defaultTokenConfig(),
+    counter: defaultCounterConfig(),
     shared: sharedFromBase(base),
     batch: [],
   })
@@ -200,6 +205,7 @@ const MIGRATIONS = [
   migrateWorkspaceV10,
   migrateWorkspaceV11,
   migrateWorkspaceV12,
+  migrateWorkspaceV13,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -226,7 +232,7 @@ export function loadWorkspace(storage: SettingsStorage): WorkspaceState {
   }
 }
 
-const PARTS: readonly GeneratorSettings[] = ['base', 'holder', 'movementTray', 'paintingTray', 'paintRack', 'stem', 'token']
+const PARTS: readonly GeneratorSettings[] = ['base', 'holder', 'movementTray', 'paintingTray', 'paintRack', 'stem', 'token', 'counter']
 const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'movementTray', 'paintingTray'])
 
 /**
@@ -280,6 +286,11 @@ export function applyWorkspaceSetup(
   const kept = Object.entries(workspace.shared.magnetCounts).filter(([footprint]) => !replaced.includes(footprint))
   const magnetCounts = { ...Object.fromEntries(kept), ...candidate.shared.magnetCounts }
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
+}
+
+function migrateWorkspaceV13(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig() }
 }
 
 function migrateWorkspaceV12(value: unknown): unknown {
@@ -433,6 +444,7 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
     workspace.movementTray.kind === 'movement-tray' &&
     ['round', 'rect'].includes(workspace.movementTray.shape) &&
     workspace.paintingTray.kind === 'painting-tray' &&
+    workspace.counter.kind === 'counter' &&
     workspace.paintRack.kind === 'paint-rack' &&
     workspace.paintRack.items.length > 0 &&
     workspace.paintRack.items.every((item) => ['module', 'corner'].includes(item.kind)) &&

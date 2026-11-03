@@ -9,6 +9,8 @@ import type { BaseConfig, BaseStats, MagnetLayout, ShapeKind } from './types'
 
 export interface BuildResult {
   mesh: Mesh
+  /** Pieces printed separately in another filament and shown in place, which the preview colours apart. */
+  inserts?: Mesh
   stats: BaseStats
 }
 

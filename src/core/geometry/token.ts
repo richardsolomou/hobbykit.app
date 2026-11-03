@@ -1,4 +1,4 @@
-import type { CrossSection, ManifoldToplevel, Vec3 } from 'manifold-3d'
+import type { CrossSection, Manifold, ManifoldToplevel, Vec3 } from 'manifold-3d'
 import type { Font } from 'opentype.js'
 import type { BuildResult } from './base'
 import { baseOutline, trimNumber } from './outline'
@@ -31,7 +31,7 @@ export function defaultTokenConfig(): TokenConfig {
     thickness: 3,
     profile: 'bevel',
     profileSize: 0.6,
-    text: '1',
+    text: 'Objective',
     textHeight: 20,
     image: null,
     threshold: 0.5,
@@ -255,17 +255,21 @@ export function buildToken(wasm: ManifoldToplevel, config: TokenConfig, font?: F
       artwork.push(own(CrossSection.ofPolygons(place(best.block, best.scale, ...textBand), GLYPH_FILL)))
     }
 
+    let inserts: Manifold | undefined
     if (artwork.length > 0 && config.emboss !== 0) {
       // Offsetting can leave coincident points, which extrude into a pinched edge once a slicer welds vertices.
       const relief = own(own(CrossSection.union(artwork)).simplify(1e-3))
       const feature = own(own(relief.extrude(Math.abs(config.emboss))).translate([0, 0, config.thickness + Math.min(0, config.emboss)]))
-      solid = own(config.emboss < 0 ? solid.subtract(feature) : solid.add(feature))
+      // Raised artwork starts exactly on the top face, so as a second part it shares no layer with the body.
+      if (config.emboss > 0) inserts = feature
+      else solid = own(config.emboss < 0 ? solid.subtract(feature) : solid.add(feature))
     }
 
-    const volume = solid.volume()
-    const triangles = solid.numTri()
+    const volume = solid.volume() + (inserts?.volume() ?? 0)
+    const triangles = solid.numTri() + (inserts?.numTri() ?? 0)
     return {
       mesh: solid.getMesh(),
+      ...(inserts ? { inserts: inserts.getMesh() } : {}),
       stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 },
     }
   } finally {

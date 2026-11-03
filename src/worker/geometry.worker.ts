@@ -9,6 +9,7 @@ import { buildToken } from '@/core/geometry/token'
 import { buildPaintingHandle, buildPaintingTray } from '@/core/geometry/paintingTray'
 import { buildPaintRack } from '@/core/geometry/paintRack'
 import { buildFlightStem } from '@/core/geometry/stem'
+import { buildCounter } from '@/core/geometry/counter'
 import type { MeshData, WorkerReply, WorkerRequest } from './protocol'
 
 const ready = Promise.all([
@@ -19,9 +20,12 @@ const ready = Promise.all([
 ])
 
 /** Copies out of the mesh: its arrays may still view WASM memory, which must not be transferred. */
-function toMeshData(result: BuildResult): MeshData {
-  const { mesh } = result
-  return { positions: new Float32Array(mesh.vertProperties), indices: new Uint32Array(mesh.triVerts) }
+function toMeshData({ mesh, inserts }: Pick<BuildResult, 'mesh' | 'inserts'>): MeshData {
+  return {
+    positions: new Float32Array(mesh.vertProperties),
+    indices: new Uint32Array(mesh.triVerts),
+    ...(inserts ? { inserts: toMeshData({ mesh: inserts }) } : {}),
+  }
 }
 
 const send = (reply: WorkerReply, transfer: ArrayBufferLike[]) => self.postMessage(reply, { transfer: transfer as Transferable[] })
@@ -45,9 +49,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
                   ? buildFlightStem(wasm, config)
                   : config.kind === 'token'
                     ? buildToken(wasm, config, font)
-                    : buildBase(wasm, config, font)
+                    : config.kind === 'counter'
+                      ? buildCounter(wasm, config, font)
+                      : buildBase(wasm, config, font)
     const mesh = toMeshData(result)
-    send({ id, kind: 'mesh', mesh, grams: result.stats.grams }, [mesh.positions.buffer, mesh.indices.buffer])
+    const buffers = [mesh, mesh.inserts].flatMap((part) => (part ? [part.positions.buffer, part.indices.buffer] : []))
+    send({ id, kind: 'mesh', mesh, grams: result.stats.grams }, buffers)
   } catch (error) {
     send({ id, kind: 'error', message: error instanceof Error ? error.message : String(error) }, [])
   }

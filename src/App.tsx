@@ -1,4 +1,4 @@
-import { Box, Download, Link, PanelLeft } from 'lucide-react'
+import { Box, Download, Link, PanelLeft, UnfoldHorizontal } from 'lucide-react'
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { BasePanel } from '@/components/panels/BasePanel'
 import { HolderPanel } from '@/components/panels/HolderPanel'
@@ -16,9 +16,11 @@ import {
 } from '@/components/panels/shared'
 import { StemPanel } from '@/components/panels/StemPanel'
 import { TokenPanel } from '@/components/panels/TokenPanel'
+import { CounterPanel } from '@/components/panels/CounterPanel'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Toggle } from '@/components/ui/toggle'
 import { TitleBlock } from '@/components/TitleBlock'
 import { Viewer } from '@/components/Viewer'
 import { holderLayout, holderName, holderPlan, maxHolderMagnetThickness } from '@/core/geometry/holder'
@@ -35,6 +37,7 @@ import {
 } from '@/core/geometry/paintingTray'
 import { paintRackLayout, paintRackName } from '@/core/geometry/paintRack'
 import { stemMaximumDiameter, stemName, stemOverallHeight } from '@/core/geometry/stem'
+import { counterLayout, counterName } from '@/core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -43,6 +46,7 @@ import type {
   MovementTrayConfig,
   PaintingTrayConfig,
   PaintRackConfig,
+  CounterConfig,
 } from '@/core/geometry/types'
 import { loadTokenImage } from '@/lib/tokenImage'
 import { batchBaseConfig, batchName } from '@/lib/batch'
@@ -79,7 +83,9 @@ const modelLabel = (model: Generator) =>
             ? 'Paint rack'
             : model === 'stem'
               ? 'Stem'
-              : 'Token'
+              : model === 'token'
+                ? 'Token'
+                : 'Dial counter'
 
 const SHARE_NOTICE_MS = 5000
 
@@ -101,6 +107,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const paintRack = workspace.paintRack
   const stem = workspace.stem
   const token = workspace.token
+  const counter = workspace.counter
   const setWorkspace = (next: WorkspaceState | ((current: WorkspaceState) => WorkspaceState)) =>
     setWorkspaceState((current) => synchronizeWorkspace(typeof next === 'function' ? next(current) : next))
   const setConfig = (next: BaseConfig | ((current: BaseConfig) => BaseConfig)) =>
@@ -116,6 +123,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const setPaintRack = (next: PaintRackConfig) => setWorkspace((current) => ({ ...current, paintRack: next }))
   const setStem = (next: FlightStemConfig | ((current: FlightStemConfig) => FlightStemConfig)) =>
     setWorkspace((current) => ({ ...current, stem: typeof next === 'function' ? next(current.stem) : next }))
+  const setCounter = (next: CounterConfig) => setWorkspace((current) => ({ ...current, counter: next }))
   const patchToken = (changes: Partial<TokenConfig>) =>
     setWorkspace((current) => {
       const next = { ...current.token, ...changes }
@@ -135,6 +143,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   })
   const [customMovementSize, setCustomMovementSize] = useState(() => !isStandardMovementSize(workspace.movementTray))
   const [model, setModel] = useState<Generator>(opened.model)
+  /** A view of the preview, not part of the design, so it is neither saved nor shared. */
+  const [exploded, setExploded] = useState(false)
+  const explodable = model === 'painting' || model === 'counter'
   const page = PAGES.find((item) => item.value === model)!
   const [tokenImageError, setTokenImageError] = useState<string>()
   const addTokenImage = async (file: File) => {
@@ -173,12 +184,14 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
         : model === 'movement'
           ? movementTray
           : model === 'painting'
-            ? paintingTray
+            ? { ...paintingTray, exploded }
             : model === 'rack'
               ? paintRack
               : model === 'stem'
                 ? stem
-                : token
+                : model === 'token'
+                  ? token
+                  : { ...counter, exploded }
   const { preview, grams, error } = useGenerator(partConfig)
 
   useEffect(() => {
@@ -244,6 +257,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const maxSharedDepthClearance = Math.max(0, Math.min(0.5, maxBaseDepthClearance, maxHolderDepthClearance))
   const plan = useMemo(() => holderPlan(holder), [holder])
   const stemDiameter = stemMaximumDiameter(stem)
+  const counterSize = counterLayout(counter)
   const partWidth =
     model === 'base'
       ? width
@@ -257,7 +271,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? rackSize.width
               : model === 'stem'
                 ? stemDiameter
-                : tokenFootprint(token).width
+                : model === 'token'
+                  ? tokenFootprint(token).width
+                  : counterSize.width
   const partLength =
     model === 'base'
       ? length
@@ -271,7 +287,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? rackSize.length
               : model === 'stem'
                 ? stemDiameter
-                : tokenFootprint(token).length
+                : model === 'token'
+                  ? tokenFootprint(token).length
+                  : counterSize.length
   const partHeight =
     model === 'base'
       ? config.height
@@ -285,7 +303,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? rackSize.height
               : model === 'stem'
                 ? stemOverallHeight(stem)
-                : tokenHeight(token)
+                : model === 'token'
+                  ? tokenHeight(token)
+                  : counterSize.height
   const partName =
     model === 'base'
       ? baseName(config)
@@ -299,7 +319,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               ? paintRackName(paintRack)
               : model === 'stem'
                 ? stemName(stem)
-                : tokenName(token)
+                : model === 'token'
+                  ? tokenName(token)
+                  : counterName(counter)
   const batch = useMemo(
     () => workspace.batch.map((entry) => ({ config: batchBaseConfig(workspace, entry), quantity: entry.quantity })),
     [workspace],
@@ -321,6 +343,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     paintRack,
     stem,
     token,
+    counter,
     width: partWidth,
     length: partLength,
     batch,
@@ -458,6 +481,8 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
       />
     ) : model === 'stem' ? (
       <StemPanel stem={stem} setStem={setStem} resets={[resetPart('stem', 'stem', false)]} />
+    ) : model === 'counter' ? (
+      <CounterPanel counter={counter} setCounter={setCounter} resets={[resetPart('counter', 'dial counter', false)]} />
     ) : (
       <TokenPanel
         token={token}
@@ -551,7 +576,20 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
             orbitTarget={model === 'painting' ? paintingHandleAxisCenter(paintingTray) : undefined}
             round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
             fitToPart={model !== 'base'}
+            leaders={!(explodable && exploded)}
           />
+          {explodable && (
+            <Toggle
+              variant="outline"
+              size="sm"
+              pressed={exploded}
+              onPressedChange={setExploded}
+              className="absolute bottom-8 left-8 bg-card/90 backdrop-blur-sm aria-pressed:border-measure/50 aria-pressed:text-measure"
+            >
+              <UnfoldHorizontal />
+              Explode
+            </Toggle>
+          )}
           <div className="pointer-events-none absolute inset-x-12 top-5 flex flex-col gap-2">
             {(error || exportError) && (
               <div role="alert" className="border border-destructive/50 bg-card/90 px-3 py-2 backdrop-blur-sm text-xs text-destructive">
