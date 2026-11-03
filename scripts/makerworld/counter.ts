@@ -1,0 +1,40 @@
+import { buildCounter, defaultCounterConfig } from '../../src/core/geometry/counter'
+import { exportSegmentsFor } from '../../src/core/geometry/quality'
+import type { CounterConfig, CounterPart } from '../../src/core/geometry/types'
+import { type Case, font } from './shared'
+
+const DRUM_PARTS: CounterPart[] = ['tens', 'pointer', 'units']
+
+/** One case per part, each built the way the app exports it; the tiles' bases and raised marks are separate pieces. */
+function parts(name: string, changes: Partial<CounterConfig>, defines: Case['defines'], only?: string[]): Case[] {
+  const config = { ...defaultCounterConfig(), ...changes }
+  const one = (piece: string, part: CounterPart, marks = false): Case => ({
+    name: `${name}-${piece}`,
+    build: (wasm) => {
+      const result = buildCounter(wasm, { ...config, part, segments: exportSegmentsFor(config.drumDiameter) }, font)
+      return marks ? result.inserts! : result.mesh
+    },
+    defines: { ...defines, part: piece },
+  })
+  const all = [
+    ...DRUM_PARTS.map((part) => one(part, part)),
+    ...(config.inserts ? [one('tile-bases', 'inserts'), one('tile-marks', 'inserts', true)] : []),
+  ]
+  return only ? all.filter((c) => only.some((piece) => c.name === `${name}-${piece}`)) : all
+}
+
+export const cases: Case[] = [
+  ...parts('default', {}, {}),
+  ...parts('engraved', { inserts: false }, { colour_inserts: false }),
+  ...parts('smallest', { drumDiameter: 32.4, drumWidth: 6 }, { drum_diameter: 32.4, drum_width: 6 }),
+  ...parts('largest', { drumDiameter: 60, drumWidth: 24 }, { drum_diameter: 60, drum_width: 24 }),
+  ...parts(
+    'engraved-wide',
+    { inserts: false, drumDiameter: 48, drumWidth: 20 },
+    { colour_inserts: false, drum_diameter: 48, drum_width: 20 },
+  ),
+  ...parts('loose', { clearance: 0.6, click: 0.4 }, { fit_clearance: 0.6, click: 0.4 }, DRUM_PARTS),
+  ...parts('tight', { clearance: 0.1, click: 0.1 }, { fit_clearance: 0.1, click: 0.1 }, DRUM_PARTS),
+  ...parts('snug-tiles', { insertClearance: 0 }, { insert_clearance: 0 }, ['tile-bases']),
+  ...parts('loose-tiles', { insertClearance: 0.2 }, { insert_clearance: 0.2 }, ['tile-bases']),
+]

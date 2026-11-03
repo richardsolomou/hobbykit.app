@@ -56,7 +56,7 @@ When a changeset reaches `main`, CI updates `package.json` and `CHANGELOG.md`, t
 - `docs/generators` — one guide per generator, linked from the README and served beside its page as Markdown.
 - `e2e` — Playwright coverage against the production build.
 - `scripts` — Node entry points for inspecting real exports and for `just social-cards`, which retakes the link preview images in `public/og`.
-- `makerworld` — an OpenSCAD port of the base generator for MakerWorld's Parametric Model Maker. Run `just makerworld check` after changing base geometry; it needs `brew install --cask openscad@snapshot`.
+- `makerworld` — OpenSCAD ports of the generators for MakerWorld's Parametric Model Maker, one file each, with their comparison cases in `scripts/makerworld`. Run `just makerworld check <name>` after changing a generator's geometry; it needs `brew install --cask openscad@snapshot`.
 
 ## Geometry model
 
