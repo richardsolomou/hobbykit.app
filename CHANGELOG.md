@@ -1,5 +1,11 @@
 # hobbykit
 
+## 0.20.1
+
+### Patch Changes
+
+- 2312273: Frame exploded previews so the spread parts stay in view, and name the dial counter's tile toggle "Press-in tiles".
+
 ## 0.20.0
 
 ### Minor Changes
