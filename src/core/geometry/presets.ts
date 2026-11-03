@@ -13,51 +13,62 @@ export interface SizePreset {
 }
 
 /**
- * The Games Workshop range as actually moulded — note 28.5mm, which everyone calls
- * 28mm — plus the oval sizes used from bikes up to titans.
+ * Round and oval sizes follow Games Workshop's Warhammer 40,000 Base Size Guide
+ * (Warhammer Event Companion, October 2026) and the Age of Sigmar Battle
+ * Profiles, with a few units each size carries. Sizes are as GW measures them:
+ * 28.5mm, which everyone calls 28mm, and 60×35.5, which AoS rounds to 60×35.
  */
 export const ROUND_SIZES: SizePreset[] = [
-  { label: '25', shape: 'round', width: 25, use: 'Legacy infantry, grots' },
-  { label: '28.5', shape: 'round', width: 28.5, use: 'Older marines, guardsmen' },
-  { label: '32', shape: 'round', width: 32, use: 'Current infantry' },
-  { label: '40', shape: 'round', width: 40, use: 'Terminators, heavy infantry' },
-  { label: '50', shape: 'round', width: 50, use: 'Bikes, ogryns' },
-  { label: '60', shape: 'round', width: 60, use: 'Dreadnoughts' },
-  { label: '65', shape: 'round', width: 65, use: 'Large monsters' },
-  { label: '80', shape: 'round', width: 80, use: 'Large vehicles, monsters' },
-  { label: '90', shape: 'round', width: 90, use: 'Greater daemons, big characters' },
-  { label: '100', shape: 'round', width: 100, use: 'Very large monsters' },
-  { label: '130', shape: 'round', width: 130, use: 'Titanic monsters' },
-  { label: '160', shape: 'round', width: 160, use: 'The largest round GW makes' },
+  { label: '25', shape: 'round', width: 25, use: 'Guardsmen, Gretchin, Kabalite Warriors' },
+  { label: '28.5', shape: 'round', width: 28.5, use: 'Guardians, Kasrkin, Freeguild Fusiliers' },
+  { label: '32', shape: 'round', width: 32, use: 'Intercessors, Necron Warriors, Ork Boyz' },
+  { label: '40', shape: 'round', width: 40, use: 'Terminators, Custodian Guard, Captains' },
+  { label: '50', shape: 'round', width: 50, use: 'Centurions, Obliterators, Kroxigor' },
+  { label: '60', shape: 'round', width: 60, use: 'Dreadnoughts, Daemon Princes, Stormfiends' },
+  { label: '80', shape: 'round', width: 80, use: 'Avatar of Khaine, Ghazghkull, Slann' },
+  { label: '90', shape: 'round', width: 90, use: 'Redemptor and Brutalis Dreadnoughts' },
+  { label: '100', shape: 'round', width: 100, use: 'Armiger Knights, Repulsor, Greater Daemons' },
+  { label: '120', shape: 'round', width: 120, use: 'Wazdakka Gutsmek' },
+  { label: '130', shape: 'round', width: 130, use: 'Great Unclean One, Onager, Nagash' },
+  { label: '160', shape: 'round', width: 160, use: 'Monolith, Defilers, Archaon' },
 ]
 
+/** The 40k guide's oval sizes, plus the 170×105 that Age of Sigmar lists apart from the Knights' 170×109. */
 export const OVAL_SIZES: SizePreset[] = [
-  { label: '60×35', shape: 'oval', width: 60, length: 35, use: 'Bikes, jetbikes' },
-  { label: '75×42', shape: 'oval', width: 75, length: 42, use: 'Cavalry, bloat drones' },
-  { label: '90×52', shape: 'oval', width: 90, length: 52, use: 'Monsters, war walkers' },
-  { label: '105×70', shape: 'oval', width: 105, length: 70, use: 'Large vehicles' },
-  { label: '120×92', shape: 'oval', width: 120, length: 92, use: 'Knights, gargantuans' },
-  { label: '170×105', shape: 'oval', width: 170, length: 105, use: 'Titans' },
+  { label: '60×35.5', shape: 'oval', width: 60, length: 35.5, use: 'Rough Riders, Flesh Hounds, Hexwraiths' },
+  { label: '75×42', shape: 'oval', width: 75, length: 42, use: 'Chaos Bikers, Vertus Praetors, Blood Knights' },
+  { label: '90×52.5', shape: 'oval', width: 90, length: 52.5, use: 'Outriders, Bloodcrushers, Dracothian Guard' },
+  { label: '105×70', shape: 'oval', width: 105, length: 70, use: 'Land Speeder, Carnifexes, Treelord' },
+  { label: '120×92', shape: 'oval', width: 120, length: 92, use: 'Riptide, Wraithknight, Bloodthirster' },
+  { label: '150×95', shape: 'oval', width: 150, length: 95, use: 'Ork buggies, Knight Destrier' },
+  { label: '170×105', shape: 'oval', width: 170, length: 105, use: 'Stardrake, Black Coach, Mortek Crawler' },
+  { label: '170×109', shape: 'oval', width: 170, length: 109, use: 'Imperial and Chaos Knights, Stormsurge' },
 ]
 
-/** Rank-and-flank sizes: The Old World, Kings of War and most historical ranges. */
+/** Frontage by depth, from The Old World's published base sizes and Kings of War's unit types. */
 export const RECT_SIZES: SizePreset[] = [
-  { label: '20×20', shape: 'rect', width: 20, length: 20, use: 'Rank infantry' },
-  { label: '25×25', shape: 'rect', width: 25, length: 25, use: 'Old World infantry' },
-  { label: '20×40', shape: 'rect', width: 20, length: 40, use: 'Kings of War cavalry' },
-  { label: '25×50', shape: 'rect', width: 25, length: 50, use: 'Cavalry, knights' },
-  { label: '40×40', shape: 'rect', width: 40, length: 40, use: 'Monstrous infantry, ogres' },
-  { label: '50×50', shape: 'rect', width: 50, length: 50, use: 'Monsters, war engines' },
-  { label: '50×100', shape: 'rect', width: 50, length: 100, use: 'Chariots, large monsters' },
-  { label: '60×100', shape: 'rect', width: 60, length: 100, use: 'Very large monsters' },
+  { label: '20×20', shape: 'rect', width: 20, length: 20, use: 'Kings of War Infantry' },
+  { label: '25×25', shape: 'rect', width: 25, length: 25, use: 'Old World infantry, KoW Heavy Infantry' },
+  { label: '30×30', shape: 'rect', width: 30, length: 30, use: 'Old World Orcs, Chaos Warriors, Saurus' },
+  { label: '25×50', shape: 'rect', width: 25, length: 50, use: 'Old World light cavalry, KoW Cavalry' },
+  { label: '30×60', shape: 'rect', width: 30, length: 60, use: 'Old World knights and cavalry' },
+  { label: '40×40', shape: 'rect', width: 40, length: 40, use: 'Ogres, Trolls, KoW Large Infantry' },
+  { label: '40×60', shape: 'rect', width: 40, length: 60, use: 'Old World Pegasus Knights' },
+  { label: '50×50', shape: 'rect', width: 50, length: 50, use: 'Minotaurs, KoW Large Cavalry and Monsters' },
+  { label: '50×75', shape: 'rect', width: 50, length: 75, use: 'Old World Demigryphs and cannons' },
+  { label: '50×100', shape: 'rect', width: 50, length: 100, use: 'Old World and KoW chariots' },
+  { label: '60×100', shape: 'rect', width: 60, length: 100, use: 'Old World Steam Tank, Griffons, Dragons' },
+  { label: '75×75', shape: 'rect', width: 75, length: 75, use: 'Kings of War Titans' },
+  { label: '100×150', shape: 'rect', width: 100, length: 150, use: 'Old World Terrorgheist, Zombie Dragon' },
 ]
 
-/** A pill is a squared-off oval, so it takes the same footprints. */
+/** No Games Workshop game uses pills, so beside historical cavalry they stand in for its ovals. */
 export const PILL_SIZES: SizePreset[] = [
-  { label: '60×35', shape: 'pill', width: 60, length: 35, use: 'Bikes, cavalry' },
-  { label: '75×42', shape: 'pill', width: 75, length: 42, use: 'Large cavalry' },
-  { label: '90×52', shape: 'pill', width: 90, length: 52, use: 'Monsters' },
-  { label: '105×70', shape: 'pill', width: 105, length: 70, use: 'Large vehicles' },
+  { label: '50×25', shape: 'pill', width: 50, length: 25, use: 'Saga and Bolt Action cavalry' },
+  { label: '60×35.5', shape: 'pill', width: 60, length: 35.5, use: 'In place of the matching GW oval' },
+  { label: '75×42', shape: 'pill', width: 75, length: 42, use: 'In place of the matching GW oval' },
+  { label: '90×52.5', shape: 'pill', width: 90, length: 52.5, use: 'In place of the matching GW oval' },
+  { label: '105×70', shape: 'pill', width: 105, length: 70, use: 'In place of the matching GW oval' },
 ]
 
 /** Measured across the corners, so a hex drops into the same space as that round. */
@@ -77,13 +88,20 @@ export const SIZES_BY_SHAPE: Record<ShapeKind, SizePreset[]> = {
   polygon: POLYGON_SIZES,
 }
 
+/** The standard size with this label, such as `standardSize('oval', '60×35.5')`. */
+export function standardSize(shape: ShapeKind, label: string): SizePreset {
+  const preset = SIZES_BY_SHAPE[shape].find((candidate) => candidate.label === label)
+  if (!preset) throw new Error(`No standard ${shape} size ${label}`)
+  return preset
+}
+
 /** Where each shape starts, chosen to show what the shape is for. */
 export const DEFAULT_SIZE: Record<ShapeKind, SizePreset> = {
-  round: ROUND_SIZES[2], // 32
-  oval: OVAL_SIZES[0], // 60x35
-  pill: PILL_SIZES[0], // 60x35
-  rect: RECT_SIZES[3], // 25x50
-  polygon: POLYGON_SIZES[1], // 32
+  round: standardSize('round', '32'),
+  oval: standardSize('oval', '60×35.5'),
+  pill: standardSize('pill', '60×35.5'),
+  rect: standardSize('rect', '25×50'),
+  polygon: standardSize('polygon', '32'),
 }
 
 /**
@@ -255,7 +273,7 @@ export function resized(config: BaseConfig, width: number, length: number): Base
   }
 }
 
-export const DEFAULT_PRESET = ROUND_SIZES[2]
+export const DEFAULT_PRESET = DEFAULT_SIZE.round
 
 export function footprintKey(shape: ShapeKind, width: number, length: number): string {
   return `${shape}:${width}x${isElongated(shape) ? length : width}`
