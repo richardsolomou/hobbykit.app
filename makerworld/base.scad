@@ -2,7 +2,7 @@
 // A port of src/core/geometry/base.ts: change both together, then run `just makerworld check`.
 // The base prints the way it is modelled: z = 0 is the face the miniature is glued to,
 // and the magnet pockets open on the top face, which meets a magnetised tray.
-// Licensed under AGPL-3.0-only, like the rest of HobbyKit.
+// Licensed under CC BY-SA 4.0, unlike the AGPL-3.0-only app, because MakerWorld offers no GPL licence.
 
 /* [Size & Shape] */
 // Pick a standard size, or Custom to use the shape and dimensions below.
