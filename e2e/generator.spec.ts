@@ -555,7 +555,7 @@ test('engraves the dial counter without inserts', async ({ page }) => {
   await visit(page, 'Counters')
   const inserted = await triangles(page)
 
-  await page.getByRole('switch', { name: 'Colour inserts' }).click()
+  await page.getByRole('switch', { name: 'Press-in tiles' }).click()
   await rebuilt(page, inserted)
   await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
   expect(await triangles(page)).toBeLessThan(inserted)
@@ -1344,13 +1344,17 @@ test.describe('explodes the parts that print apart', () => {
     test(`on the ${name} page`, async ({ page }) => {
       await visit(page, name)
       const explode = page.getByRole('button', { name: 'Explode' })
+      const cameraView = () => drawn(page).getAttribute('data-camera-view')
+      const assembled = await cameraView()
 
       await explode.click()
       await expect(explode).toHaveAttribute('aria-pressed', 'true')
       await expect(across(page)).toBeHidden()
+      await expect.poll(cameraView).not.toBe(assembled)
 
       await explode.click()
       await expect(across(page)).toBeVisible()
+      await expect.poll(cameraView).toBe(assembled)
     })
   }
 

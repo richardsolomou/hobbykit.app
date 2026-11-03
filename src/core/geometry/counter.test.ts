@@ -280,6 +280,20 @@ describe('buildCounter', () => {
     expect(across(counter({ exploded: true }))).toBeGreaterThan(across(counter()) + 10)
   })
 
+  it.each([
+    ['assembled', counter()],
+    ['exploded', counter({ exploded: true })],
+  ])('frames the %s counter around all its parts, tiles included', (_name, config) => {
+    const { mesh, inserts } = build(config)
+    const points = [...vertices(mesh), ...vertices(inserts!)]
+    const { width, length, height, minZ } = counterLayout(config)
+    const outside = points.filter(
+      ([x, y, z]) => Math.abs(x) > width / 2 + 1e-6 || Math.abs(y) > length / 2 + 1e-6 || z < minZ - 1e-6 || z > minZ + height + 1e-6,
+    )
+
+    expect(outside).toEqual([])
+  })
+
   it('names the file after the drum size', () => {
     expect(counterName(counter({ drumDiameter: 32.5 }))).toBe('counter-32.5mm')
   })
