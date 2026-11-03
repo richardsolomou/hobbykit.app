@@ -44,6 +44,40 @@ export interface LabelSpec {
   emboss: number
 }
 
+export type TexturePattern =
+  | 'none'
+  | 'flagstone'
+  | 'cobblestone'
+  | 'hex'
+  | 'tile'
+  | 'plank'
+  | 'plate'
+  | 'herringbone'
+  | 'diamond'
+  | 'rock'
+  | 'earth'
+  | 'rubble'
+  | 'sand'
+  | 'cracked'
+  | 'snow'
+  | 'roots'
+
+/**
+ * A pattern on the face the model stands on. Joint patterns are cut into it as it
+ * lies on the build plate; relief patterns rise from it, and the base prints face up.
+ */
+export interface TextureSpec {
+  pattern: TexturePattern
+  /** Stone or tile size, plank width or plate depth in mm, constant across footprints so a batch matches. */
+  scale: number
+  /** How far each joint cuts into the face, or how high the relief rises from it. */
+  depth: number
+  /** Which of the pattern's random layouts to draw, so a base can be rerolled and still exported the same. */
+  seed: number
+  /** How far a pattern strays from its tidiest form, from 0 to 100. */
+  irregularity: number
+}
+
 export interface BaseConfig {
   shape: ShapeKind
   /** X extent. The diameter for round, the across-corners size for polygons. */
@@ -64,6 +98,7 @@ export interface BaseConfig {
   magnets: MagnetSpec
   ribs: RibSpec
   label: LabelSpec
+  texture: TextureSpec
   /** Segments per full circle, so curves stay smooth at print scale. */
   segments: number
 }

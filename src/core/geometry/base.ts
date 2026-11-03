@@ -4,6 +4,8 @@ import { fitLabel, LABEL_MARGIN, labelAngles, LABEL_MAX_LENGTH, labelText, point
 import { baseOutline, defaultLabel } from './outline'
 import { MIN_PROFILE_WALL, profileInsetAt, profileSteps } from './profile'
 import { curveTolerance } from './quality'
+import { MIN_POCKET_ROOF, reliefBlock } from './relief'
+import { isRelief, textureCut } from './texture'
 import { GLYPH_FILL, polygonsWidth, textPolygons, type Polygon } from './text'
 import type { BaseConfig, BaseStats, MagnetLayout, ShapeKind } from './types'
 
@@ -153,12 +155,23 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
   const solidOf = (m: Manifold) => own(m)
 
   try {
+    /*
+     * Relief rises from the model face, which would overhang if it lay on the plate,
+     * so a relief base turns over: solid, model face up, pockets opening onto the
+     * plate where their small ceilings bridge. Everything else hollows the body and
+     * keeps the model face on the plate.
+     */
+    const faceUp = isRelief(config.texture.pattern)
     const wellDepth = config.height - config.floorThickness
-    if (wellDepth < 0.2) throw new Error('No room left for a well — thin the floor')
+    const pocketDepth = Math.min(config.magnets.thickness + config.magnets.depthClearance, faceUp ? config.height : wellDepth)
+    if (faceUp && config.magnets.count > 0 && config.height - pocketDepth < MIN_POCKET_ROOF - 1e-6) {
+      throw new Error('Magnet pockets leave too little above them — raise the base or use thinner magnets')
+    }
+    if (!faceUp && wellDepth < 0.2) throw new Error('No room left for a well — thin the floor')
     const tolerance = curveTolerance(Math.max(config.width, config.length), config.segments)
     const wallAtFloor =
       config.wallThickness - profileInsetAt(config.height, config.profile, config.profileSize, config.floorThickness, tolerance)
-    if (wallAtFloor < MIN_PROFILE_WALL - 1e-6) {
+    if (!faceUp && wallAtFloor < MIN_PROFILE_WALL - 1e-6) {
       throw new Error('Edge profile leaves too little wall at the well floor — reduce the edge size')
     }
 
@@ -170,10 +183,19 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
     for (const step of profileSteps(config.height, config.profile, config.profileSize, tolerance)) {
       const ring = step.inset > 0 ? section(outline.offset(-step.inset, 'Miter', 2, config.segments)) : outline
       for (const contour of ring.toPolygons()) {
-        for (const [x, y] of contour) points.push([x, y, step.z])
+        for (const [x, y] of contour) points.push([x, y, faceUp ? config.height - step.z : step.z])
       }
     }
     let solid = solidOf(Manifold.hull(points))
+
+    if (faceUp) {
+      const modelInset = profileInsetAt(config.height, config.profile, config.profileSize, 0, tolerance)
+      const modelFace = modelInset > 0 ? section(outline.offset(-modelInset, 'Miter', 2, config.segments)) : outline
+      const relief = reliefBlock(wasm, config, modelFace, tolerance, own)
+      if (relief) solid = solidOf(solid.add(relief))
+    }
+    const texture = textureCut(wasm, config, outline, own)
+    if (texture) solid = solidOf(solid.subtract(texture))
 
     // A footprint narrower than twice the wall offsets away to nothing. Its bounds
     // come back infinite, which would send everything downstream to NaN.
@@ -185,9 +207,11 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
     const halfLength = (wellBounds.max[1] - wellBounds.min[1]) / 2
     const wellReach = Math.hypot(halfWidth, halfLength)
 
-    // Cut past the top face so no zero-thickness skin is left behind.
-    const plug = solidOf(wellOutline.extrude(wellDepth + 1))
-    solid = solidOf(solid.subtract(solidOf(plug.translate([0, 0, config.floorThickness]))))
+    if (!faceUp) {
+      // Cut past the top face so no zero-thickness skin is left behind.
+      const plug = solidOf(wellOutline.extrude(wellDepth + 1))
+      solid = solidOf(solid.subtract(solidOf(plug.translate([0, 0, config.floorThickness]))))
+    }
 
     const pocketRadius = (config.magnets.diameter + config.magnets.clearance) / 2
     const bossRadius = pocketRadius + config.magnets.bossWall
@@ -200,13 +224,11 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
 
     /*
      * The boss carries the pocket the full depth of the well, and the pocket is cut
-     * only as deep as the magnet plus its depth clearance — measured down from the
-     * top. The magnet can finish flush with the top of the boss while leaving room
-     * for adhesive behind it.
+     * only as deep as the magnet plus its depth clearance, measured from the face
+     * that meets the tray. The magnet can finish flush with that face while leaving
+     * room for adhesive behind it.
      */
-    const pocketDepth = Math.min(config.magnets.thickness + config.magnets.depthClearance, wellDepth)
-
-    if (magnets.length > 0) {
+    if (!faceUp && magnets.length > 0) {
       // Bosses carry the pockets up through the well so magnets seat against the floor.
       const bossDisc = section(CrossSection.circle(bossRadius, config.segments))
       const bossColumn = solidOf(bossDisc.extrude(wellDepth))
@@ -217,7 +239,7 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
 
     // Single spokes from the centre outwards, phased to run through the bosses.
     // Intersecting the well stops them at the wall.
-    const spokeAngles = ribAngles(config.ribs.count, magnets)
+    const spokeAngles = faceUp ? [] : ribAngles(config.ribs.count, magnets)
     const ribHeight = Math.min(config.ribs.height, wellDepth)
     if (spokeAngles.length > 0 && ribHeight > 0) {
       const reach = wellReach + config.wallThickness
@@ -261,20 +283,26 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
           const scaled: Polygon[] = polys.map((p) => p.map(([x, y]): [number, number] => [x * fit.scale, y * fit.scale]))
           const glyphs = section(CrossSection.ofPolygons(scaled, GLYPH_FILL))
           const placed = section(glyphs.translate([fit.x, fit.y]))
-          const raised = solidOf(placed.extrude(Math.min(config.label.emboss, wellDepth)))
-          solid = solidOf(solid.add(solidOf(raised.translate([0, 0, config.floorThickness]))))
+          if (faceUp) {
+            // Engraved into the face on the plate, mirrored so it reads from below.
+            const engraving = solidOf(section(placed.mirror([1, 0])).extrude(config.label.emboss + 1))
+            solid = solidOf(solid.subtract(solidOf(engraving.translate([0, 0, -1]))))
+          } else {
+            const raised = solidOf(placed.extrude(Math.min(config.label.emboss, wellDepth)))
+            solid = solidOf(solid.add(solidOf(raised.translate([0, 0, config.floorThickness]))))
+          }
         } else if (custom) {
           throw new Error('Label text does not fit this base — shorten it or reduce the label size')
         }
       }
     }
 
-    // Pockets open on the face that meets the tray, which is the top of the model
-    // as built, since the part is modelled the way it prints.
+    // Pockets open on the face that meets the tray: the top of a base as it prints,
+    // or the plate face of one printed face up.
     if (magnets.length > 0) {
       const pocketDisc = section(CrossSection.circle(pocketRadius, config.segments))
       const drill = solidOf(pocketDisc.extrude(pocketDepth + 1.001))
-      const z = config.height - pocketDepth
+      const z = faceUp ? -1.001 : config.height - pocketDepth
       for (const m of magnets) {
         solid = solidOf(solid.subtract(solidOf(drill.translate([m.x, m.y, z]))))
       }

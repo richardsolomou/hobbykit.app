@@ -9,6 +9,7 @@ import {
   AUTOMATIC_MAGNET_COUNT,
   fitSlotDepth,
   safeEdgeSize,
+  safeTextureDepth,
   type MagnetCountChoice,
   type ResetAction,
   type SharedMagnetChanges,
@@ -26,6 +27,7 @@ import { Viewer } from '@/components/Viewer'
 import { holderLayout, holderName, holderPlan, maxHolderMagnetThickness } from '@/core/geometry/holder'
 import { baseName, footprint, isElongated } from '@/core/geometry/outline'
 import { footprintKey, SIZES_BY_SHAPE } from '@/core/geometry/presets'
+import { isRelief } from '@/core/geometry/texture'
 import { movementTrayHeight, movementTrayLayout, movementTrayName } from '@/core/geometry/movementTray'
 import { maxTokenEdgeSize, tokenFootprint, tokenHeight, tokenName } from '@/core/geometry/token'
 import {
@@ -244,7 +246,11 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const patch = (changes: Partial<BaseConfig>) =>
     setConfig((current) => {
       const next = { ...current, ...changes }
-      return { ...next, profileSize: Math.min(next.profileSize, safeEdgeSize(next)) }
+      return {
+        ...next,
+        profileSize: Math.min(next.profileSize, safeEdgeSize(next)),
+        texture: { ...next.texture, depth: Math.min(next.texture.depth, safeTextureDepth(next)) },
+      }
     })
   const { width, length } = footprint(config)
   const holderSize = useMemo(() => holderLayout(holder), [holder])
@@ -593,6 +599,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
             round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
             fitToPart={model !== 'base'}
             leaders={!(explodable && exploded)}
+            flipped={model === 'base' && config.texture.pattern !== 'none' && !isRelief(config.texture.pattern)}
           />
           {explodable && (
             <Toggle

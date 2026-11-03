@@ -1,4 +1,4 @@
-import { Box, Download, Plus, Trash2 } from 'lucide-react'
+import { Box, Download, Plus, Shuffle, Trash2 } from 'lucide-react'
 import { Choice, Dimension, Section, SizeSelect, ToggleSetting } from '@/components/controls'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supportsFivePocketCross } from '@/core/geometry/base'
 import { labelText } from '@/core/geometry/label'
+import { DEFAULT_TEXTURE, isRegular, isRelief, MAX_SEED, withPattern } from '@/core/geometry/texture'
 import { defaultLabel, footprint, isElongated, trimNumber } from '@/core/geometry/outline'
 import {
   defaultBaseHeight,
@@ -19,7 +20,7 @@ import {
   SIZES_BY_SHAPE,
   type SizePreset,
 } from '@/core/geometry/presets'
-import type { BaseConfig, ShapeKind } from '@/core/geometry/types'
+import type { BaseConfig, ShapeKind, TexturePattern } from '@/core/geometry/types'
 import { addToBatch } from '@/lib/batch'
 import posthog from '@/lib/posthog'
 import type { ExportFormat } from '@/lib/useExport'
@@ -31,6 +32,7 @@ import {
   PROFILES,
   PanelFooter,
   safeEdgeSize,
+  safeTextureDepth,
   type MagnetCountChoice,
   type ResetAction,
   type SharedMagnetChanges,
@@ -44,6 +46,27 @@ const SHAPES: { value: ShapeKind; label: string }[] = [
   { value: 'rect', label: 'Rectangle' },
   { value: 'polygon', label: 'Hex' },
 ]
+
+/** `size` names what the size control measures for each pattern. */
+const TEXTURES: { value: TexturePattern; label: string; size: string }[] = [
+  { value: 'none', label: 'None', size: '' },
+  { value: 'flagstone', label: 'Flagstone', size: 'Stone size' },
+  { value: 'cobblestone', label: 'Cobblestone', size: 'Cobble size' },
+  { value: 'hex', label: 'Hex tile', size: 'Tile size' },
+  { value: 'tile', label: 'Square tile', size: 'Tile size' },
+  { value: 'plank', label: 'Plank', size: 'Plank width' },
+  { value: 'plate', label: 'Plate', size: 'Plate depth' },
+  { value: 'herringbone', label: 'Herringbone', size: 'Brick width' },
+  { value: 'diamond', label: 'Diamond plate', size: 'Diamond width' },
+  { value: 'rock', label: 'Rock', size: 'Rock size' },
+  { value: 'earth', label: 'Earth', size: 'Feature size' },
+  { value: 'rubble', label: 'Rubble', size: 'Stone size' },
+  { value: 'sand', label: 'Sand', size: 'Ripple spacing' },
+  { value: 'cracked', label: 'Cracked earth', size: 'Plate size' },
+  { value: 'snow', label: 'Snow', size: 'Drift size' },
+  { value: 'roots', label: 'Roots', size: 'Feature size' },
+]
+const MIN_TEXTURE_DEPTH = 0.2
 
 const CUSTOM_HOLDER_SIZE = 'custom'
 const counts = (values: number[]) => values.map((value) => ({ value, label: value === 0 ? 'None' : String(value) }))
@@ -97,6 +120,7 @@ export function BasePanel({
 }: Props) {
   const { width, length } = footprint(config)
   const elongated = isElongated(config.shape)
+  const faceUp = isRelief(config.texture.pattern)
   const sizes = SIZES_BY_SHAPE[config.shape]
   const standard = sizes.find((size) => size.width === width && (size.length ?? size.width) === length)
   const footprintDefaultHeight = defaultBaseHeight(config.width, config.length)
@@ -116,7 +140,11 @@ export function BasePanel({
     posthog.capture('base_size_selected', { size: size.label, shape: config.shape })
     setCustomBaseSize(false)
     const preset = presetFor(size, config.magnets.maxCount, config.magnets.patternVersion)
-    setConfig({ ...preset, label: { ...preset.label, text: config.label.text } })
+    setConfig({
+      ...preset,
+      label: { ...preset.label, text: config.label.text },
+      texture: { ...config.texture, depth: Math.min(config.texture.depth, safeTextureDepth(preset)) },
+    })
   }
 
   /** Keeps the current settings but adopts the new shape's usual footprint. */
@@ -317,6 +345,81 @@ export function BasePanel({
           )}
         </Section>
 
+        <Section title="Texture">
+          <Choice
+            label="Pattern"
+            value={config.texture.pattern}
+            defaultValue={BASE_DEFAULTS.texture.pattern}
+            options={TEXTURES}
+            onChange={(pattern) => {
+              posthog.capture('base_texture_selected', { pattern })
+              patch({ texture: withPattern(config.texture, pattern) })
+            }}
+          />
+          {config.texture.pattern !== 'none' &&
+            (safeTextureDepth(config) < MIN_TEXTURE_DEPTH ? (
+              <FieldDescription>Thicken the top to make room for the joints.</FieldDescription>
+            ) : (
+              <>
+                <Dimension
+                  label={TEXTURES.find((texture) => texture.value === config.texture.pattern)!.size}
+                  value={config.texture.scale}
+                  min={3}
+                  max={30}
+                  step={0.5}
+                  defaultValue={DEFAULT_TEXTURE[config.texture.pattern].scale}
+                  onChange={(scale) => patch({ texture: { ...config.texture, scale } })}
+                />
+                <Dimension
+                  label={faceUp ? 'Relief height' : 'Joint depth'}
+                  value={config.texture.depth}
+                  min={MIN_TEXTURE_DEPTH}
+                  max={safeTextureDepth(config)}
+                  step={0.1}
+                  defaultValue={Math.min(DEFAULT_TEXTURE[config.texture.pattern].depth, safeTextureDepth(config))}
+                  onChange={(depth) => patch({ texture: { ...config.texture, depth } })}
+                />
+                {!isRegular(config.texture.pattern) && (
+                  <>
+                    <Dimension
+                      label="Irregularity"
+                      value={config.texture.irregularity}
+                      min={0}
+                      max={100}
+                      step={5}
+                      unit="%"
+                      defaultValue={DEFAULT_TEXTURE[config.texture.pattern].irregularity}
+                      onChange={(irregularity) => patch({ texture: { ...config.texture, irregularity } })}
+                    />
+                    <Dimension
+                      label="Variation"
+                      value={config.texture.seed}
+                      min={1}
+                      max={MAX_SEED}
+                      step={1}
+                      unit=""
+                      defaultValue={BASE_DEFAULTS.texture.seed}
+                      action={{
+                        label: 'Shuffle variation',
+                        icon: <Shuffle />,
+                        onClick: () => {
+                          posthog.capture('base_texture_shuffled', { pattern: config.texture.pattern })
+                          patch({ texture: { ...config.texture, seed: 1 + Math.floor(Math.random() * MAX_SEED) } })
+                        },
+                      }}
+                      onChange={(seed) => patch({ texture: { ...config.texture, seed } })}
+                    />
+                  </>
+                )}
+                {faceUp && (
+                  <FieldDescription>
+                    Prints model face up as a solid base. Magnet pockets open underneath, and the label is engraved there.
+                  </FieldDescription>
+                )}
+              </>
+            ))}
+        </Section>
+
         <Section title="Construction" aside={<span className="readout text-xs text-muted-foreground">{trimNumber(config.height)}mm</span>}>
           <Dimension
             label="Base height"
@@ -336,15 +439,17 @@ export function BasePanel({
             defaultValue={BASE_DEFAULTS.wallThickness}
             onChange={(wallThickness) => setSharedMagnetPlacement({ wallThickness })}
           />
-          <Dimension
-            label="Top thickness"
-            value={config.floorThickness}
-            min={0.4}
-            max={Math.max(0.5, config.height - 0.5)}
-            step={0.1}
-            defaultValue={footprintDefaultFloor}
-            onChange={(floorThickness) => patch({ floorThickness })}
-          />
+          {!faceUp && (
+            <Dimension
+              label="Top thickness"
+              value={config.floorThickness}
+              min={0.4}
+              max={Math.max(0.5, config.height - 0.5)}
+              step={0.1}
+              defaultValue={footprintDefaultFloor}
+              onChange={(floorThickness) => patch({ floorThickness })}
+            />
+          )}
           <Choice
             label="Bottom edge"
             value={config.profile}
@@ -388,46 +493,48 @@ export function BasePanel({
           )}
         </Section>
 
-        <Section
-          title="Internal Supports"
-          aside={
-            <span className="readout text-xs text-muted-foreground">
-              {config.ribs.count === 0 ? 'none' : `${config.ribs.count} spokes`}
-            </span>
-          }
-        >
-          {config.magnets.layout !== 'five-cross' && (
-            <Choice
-              label="Number of supports"
-              value={config.ribs.count}
-              defaultValue={BASE_DEFAULTS.ribs.count}
-              options={RIB_COUNTS}
-              onChange={(count) => patch({ ribs: { ...config.ribs, count } })}
-            />
-          )}
-          {config.ribs.count > 0 && (
-            <>
-              <Dimension
-                label="Support thickness"
-                value={config.ribs.thickness}
-                min={0.8}
-                max={4}
-                step={0.1}
-                defaultValue={BASE_DEFAULTS.ribs.thickness}
-                onChange={(thickness) => patch({ ribs: { ...config.ribs, thickness } })}
+        {!faceUp && (
+          <Section
+            title="Internal Supports"
+            aside={
+              <span className="readout text-xs text-muted-foreground">
+                {config.ribs.count === 0 ? 'none' : `${config.ribs.count} spokes`}
+              </span>
+            }
+          >
+            {config.magnets.layout !== 'five-cross' && (
+              <Choice
+                label="Number of supports"
+                value={config.ribs.count}
+                defaultValue={BASE_DEFAULTS.ribs.count}
+                options={RIB_COUNTS}
+                onChange={(count) => patch({ ribs: { ...config.ribs, count } })}
               />
-              <Dimension
-                label="Support height"
-                value={config.ribs.height}
-                min={0.4}
-                max={Math.max(0.5, config.height - config.floorThickness)}
-                step={0.1}
-                defaultValue={BASE_DEFAULTS.ribs.height}
-                onChange={(height) => patch({ ribs: { ...config.ribs, height } })}
-              />
-            </>
-          )}
-        </Section>
+            )}
+            {config.ribs.count > 0 && (
+              <>
+                <Dimension
+                  label="Support thickness"
+                  value={config.ribs.thickness}
+                  min={0.8}
+                  max={4}
+                  step={0.1}
+                  defaultValue={BASE_DEFAULTS.ribs.thickness}
+                  onChange={(thickness) => patch({ ribs: { ...config.ribs, thickness } })}
+                />
+                <Dimension
+                  label="Support height"
+                  value={config.ribs.height}
+                  min={0.4}
+                  max={Math.max(0.5, config.height - config.floorThickness)}
+                  step={0.1}
+                  defaultValue={BASE_DEFAULTS.ribs.height}
+                  onChange={(height) => patch({ ribs: { ...config.ribs, height } })}
+                />
+              </>
+            )}
+          </Section>
+        )}
 
         {(config.magnets.count > 0 || config.label.enabled) && (
           <Section
