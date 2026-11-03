@@ -9,6 +9,7 @@ import {
   AUTOMATIC_MAGNET_COUNT,
   fitSlotDepth,
   safeEdgeSize,
+  safeTextureDepth,
   type MagnetCountChoice,
   type ResetAction,
   type SharedMagnetChanges,
@@ -243,7 +244,11 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const patch = (changes: Partial<BaseConfig>) =>
     setConfig((current) => {
       const next = { ...current, ...changes }
-      return { ...next, profileSize: Math.min(next.profileSize, safeEdgeSize(next)) }
+      return {
+        ...next,
+        profileSize: Math.min(next.profileSize, safeEdgeSize(next)),
+        texture: { ...next.texture, depth: Math.min(next.texture.depth, safeTextureDepth(next)) },
+      }
     })
   const { width, length } = footprint(config)
   const holderSize = useMemo(() => holderLayout(holder), [holder])

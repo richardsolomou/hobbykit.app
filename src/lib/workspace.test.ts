@@ -198,6 +198,25 @@ describe('workspace state', () => {
     expect(loadWorkspace(storage)).toMatchObject({ stem: { bodyHeight: 20 }, counter: defaultWorkspace().counter })
   })
 
+  it('gives bases saved before textures a plain face', () => {
+    const storage = memoryStorage()
+    const legacy = JSON.parse(JSON.stringify(defaultWorkspace()))
+    legacy.base.height = 5
+    delete legacy.base.texture
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 14, workspace: legacy }))
+
+    expect(loadWorkspace(storage).base).toMatchObject({ height: 5, texture: defaultWorkspace().base.texture })
+  })
+
+  it('discards a saved texture pattern it does not know', () => {
+    const storage = memoryStorage()
+    const workspace = defaultWorkspace()
+    const saved = { ...workspace, base: { ...workspace.base, height: 5, texture: { ...workspace.base.texture, pattern: 'lava' } } }
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 15, workspace: saved }))
+
+    expect(loadWorkspace(storage).base.height).toBe(defaultWorkspace().base.height)
+  })
+
   it('keeps a saved counter drum width', () => {
     const storage = memoryStorage()
     const workspace = defaultWorkspace()

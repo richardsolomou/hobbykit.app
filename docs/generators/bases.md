@@ -10,6 +10,12 @@ Choose a round, oval, pill, rectangle, or regular polygon base, then pick a stan
 
 The base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
 
+## Texture
+
+Cut flagstones, square tiles, staggered planks, or running-bond plates into the face the model stands on. Planks and plates run along the base's longer side. Set the stone, tile, plank, or plate size, which stays the same across every size in a batch, and how deep the joints go. That face is printed on the build plate, so every joint is a V whose sides stand at 45° and the stones print without supports. A plain band runs round the edge, and the joint depth is capped to leave material above the recess.
+
+Rock, earth, and rubble raise an uneven surface from the model face instead, up to 4mm high. A surface like that would need supports if it faced the build plate, so these bases print model face up and solid, with the magnet pockets opening on the underside and the size label engraved beside them. A solid base uses more filament than a hollow one, though the slicer's infill keeps it well under the solid weight shown.
+
 ## Magnets
 
 Set the diameter, thickness, fit clearance, and depth clearance of the magnets you have. Each magnet sits flush with the face that meets a magnetised tray, and the depth clearance leaves room for adhesive behind it. The magnet count is recommended from the footprint and the magnet's size, or set it yourself for each footprint. Pockets follow a balanced arrangement or a five-pocket cross. Bases share their magnet settings with holders, movement trays, and spray trays, so every magnetised part lands on the same pattern.

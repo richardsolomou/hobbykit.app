@@ -1,6 +1,7 @@
 import { magnetsRing } from './base'
 import { isElongated } from './outline'
 import { previewSegmentsFor } from './quality'
+import { DEFAULT_TEXTURE, maxTextureDepth } from './texture'
 import type { BaseConfig, MagnetPatternVersion, ShapeKind } from './types'
 
 export interface SizePreset {
@@ -228,6 +229,7 @@ export function presetFor(preset: SizePreset, maxMagnets = 8, patternVersion: Ma
     // Low ribs stiffen the thin floor the recess leaves, without filling the recess.
     ribs: { count: ribCountFor(width, length, magnetCount), thickness: 1.6, height: 1.2 },
     label: { enabled: true, height: labelHeight(width, length), emboss: 0.6 },
+    texture: { pattern: 'none', ...DEFAULT_TEXTURE.none },
     segments: previewSegmentsFor(Math.max(width, length)),
   }
 }
@@ -251,6 +253,10 @@ export function resized(config: BaseConfig, width: number, length: number): Base
     magnets: { ...config.magnets, count: magnetCount },
     ribs: { ...config.ribs, count: ribCountFor(width, effective, magnetCount) },
     label: { ...config.label, height: labelHeight(width, effective) },
+    texture: {
+      ...config.texture,
+      depth: Math.min(config.texture.depth, maxTextureDepth({ floorThickness: floor, texture: config.texture })),
+    },
     segments: previewSegmentsFor(Math.max(width, effective)),
   }
 }
