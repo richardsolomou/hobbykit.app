@@ -69,6 +69,23 @@ function overhangs(mesh: Mesh): string[] {
   return [...found].sort()
 }
 
+/** The steepest face of the relief above the body, in degrees, ignoring its vertical walls and float32 slivers. */
+function steepest(mesh: Mesh, config: BaseConfig) {
+  const { numProp, vertProperties: v, triVerts } = mesh
+  let flattest = 1
+  for (let t = 0; t < triVerts.length; t += 3) {
+    const [a, b, c] = [0, 1, 2].map((k) => triVerts[t + k] * numProp)
+    if (Math.min(v[a + 2], v[b + 2], v[c + 2]) < config.height) continue
+    const u = [0, 1, 2].map((axis) => v[b + axis] - v[a + axis])
+    const w = [0, 1, 2].map((axis) => v[c + axis] - v[a + axis])
+    const normal = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
+    const area = Math.hypot(...normal) / 2
+    const nz = normal[2] / (2 * area)
+    if (area > 1e-3 && nz > 0.02) flattest = Math.min(flattest, nz)
+  }
+  return (Math.acos(flattest) * 180) / Math.PI
+}
+
 function duplicateVertices(mesh: Mesh) {
   const seen = new Set<string>()
   let duplicates = 0
@@ -125,6 +142,12 @@ describe('relief textures', () => {
 
   it.for(CASES)('welds cleanly on a $label base', ({ pattern, size }) => {
     expect(duplicateVertices(build(relief(size, pattern, true)).mesh)).toBe(0)
+  })
+
+  it.for(PATTERNS)('softens %s into slopes the mesh can follow at its smallest, roughest setting', (pattern) => {
+    const config = relief(ROUND_32, pattern, true)
+    const roughest = { ...config, texture: { ...config.texture, scale: 3, irregularity: 100 } }
+    expect(steepest(build(roughest).mesh, roughest)).toBeLessThan(65)
   })
 
   it('engraves the size label into the plate face on a cramped base', () => {
