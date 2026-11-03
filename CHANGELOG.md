@@ -1,5 +1,13 @@
 # hobbykit
 
+## 0.20.0
+
+### Minor Changes
+
+- b6cc530: Add a dial counter generator: two ten-sided drums count 00–99 by rolling from flat to flat, a pointer between them marks the count, printed bumps click each count into place, the digits and arrows print raised on press-in tiles that change colour once, and the parts snap together on a barbed hub without supports.
+- a47fc8e: Explode the spray tray and dial counter previews to see how their separately printed parts fit together.
+- a47fc8e: Print raised token artwork in a second colour: the 3MF puts the artwork on its own filament, changing once above the body.
+
 ## 0.19.0
 
 ### Minor Changes
