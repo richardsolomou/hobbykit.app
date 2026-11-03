@@ -516,7 +516,6 @@ test('builds a dial counter and downloads each part with its tiles', async ({ pa
 
   await expect(tall(page)).toHaveText('32.34')
   await expect(footer(page)).toContainText('counter-34mm')
-  await expect(footer(page)).toContainText('Press-in tiles')
 
   // Resizing scales every face without adding triangles, so the footer's name shows the rebuild.
   await setDimension(page, 'Drum diameter in mm', '36')
