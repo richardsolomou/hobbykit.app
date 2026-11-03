@@ -181,7 +181,7 @@ test('estimates solid filament weight for every generator', { tag: '@ci' }, asyn
 
 test('uses an end pair for a medium oval base', async ({ page }) => {
   await pickChoice(page, 'Shape', 'Oval')
-  await pickSize(page, '90×52')
+  await pickSize(page, '90×52.5')
   await expect(footer(page)).toContainText('2 × 5.2 mm hole')
 })
 
@@ -197,7 +197,7 @@ test('marks and resets a changed value to its default', { tag: '@ci' }, async ({
 })
 
 test('resets construction values to the current footprint defaults', async ({ page }) => {
-  await pickSize(page, '65')
+  await pickSize(page, '80')
   const thickness = page.getByLabel('Top thickness in mm')
   await expect(thickness).toHaveValue('1.5')
   await thickness.fill('1.2')
@@ -223,7 +223,7 @@ test('marks and resets changed toggles and choices', async ({ page }) => {
 
 test('keeps shape and size independent while sharing matching magnet settings in the session', async ({ page }) => {
   await pickChoice(page, 'Shape', 'Oval')
-  await pickSize(page, '90×52')
+  await pickSize(page, '90×52.5')
   await page.getByLabel('Magnet diameter in mm').fill('6')
   await page.getByLabel('Magnet diameter in mm').press('Enter')
 
@@ -231,8 +231,8 @@ test('keeps shape and size independent while sharing matching magnet settings in
   await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('32')
   await pickChoice(page, 'Shape 1', 'Oval')
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: /^90×52\b/ }).click()
-  await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('90×52')
+  await page.getByRole('option', { name: /^90×52\.5\b/ }).click()
+  await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('90×52.5')
   await expect(page.getByLabel('Magnet diameter in mm')).toHaveValue('6.0')
   await expect(footer(page)).toContainText('10 × 6.2 mm hole')
 
@@ -245,7 +245,7 @@ test('keeps shape and size independent while sharing matching magnet settings in
   await rebuilt(page, ninetyByFiftyTwo)
 
   await page.getByRole('link', { name: 'Bases' }).click()
-  await expect(across(page)).toHaveText('90 × 52')
+  await expect(across(page)).toHaveText('90 × 52.5')
   await expect(page.getByLabel('Magnet diameter in mm')).toHaveValue('7.0')
 })
 
@@ -516,7 +516,6 @@ test('builds a dial counter and downloads each part with its tiles', async ({ pa
 
   await expect(tall(page)).toHaveText('32.34')
   await expect(footer(page)).toContainText('counter-34mm')
-  await expect(footer(page)).toContainText('Press-in tiles')
 
   // Resizing scales every face without adding triangles, so the footer's name shows the rebuild.
   await setDimension(page, 'Drum diameter in mm', '36')
@@ -555,7 +554,7 @@ test('engraves the dial counter without inserts', async ({ page }) => {
   await visit(page, 'Counters')
   const inserted = await triangles(page)
 
-  await page.getByRole('switch', { name: 'Colour inserts' }).click()
+  await page.getByRole('switch', { name: 'Press-in tiles' }).click()
   await rebuilt(page, inserted)
   await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
   expect(await triangles(page)).toBeLessThan(inserted)
@@ -1085,7 +1084,7 @@ test('uses clear wording when no holder miniatures fit', async ({ page }) => {
   await page.getByLabel(/^Maximum rows in/).press('Enter')
   await rebuilt(page, constrained)
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: '90 Greater daemons, big characters' }).click()
+  await page.getByRole('option', { name: '90 Redemptor and Brutalis Dreadnoughts' }).click()
   await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('90')
   await expect(page.getByText('None of 5 fit')).toBeVisible()
   await expect(page.getByText(/Only 0 of/)).not.toBeVisible()
@@ -1149,7 +1148,7 @@ test('changes holder slots to non-round base shapes', async ({ page }) => {
   await rebuilt(page, before)
   const oval = await triangles(page)
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: /75×42\b.*Cavalry/ }).click()
+  await page.getByRole('option', { name: /75×42\b.*Chaos Bikers/ }).click()
   await rebuilt(page, oval)
   await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('75×42')
   await expect(footer(page)).toContainText('5×oval 75×42')
@@ -1167,14 +1166,14 @@ test('uses canonical magnet patterns in holder slots', async ({ page }) => {
   await visit(page, 'Holders')
   const before = await triangles(page)
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: '65 Large monsters' }).click()
+  await page.getByRole('option', { name: '80 Avatar of Khaine, Ghazghkull, Slann' }).click()
   await rebuilt(page, before)
-  await expect(footer(page)).toContainText('15 × 5.2 mm hole')
+  await expect(footer(page)).toContainText('20 × 5.2 mm hole')
 })
 
 const SHAPES = [
-  { name: 'Oval', footprint: '60 × 35', mark: '60x35', chip: '170×105' },
-  { name: 'Pill', footprint: '60 × 35', mark: '60x35', chip: '105×70' },
+  { name: 'Oval', footprint: '60 × 35.5', mark: '60x35.5', chip: '170×109' },
+  { name: 'Pill', footprint: '60 × 35.5', mark: '60x35.5', chip: '105×70' },
   { name: 'Rectangle', footprint: '25 × 50', mark: '25x50', chip: '50×100' },
   { name: 'Hex', footprint: 'Ø32', mark: '32', chip: '60' },
 ]
@@ -1344,13 +1343,17 @@ test.describe('explodes the parts that print apart', () => {
     test(`on the ${name} page`, async ({ page }) => {
       await visit(page, name)
       const explode = page.getByRole('button', { name: 'Explode' })
+      const cameraView = () => drawn(page).getAttribute('data-camera-view')
+      const assembled = await cameraView()
 
       await explode.click()
       await expect(explode).toHaveAttribute('aria-pressed', 'true')
       await expect(across(page)).toBeHidden()
+      await expect.poll(cameraView).not.toBe(assembled)
 
       await explode.click()
       await expect(across(page)).toBeVisible()
+      await expect.poll(cameraView).toBe(assembled)
     })
   }
 

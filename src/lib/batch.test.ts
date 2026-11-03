@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { automaticMagnetCount, footprintKey, OVAL_SIZES, presetFor } from '../core/geometry/presets'
+import { automaticMagnetCount, footprintKey, presetFor, standardSize } from '../core/geometry/presets'
 import { addToBatch, batchBaseConfig, batchFileName, batchName } from './batch'
 import { defaultWorkspace, synchronizeWorkspace, type BatchEntry } from './workspace'
 
@@ -16,11 +16,14 @@ describe('batch list', () => {
   })
 
   it('lists a different footprint separately', () => {
-    expect(addToBatch([round(32)], presetFor(OVAL_SIZES[0]))).toEqual([round(32), { shape: 'oval', width: 60, length: 35, quantity: 1 }])
+    expect(addToBatch([round(32)], presetFor(standardSize('oval', '60×35.5')))).toEqual([
+      round(32),
+      { shape: 'oval', width: 60, length: 35.5, quantity: 1 },
+    ])
   })
 
   it('names each size the way a single export is named, with its quantity', () => {
-    expect(batchFileName(presetFor(OVAL_SIZES[0]), 3)).toBe('base-oval-60x35mm-x3')
+    expect(batchFileName(presetFor(standardSize('oval', '60×35.5')), 3)).toBe('base-oval-60x35.5mm-x3')
   })
 
   it('names the batch by its total number of bases', () => {

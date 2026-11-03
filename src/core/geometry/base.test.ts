@@ -20,12 +20,13 @@ import {
   RIB_CHOICES,
   ROUND_SIZES,
   type SizePreset,
+  standardSize,
 } from './presets'
 import { EXPORT_CURVE_TOLERANCE, exportSegmentsFor, previewSegmentsFor } from './quality'
 import type { BaseConfig } from './types'
 
 const FONT_PATH = 'src/assets/fonts/oswald-700.woff'
-const ROUND_32 = ROUND_SIZES[2]
+const ROUND_32 = standardSize('round', '32')
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
 let font: Font
@@ -101,23 +102,23 @@ describe('buildBase', () => {
   })
 
   it('thickens the floor for bases 65mm and over without reducing the magnet recess', () => {
-    expect(presetFor(ROUND_SIZES[5])).toMatchObject({ height: 4, floorThickness: 1 })
-    expect(presetFor(ROUND_SIZES[6])).toMatchObject({ height: 4.5, floorThickness: 1.5 })
-    expect(presetFor(OVAL_SIZES[2])).toMatchObject({ height: 4, floorThickness: 1 })
-    expect(presetFor(OVAL_SIZES[3])).toMatchObject({ height: 4.5, floorThickness: 1.5 })
+    expect(presetFor(standardSize('round', '60'))).toMatchObject({ height: 4, floorThickness: 1 })
+    expect(presetFor({ label: '65', shape: 'round', width: 65, use: '' })).toMatchObject({ height: 4.5, floorThickness: 1.5 })
+    expect(presetFor(standardSize('oval', '90×52.5'))).toMatchObject({ height: 4, floorThickness: 1 })
+    expect(presetFor(standardSize('oval', '105×70'))).toMatchObject({ height: 4.5, floorThickness: 1.5 })
   })
 
   it('sits on the build plate', () => {
-    expect(bounds(build(preset(ROUND_SIZES[4])).mesh).min[2]).toBeCloseTo(0, 5)
+    expect(bounds(build(preset(standardSize('round', '50'))).mesh).min[2]).toBeCloseTo(0, 5)
   })
 
   it('tapers the bottom face inwards by the profile size', () => {
-    const config = { ...preset(ROUND_SIZES[3]), profile: 'taper' as const, profileSize: 1 }
+    const config = { ...preset(standardSize('round', '40')), profile: 'taper' as const, profileSize: 1 }
     expect(bottomReach(build(config).mesh)).toBeCloseTo(19, 1)
   })
 
   it('leaves the bottom face at full size when the edge is straight', () => {
-    const config = { ...preset(ROUND_SIZES[3]), profile: 'straight' as const }
+    const config = { ...preset(standardSize('round', '40')), profile: 'straight' as const }
     expect(bottomReach(build(config).mesh)).toBeCloseTo(20, 1)
   })
 
@@ -130,7 +131,7 @@ describe('buildBase', () => {
 
   it('drills a pocket at every magnet position, open at the top face so the magnet sits flush', () => {
     // Ribs are aimed at the bosses, so they are switched off to isolate the bore.
-    const base = preset(ROUND_SIZES[4])
+    const base = preset(standardSize('round', '50'))
     const config = { ...base, ribs: { ...base.ribs, count: 0 } }
     const pocketRadius = (config.magnets.diameter + config.magnets.clearance) / 2
     const { mesh } = build(config)
@@ -154,7 +155,7 @@ describe('buildBase', () => {
   })
 
   it.each([1, 1.5, 2, 3])('keeps a %dmm magnet flush with the top of its boss', (thickness) => {
-    const base = preset(ROUND_SIZES[4])
+    const base = preset(standardSize('round', '50'))
     const config = {
       ...base,
       ribs: { ...base.ribs, count: 0 },
@@ -169,7 +170,7 @@ describe('buildBase', () => {
   })
 
   it('adds depth clearance behind a flush magnet pocket', () => {
-    const base = preset(ROUND_SIZES[4])
+    const base = preset(standardSize('round', '50'))
     const config = { ...base, ribs: { ...base.ribs, count: 0 }, magnets: { ...base.magnets, depthClearance: 0.2 } }
     const ringRadius = (config.width / 2 - config.wallThickness) / 2
     const bore = (config.magnets.diameter + config.magnets.clearance) / 2
@@ -180,7 +181,7 @@ describe('buildBase', () => {
 
   it('leaves the centre unbored when magnets are turned off', () => {
     // Ribs and the label would both put geometry at the centre on their own.
-    const base = preset(ROUND_SIZES[3])
+    const base = preset(standardSize('round', '40'))
     const { mesh } = build({
       ...base,
       magnets: { ...base.magnets, count: 0 },
@@ -236,22 +237,25 @@ describe('buildBase', () => {
     expect(duplicateVertices(mesh)).toBe(0)
   })
 
-  it.for([RECT_SIZES[0], RECT_SIZES[1], ROUND_SIZES[0], ROUND_SIZES[1]])('still fits a size label on a cramped $label base', (size) => {
-    // The well of a small base is mostly boss and ribs, and the label used to be
-    // dropped silently when the first direction tried had no room.
-    const config = preset(size)
-    const plain = { ...config, label: { ...config.label, enabled: false } }
-    expect(build(config).stats.volume).toBeGreaterThan(build(plain).stats.volume)
-  })
+  it.for([standardSize('rect', '20×20'), standardSize('rect', '25×25'), standardSize('round', '25'), standardSize('round', '28.5')])(
+    'still fits a size label on a cramped $label base',
+    (size) => {
+      // The well of a small base is mostly boss and ribs, and the label used to be
+      // dropped silently when the first direction tried had no room.
+      const config = preset(size)
+      const plain = { ...config, label: { ...config.label, enabled: false } }
+      expect(build(config).stats.volume).toBeGreaterThan(build(plain).stats.volume)
+    },
+  )
 
   it('adds material for the embossed label', () => {
-    const config = preset(ROUND_SIZES[3])
+    const config = preset(standardSize('round', '40'))
     const plain = { ...config, label: { ...config.label, enabled: false } }
     expect(build(config).stats.volume).toBeGreaterThan(build(plain).stats.volume)
   })
 
   it.for([0, 2, 3, 4, 6])('builds a solid with %i ribs', (count) => {
-    const config = preset(ROUND_SIZES[4])
+    const config = preset(standardSize('round', '50'))
     expect(build({ ...config, ribs: { ...config.ribs, count } }).stats.solid).toBe(true)
   })
 
@@ -301,7 +305,7 @@ describe('buildBase', () => {
 
   it('keeps a hex inside the round it replaces', () => {
     // Width is across the corners, so it fits the same space as that diameter.
-    const { size } = bounds(build(preset(POLYGON_SIZES[1])).mesh)
+    const { size } = bounds(build(preset(standardSize('polygon', '32'))).mesh)
     expect(size[0]).toBeCloseTo(32, 1)
     expect(size[1]).toBeLessThanOrEqual(32.01)
   })
@@ -328,12 +332,12 @@ describe('buildBase', () => {
   })
 
   it.for([3, 5, 6, 8])('builds a solid %i-sided polygon base', (sides) => {
-    const config = { ...preset(ROUND_SIZES[4]), shape: 'polygon' as const, sides }
+    const config = { ...preset(standardSize('round', '50')), shape: 'polygon' as const, sides }
     expect(build(config).stats.solid).toBe(true)
   })
 
   it('spreads magnets along the long axis of an elongated base', () => {
-    const base = preset(OVAL_SIZES[0]) // 60x35
+    const base = preset(standardSize('oval', '60×35.5'))
     const config = { ...base, magnets: { ...base.magnets, count: 3 }, ribs: { ...base.ribs, count: 0 } }
     const pocketRadius = (config.magnets.diameter + config.magnets.clearance) / 2
     const { mesh } = build(config)
@@ -351,24 +355,30 @@ describe('buildBase', () => {
   })
 
   it('caps the automatic magnet count for a large oval', () => {
-    expect(presetFor(OVAL_SIZES[3], 2).magnets.count).toBe(2)
+    expect(presetFor(standardSize('oval', '105×70'), 2).magnets.count).toBe(2)
   })
 
-  it.for([ROUND_SIZES[1], ROUND_SIZES[4], ROUND_SIZES[9], OVAL_SIZES[0], OVAL_SIZES[2]])('welds cleanly on a $label base', (size) => {
+  it.for([
+    standardSize('round', '28.5'),
+    standardSize('round', '50'),
+    standardSize('round', '100'),
+    standardSize('oval', '60×35.5'),
+    standardSize('oval', '90×52.5'),
+  ])('welds cleanly on a $label base', (size) => {
     // Two vertices at one position mean surfaces meet tangentially, which pinches
     // into a non-manifold edge in any tool that merges vertices by position.
     expect(duplicateVertices(build(preset(size)).mesh)).toBe(0)
   })
 
   it('rejects walls that leave no room inside', () => {
-    expect(() => build({ ...preset(ROUND_SIZES[0]), wallThickness: 20 })).toThrow(/no room inside/)
+    expect(() => build({ ...preset(standardSize('round', '25')), wallThickness: 20 })).toThrow(/no room inside/)
   })
 
   it('rejects a wall thicker than a narrow polygon can carry', () => {
     // A triangle's inradius is far under its bounding box, so a wall the round
     // sizes shrug off offsets this one away to nothing. That used to leave the
     // well bounds infinite and hang the build allocating rib obstacles.
-    const config = { ...preset(POLYGON_SIZES[0]), sides: 3, width: 15, length: 15, wallThickness: 6 }
+    const config = { ...preset(standardSize('polygon', '25')), sides: 3, width: 15, length: 15, wallThickness: 6 }
     expect(() => build(config)).toThrow(/no room inside/)
   })
 
@@ -400,16 +410,16 @@ describe('labels', () => {
   })
 
   it('names a round base by its diameter', () => {
-    expect(defaultLabel(presetFor(ROUND_SIZES[1]))).toBe('28.5')
+    expect(defaultLabel(presetFor(standardSize('round', '28.5')))).toBe('28.5')
   })
 
   it('names an oval by both extents', () => {
-    expect(defaultLabel(presetFor(OVAL_SIZES[0]))).toBe('60x35')
+    expect(defaultLabel(presetFor(standardSize('oval', '60×35.5')))).toBe('60x35.5')
   })
 
   it('embosses the exact half millimetre size', () => {
     // 28.5 would read "29" if the label were rounded, so the glyph count differs.
-    const config = presetFor(ROUND_SIZES[1])
+    const config = presetFor(standardSize('round', '28.5'))
     const plain = { ...config, label: { ...config.label, enabled: false } }
     expect(build(config).stats.volume).toBeGreaterThan(build(plain).stats.volume)
   })
@@ -422,7 +432,7 @@ describe('labels', () => {
 
   it('fills where neighbouring glyphs overlap', () => {
     // Oswald's accents overhang their neighbours; an even-odd fill punches the overlap out.
-    const config = presetFor(ROUND_SIZES[4])
+    const config = presetFor(standardSize('round', '50'))
     const raised = (text: string) =>
       build({ ...config, label: { ...config.label, text } }).stats.volume -
       build({ ...config, label: { ...config.label, enabled: false } }).stats.volume
@@ -436,14 +446,14 @@ describe('labels', () => {
   })
 
   it('still fits custom text on a cramped base', () => {
-    const config = presetFor(RECT_SIZES[0])
+    const config = presetFor(standardSize('rect', '20×20'))
     const plain = { ...config, label: { ...config.label, enabled: false } }
     const custom = { ...config, label: { ...config.label, text: 'HQ' } }
     expect(build(custom).stats.volume).toBeGreaterThan(build(plain).stats.volume)
   })
 
   it('reports custom text too long to fit rather than dropping it', () => {
-    const config = presetFor(ROUND_SIZES[0])
+    const config = presetFor(standardSize('round', '25'))
     const custom = { ...config, label: { ...config.label, text: 'W'.repeat(LABEL_MAX_LENGTH) } }
     expect(() => build(custom)).toThrow(/does not fit/)
   })
@@ -545,7 +555,7 @@ describe('rib placement', () => {
   it('gussets every boss across custom row boundaries', () => {
     for (let short = 20; short <= 120; short += 5) {
       for (let long = short * 1.36; long <= 180; long += 5) {
-        const config = resized(presetFor(OVAL_SIZES[0]), long, short)
+        const config = resized(presetFor(standardSize('oval', '60×35.5')), long, short)
         const bossRadius = config.magnets.diameter / 2 + config.magnets.clearance / 2 + config.magnets.bossWall
         const magnets = magnetPositions(config.magnets.count, long / 2, short / 2, bossRadius)
         const spokes = ribAngles(config.ribs.count, magnets)
@@ -569,38 +579,38 @@ describe('scaling with the footprint', () => {
   })
 
   it('uses an end pair on a 90×52 oval without weakening larger rows', () => {
-    expect(presetFor(OVAL_SIZES[2]).magnets.count).toBe(2)
-    expect(presetFor(OVAL_SIZES[3]).magnets.count).toBe(4)
+    expect(presetFor(standardSize('oval', '90×52.5')).magnets.count).toBe(2)
+    expect(presetFor(standardSize('oval', '105×70')).magnets.count).toBe(4)
   })
 
   it('keeps automatic balanced rings on their supported counts', () => {
-    expect(presetFor(ROUND_SIZES[9])).toMatchObject({ magnets: { count: 5 }, ribs: { count: 5 } })
-    expect(presetFor(ROUND_SIZES[8])).toMatchObject({ magnets: { count: 4 }, ribs: { count: 4 } })
-    expect(presetFor(OVAL_SIZES[4])).toMatchObject({ magnets: { count: 4 }, ribs: { count: 4 } })
+    expect(presetFor(standardSize('round', '100'))).toMatchObject({ magnets: { count: 5 }, ribs: { count: 5 } })
+    expect(presetFor(standardSize('round', '90'))).toMatchObject({ magnets: { count: 4 }, ribs: { count: 4 } })
+    expect(presetFor(standardSize('oval', '120×92'))).toMatchObject({ magnets: { count: 4 }, ribs: { count: 4 } })
   })
 
   it('preserves odd rings for legacy geometry', () => {
-    expect(presetFor(ROUND_SIZES[9], 8, 1)).toMatchObject({ magnets: { count: 5, patternVersion: 1 }, ribs: { count: 5 } })
+    expect(presetFor(standardSize('round', '100'), 8, 1)).toMatchObject({ magnets: { count: 5, patternVersion: 1 }, ribs: { count: 5 } })
   })
 
   it('uses an end pair when a low-area custom base has a long lever arm', () => {
-    expect(resized(presetFor(OVAL_SIZES[0]), 80, 20).magnets.count).toBe(2)
-    expect(resized(presetFor(OVAL_SIZES[0]), 50, 25).magnets.count).toBe(1)
+    expect(resized(presetFor(standardSize('oval', '60×35.5')), 80, 20).magnets.count).toBe(2)
+    expect(resized(presetFor(standardSize('oval', '60×35.5')), 50, 25).magnets.count).toBe(1)
   })
 
   it('updates size-driven construction defaults when a custom footprint crosses 65mm', () => {
-    const large = resized(presetFor(ROUND_SIZES[2]), 65, 65)
+    const large = resized(presetFor(standardSize('round', '32')), 65, 65)
     expect(large).toMatchObject({ height: 4.5, floorThickness: 1.5 })
     expect(resized(large, 60, 60)).toMatchObject({ height: 4, floorThickness: 1 })
   })
 
   it('preserves manually changed construction values while resizing', () => {
-    const base = { ...presetFor(ROUND_SIZES[2]), height: 5, floorThickness: 1.3 }
+    const base = { ...presetFor(standardSize('round', '32')), height: 5, floorThickness: 1.3 }
     expect(resized(base, 65, 65)).toMatchObject({ height: 5, floorThickness: 1.3 })
   })
 
   it('uses the lower supported row count when transverse demand falls between counts', () => {
-    const base = presetFor(OVAL_SIZES[0])
+    const base = presetFor(standardSize('oval', '60×35.5'))
     expect(resized(base, 90, 70).magnets.count).toBe(3)
     expect(resized(base, 95, 70).magnets.count).toBe(4)
     expect(resized(base, 142, 105).magnets.count).toBe(4)
@@ -610,7 +620,7 @@ describe('scaling with the footprint', () => {
     const odd: string[] = []
     for (let short = 20; short <= 120; short += 5) {
       for (let long = short * 1.36; long <= 180; long += 5) {
-        const count = resized(presetFor(OVAL_SIZES[0]), long, short).magnets.count
+        const count = resized(presetFor(standardSize('oval', '60×35.5')), long, short).magnets.count
         if (count > 1 && count % 2 !== 0) odd.push(`${long}×${short}: ${count}`)
       }
     }
@@ -625,7 +635,7 @@ describe('scaling with the footprint', () => {
   })
 
   it('never reduces the magnet count as an elongated row grows', () => {
-    const base = presetFor(OVAL_SIZES[0])
+    const base = presetFor(standardSize('oval', '60×35.5'))
     const weaker: string[] = []
     for (let short = 20; short <= 130; short += 5) {
       let previous = 0
@@ -650,7 +660,12 @@ describe('scaling with the footprint', () => {
     const configs = [...ROUND_SIZES, ...OVAL_SIZES, ...PILL_SIZES, ...RECT_SIZES, ...POLYGON_SIZES].map((size) => presetFor(size))
     const elongatedShapes: BaseConfig['shape'][] = ['oval', 'pill', 'rect']
     for (const shape of elongatedShapes) {
-      const source = shape === 'oval' ? OVAL_SIZES[0] : shape === 'pill' ? PILL_SIZES[0] : RECT_SIZES[0]
+      const source =
+        shape === 'oval'
+          ? standardSize('oval', '60×35.5')
+          : shape === 'pill'
+            ? standardSize('pill', '60×35.5')
+            : standardSize('rect', '20×20')
       for (const short of [20, 35, 45, 46, 60, 70, 90]) {
         for (const long of [62, 95, 101, 102, 132, 180]) {
           if (long >= short) configs.push(resized(presetFor(source), long, short))
@@ -658,7 +673,8 @@ describe('scaling with the footprint', () => {
       }
     }
     for (const sides of [3, 4, 5, 6, 8, 12]) {
-      for (const width of [25, 40, 50, 60, 100, 160]) configs.push({ ...presetFor(POLYGON_SIZES[0]), sides, width, length: width })
+      for (const width of [25, 40, 50, 60, 100, 160])
+        configs.push({ ...presetFor(standardSize('polygon', '25')), sides, width, length: width })
     }
 
     for (const config of configs) {
