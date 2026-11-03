@@ -4,7 +4,7 @@ import { buildBase } from './base'
 import { loadManifold } from './manifold'
 import { OVAL_SIZES, POLYGON_SIZES, presetFor, RECT_SIZES, resized, ROUND_SIZES, type SizePreset } from './presets'
 import { exportSegmentsFor } from './quality'
-import { DEFAULT_TEXTURE, maxTextureDepth, TEXTURE_BORDER, textureCells, withPattern } from './texture'
+import { DEFAULT_TEXTURE, isRegular, maxTextureDepth, textureCells, withPattern } from './texture'
 import type { BaseConfig, TexturePattern } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
@@ -16,14 +16,15 @@ beforeAll(async () => {
 const ROUND_32 = ROUND_SIZES[2]
 const SIZES = [ROUND_SIZES[0], ROUND_32, ROUND_SIZES[9], OVAL_SIZES[0], RECT_SIZES[3], POLYGON_SIZES[1]]
 
-const PATTERNS = ['flagstone', 'tile', 'plank', 'plate'] as const
+const PATTERNS = ['flagstone', 'cobblestone', 'hex', 'tile', 'plank', 'plate', 'herringbone', 'diamond'] as const
+const IRREGULAR = PATTERNS.filter((pattern) => !isRegular(pattern))
 const CASES = PATTERNS.flatMap((pattern) => SIZES.map((size) => ({ pattern, size, label: `${pattern} ${size.label}` })))
 
 function textured(size: SizePreset, exported = false, pattern: TexturePattern = 'flagstone'): BaseConfig {
   const config = presetFor(size)
   return {
     ...config,
-    texture: { pattern, scale: DEFAULT_TEXTURE[pattern].scale, depth: 0.5 },
+    texture: { pattern, seed: 1, ...DEFAULT_TEXTURE[pattern], depth: 0.5 },
     segments: exported ? exportSegmentsFor(Math.max(config.width, config.length)) : config.segments,
   }
 }
@@ -43,9 +44,8 @@ function duplicateVertices(mesh: Mesh) {
 
 /**
  * Every downward face flatter than 45° above the build plate, as a flat at its
- * height or a slope. Float32 vertices tip a 45° face a little either way, and
- * slivers far under a square millimetre by a fraction of a degree, so those are
- * left out.
+ * height or a slope. Float32 vertices tip a 45° face by up to about a tenth of a
+ * degree, so the check allows that and ignores slivers under 0.001mm².
  */
 function overhangs(mesh: Mesh): Set<string> {
   const { numProp, vertProperties: v, triVerts } = mesh
@@ -58,7 +58,7 @@ function overhangs(mesh: Mesh): Set<string> {
     const area = Math.hypot(...normal) / 2
     const nz = normal[2] / (2 * area)
     const z = Math.max(v[a + 2], v[b + 2], v[c + 2])
-    if (area > 1e-3 && nz < -Math.SQRT1_2 - 1e-3 && z > 1e-6) found.add(nz < -0.999 ? `flat at ${z.toFixed(2)}` : 'slope')
+    if (area > 1e-3 && nz < -Math.SQRT1_2 - 3e-3 && z > 1e-6) found.add(nz < -0.999 ? `flat at ${z.toFixed(2)}` : 'slope')
   }
   return found
 }
@@ -73,7 +73,7 @@ function jointReach(mesh: Mesh, depth: number) {
   return reach
 }
 
-describe('flagstone texture', () => {
+describe('joint textures', () => {
   it.for(PATTERNS)('cuts %s joints into the plate face', (pattern) => {
     const config = textured(ROUND_32, false, pattern)
     const plain = build({ ...config, texture: { ...config.texture, pattern: 'none' } })
@@ -90,10 +90,10 @@ describe('flagstone texture', () => {
     expect([...overhangs(build(textured(size, true, pattern)).mesh)]).toEqual(['flat at 0.49'])
   })
 
-  it('stops the joints short of the edge profile', () => {
+  it('runs the joints out through the edge', () => {
     const config = textured(ROUND_32)
     const plateRadius = config.width / 2 - config.profileSize
-    expect(jointReach(build(config).mesh, config.texture.depth)).toBeLessThanOrEqual(plateRadius - TEXTURE_BORDER + 1e-3)
+    expect(jointReach(build(config).mesh, config.texture.depth)).toBeGreaterThan(plateRadius)
   })
 
   it.for(CASES)('welds cleanly on a $label base', ({ pattern, size }) => {
@@ -101,7 +101,7 @@ describe('flagstone texture', () => {
   })
 
   it('runs planks along the longer axis of the face', () => {
-    const across = textureCells('plank', 5, 10, 30).filter((cell) => {
+    const across = textureCells({ pattern: 'plank', scale: 5, seed: 1, irregularity: 50 }, 10, 30).filter((cell) => {
       const xs = cell.map(([x]) => x)
       const ys = cell.map(([, y]) => y)
       return Math.max(...xs) - Math.min(...xs) >= Math.max(...ys) - Math.min(...ys)
@@ -118,16 +118,34 @@ describe('flagstone texture', () => {
 
   it('makes the joints shallower when a resize thins the top', () => {
     const large = presetFor(ROUND_SIZES[6])
-    const config = { ...large, texture: { pattern: 'flagstone' as const, scale: 10, depth: 1 } }
+    const config = { ...large, texture: { ...textured(ROUND_32).texture, depth: 1 } }
     expect(resized(config, 32, 32).texture.depth).toBeCloseTo(maxTextureDepth({ floorThickness: 1, texture: config.texture }))
   })
 
+  it.for(IRREGULAR)('lays %s out differently for another variation', (pattern) => {
+    const config = textured(ROUND_32, false, pattern)
+    const other = { ...config, texture: { ...config.texture, seed: 2, irregularity: 100 } }
+    expect(build(other).stats.volume).not.toBeCloseTo(
+      build({ ...config, texture: { ...config.texture, irregularity: 100 } }).stats.volume,
+      3,
+    )
+  })
+
+  it('lays a perfect honeycomb with no irregularity', () => {
+    const area = (cell: [number, number][]) =>
+      cell.reduce((total, [x, y], k) => total + x * cell[(k + 1) % cell.length][1] - cell[(k + 1) % cell.length][0] * y, 0) / 2
+    const inner = textureCells({ pattern: 'hex', scale: 6, seed: 1, irregularity: 0 }, 20, 20).filter((cell) =>
+      cell.every(([x, y]) => Math.hypot(x, y) < 12),
+    )
+    expect(new Set(inner.map((cell) => area(cell).toFixed(6)))).toEqual(new Set([((Math.sqrt(3) / 2) * 36).toFixed(6)]))
+  })
+
   it("takes the new pattern's size when the size was left at its default", () => {
-    const flagstone = { pattern: 'flagstone' as const, scale: DEFAULT_TEXTURE.flagstone.scale, depth: 0.5 }
+    const flagstone = textured(ROUND_32).texture
     expect(withPattern(flagstone, 'plank').scale).toBe(DEFAULT_TEXTURE.plank.scale)
   })
 
   it('keeps a size the user set when the pattern changes', () => {
-    expect(withPattern({ pattern: 'flagstone', scale: 12, depth: 0.5 }, 'plank').scale).toBe(12)
+    expect(withPattern({ ...textured(ROUND_32).texture, scale: 12 }, 'plank').scale).toBe(12)
   })
 })

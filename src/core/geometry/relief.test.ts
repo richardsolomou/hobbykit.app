@@ -19,7 +19,7 @@ beforeAll(async () => {
 })
 
 const ROUND_32 = ROUND_SIZES[2]
-const PATTERNS = ['rock', 'earth', 'rubble'] as const
+const PATTERNS = ['rock', 'earth', 'rubble', 'sand', 'cracked', 'snow', 'roots'] as const
 const SIZES = [ROUND_32, OVAL_SIZES[0], RECT_SIZES[3], POLYGON_SIZES[1]]
 const CASES = PATTERNS.flatMap((pattern) => SIZES.map((size) => ({ pattern, size, label: `${pattern} ${size.label}` })))
 
@@ -27,7 +27,7 @@ function relief(size: SizePreset, pattern: (typeof PATTERNS)[number] = 'rock', e
   const config = presetFor(size)
   return {
     ...config,
-    texture: { pattern, ...DEFAULT_TEXTURE[pattern] },
+    texture: { pattern, seed: 1, ...DEFAULT_TEXTURE[pattern] },
     segments: exported ? exportSegmentsFor(Math.max(config.width, config.length)) : config.segments,
   }
 }
@@ -64,7 +64,7 @@ function overhangs(mesh: Mesh): string[] {
     const area = Math.hypot(...normal) / 2
     const nz = normal[2] / (2 * area)
     const z = Math.max(v[a + 2], v[b + 2], v[c + 2])
-    if (area > 1e-3 && nz < -Math.SQRT1_2 - 1e-3 && z > 1e-6) found.add(nz < -0.999 ? `flat at ${z.toFixed(2)}` : 'slope')
+    if (area > 1e-3 && nz < -Math.SQRT1_2 - 3e-3 && z > 1e-6) found.add(nz < -0.999 ? `flat at ${z.toFixed(2)}` : 'slope')
   }
   return [...found].sort()
 }
@@ -101,6 +101,17 @@ describe('relief textures', () => {
     expect(reach).toBeCloseTo(16, 2)
   })
 
+  it('runs the relief out to the lip', () => {
+    const config = relief(ROUND_32)
+    const { mesh } = build(config)
+    let reach = 0
+    for (let i = 0; i < mesh.vertProperties.length; i += mesh.numProp) {
+      if (mesh.vertProperties[i + 2] > config.height + 0.05)
+        reach = Math.max(reach, Math.hypot(mesh.vertProperties[i], mesh.vertProperties[i + 1]))
+    }
+    expect(reach).toBeGreaterThan(config.width / 2 - config.profileSize - 0.05)
+  })
+
   it('opens the magnet pocket onto the plate face, so the magnet sits flush with the tray', () => {
     const config = relief(ROUND_32)
     expect(pocketCeiling(build(config).mesh, config)).toBeCloseTo(pocketDepth(config), 4)
@@ -125,6 +136,18 @@ describe('relief textures', () => {
   it('rises higher than a thin top would allow a joint to cut', () => {
     const config = relief(ROUND_32)
     expect(() => build({ ...config, floorThickness: 0.4, texture: { ...config.texture, depth: 3 } })).not.toThrow()
+  })
+
+  it.for(PATTERNS)('raises %s differently for another variation', (pattern) => {
+    const config = relief(ROUND_32, pattern)
+    const other = { ...config, texture: { ...config.texture, seed: 2 } }
+    expect(build(other).stats.volume).not.toBeCloseTo(build(config).stats.volume, 3)
+  })
+
+  it.for(PATTERNS)('roughens %s with irregularity', (pattern) => {
+    const config = relief(ROUND_32, pattern)
+    const rough = { ...config, texture: { ...config.texture, irregularity: 100 } }
+    expect(build(rough).stats.volume).not.toBeCloseTo(build(config).stats.volume, 3)
   })
 
   it('rejects magnet pockets that leave too little base above them', () => {

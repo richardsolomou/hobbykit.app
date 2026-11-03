@@ -1,4 +1,4 @@
-import { Box, Download, Plus, Trash2 } from 'lucide-react'
+import { Box, Download, Plus, Shuffle, Trash2 } from 'lucide-react'
 import { Choice, Dimension, Section, SizeSelect, ToggleSetting } from '@/components/controls'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supportsFivePocketCross } from '@/core/geometry/base'
 import { labelText } from '@/core/geometry/label'
-import { DEFAULT_TEXTURE, isRelief, withPattern } from '@/core/geometry/texture'
+import { DEFAULT_TEXTURE, isRegular, isRelief, MAX_SEED, withPattern } from '@/core/geometry/texture'
 import { defaultLabel, footprint, isElongated, trimNumber } from '@/core/geometry/outline'
 import {
   defaultBaseHeight,
@@ -47,26 +47,25 @@ const SHAPES: { value: ShapeKind; label: string }[] = [
   { value: 'polygon', label: 'Hex' },
 ]
 
-const TEXTURES: { value: TexturePattern; label: string }[] = [
-  { value: 'none', label: 'None' },
-  { value: 'flagstone', label: 'Flagstone' },
-  { value: 'tile', label: 'Tile' },
-  { value: 'plank', label: 'Plank' },
-  { value: 'plate', label: 'Plate' },
-  { value: 'rock', label: 'Rock' },
-  { value: 'earth', label: 'Earth' },
-  { value: 'rubble', label: 'Rubble' },
+/** `size` names what the size control measures for each pattern. */
+const TEXTURES: { value: TexturePattern; label: string; size: string }[] = [
+  { value: 'none', label: 'None', size: '' },
+  { value: 'flagstone', label: 'Flagstone', size: 'Stone size' },
+  { value: 'cobblestone', label: 'Cobblestone', size: 'Cobble size' },
+  { value: 'hex', label: 'Hex tile', size: 'Tile size' },
+  { value: 'tile', label: 'Square tile', size: 'Tile size' },
+  { value: 'plank', label: 'Plank', size: 'Plank width' },
+  { value: 'plate', label: 'Plate', size: 'Plate depth' },
+  { value: 'herringbone', label: 'Herringbone', size: 'Brick width' },
+  { value: 'diamond', label: 'Diamond plate', size: 'Diamond width' },
+  { value: 'rock', label: 'Rock', size: 'Rock size' },
+  { value: 'earth', label: 'Earth', size: 'Feature size' },
+  { value: 'rubble', label: 'Rubble', size: 'Stone size' },
+  { value: 'sand', label: 'Sand', size: 'Ripple spacing' },
+  { value: 'cracked', label: 'Cracked earth', size: 'Plate size' },
+  { value: 'snow', label: 'Snow', size: 'Drift size' },
+  { value: 'roots', label: 'Roots', size: 'Feature size' },
 ]
-const TEXTURE_SCALE_LABELS: Record<TexturePattern, string> = {
-  none: '',
-  flagstone: 'Stone size',
-  tile: 'Tile size',
-  plank: 'Plank width',
-  plate: 'Plate depth',
-  rock: 'Rock size',
-  earth: 'Feature size',
-  rubble: 'Stone size',
-}
 const MIN_TEXTURE_DEPTH = 0.2
 
 const CUSTOM_HOLDER_SIZE = 'custom'
@@ -363,9 +362,9 @@ export function BasePanel({
             ) : (
               <>
                 <Dimension
-                  label={TEXTURE_SCALE_LABELS[config.texture.pattern]}
+                  label={TEXTURES.find((texture) => texture.value === config.texture.pattern)!.size}
                   value={config.texture.scale}
-                  min={4}
+                  min={3}
                   max={30}
                   step={0.5}
                   defaultValue={DEFAULT_TEXTURE[config.texture.pattern].scale}
@@ -380,6 +379,38 @@ export function BasePanel({
                   defaultValue={Math.min(DEFAULT_TEXTURE[config.texture.pattern].depth, safeTextureDepth(config))}
                   onChange={(depth) => patch({ texture: { ...config.texture, depth } })}
                 />
+                {!isRegular(config.texture.pattern) && (
+                  <>
+                    <Dimension
+                      label="Irregularity"
+                      value={config.texture.irregularity}
+                      min={0}
+                      max={100}
+                      step={5}
+                      unit="%"
+                      defaultValue={DEFAULT_TEXTURE[config.texture.pattern].irregularity}
+                      onChange={(irregularity) => patch({ texture: { ...config.texture, irregularity } })}
+                    />
+                    <Dimension
+                      label="Variation"
+                      value={config.texture.seed}
+                      min={1}
+                      max={MAX_SEED}
+                      step={1}
+                      unit=""
+                      defaultValue={BASE_DEFAULTS.texture.seed}
+                      action={{
+                        label: 'Shuffle variation',
+                        icon: <Shuffle />,
+                        onClick: () => {
+                          posthog.capture('base_texture_shuffled', { pattern: config.texture.pattern })
+                          patch({ texture: { ...config.texture, seed: 1 + Math.floor(Math.random() * MAX_SEED) } })
+                        },
+                      }}
+                      onChange={(seed) => patch({ texture: { ...config.texture, seed } })}
+                    />
+                  </>
+                )}
                 {faceUp && (
                   <FieldDescription>
                     Prints model face up as a solid base. Magnet pockets open underneath, and the label is engraved there.

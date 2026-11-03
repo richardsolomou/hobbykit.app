@@ -229,7 +229,7 @@ export function presetFor(preset: SizePreset, maxMagnets = 8, patternVersion: Ma
     // Low ribs stiffen the thin floor the recess leaves, without filling the recess.
     ribs: { count: ribCountFor(width, length, magnetCount), thickness: 1.6, height: 1.2 },
     label: { enabled: true, height: labelHeight(width, length), emboss: 0.6 },
-    texture: { pattern: 'none', ...DEFAULT_TEXTURE.none },
+    texture: { pattern: 'none', seed: 1, ...DEFAULT_TEXTURE.none },
     segments: previewSegmentsFor(Math.max(width, length)),
   }
 }

@@ -12,9 +12,11 @@ The base's size is embossed inside, so a loose print still tells you what it is:
 
 ## Texture
 
-Cut flagstones, square tiles, staggered planks, or running-bond plates into the face the model stands on. Planks and plates run along the base's longer side. Set the stone, tile, plank, or plate size, which stays the same across every size in a batch, and how deep the joints go. That face is printed on the build plate, so every joint is a V whose sides stand at 45° and the stones print without supports. A plain band runs round the edge, and the joint depth is capped to leave material above the recess.
+Cut flagstones, cobblestones, hex tiles, square tiles, staggered planks, running-bond plates, herringbone bricks, or diamond plate into the face the model stands on. Planks, plates, and diamonds run along the base's longer side. Set the size of each stone, tile, or plank, which stays the same across every size in a batch, and how deep the joints go. That face is printed on the build plate, so every joint is a V whose sides stand at 45° and the stones print without supports. Joints run out through the edge, and the depth is capped to leave material above the recess. The preview shows these bases model face up so you can see the pattern, but they still print face down.
 
-Rock, earth, and rubble raise an uneven surface from the model face instead, up to 4mm high. A surface like that would need supports if it faced the build plate, so these bases print model face up and solid, with the magnet pockets opening on the underside and the size label engraved beside them. A solid base uses more filament than a hollow one, though the slicer's infill keeps it well under the solid weight shown.
+Rock, earth, rubble, sand, cracked earth, snow, and roots raise an uneven surface from the model face instead, up to 4mm high and out to the lip. A surface like that would need supports if it faced the build plate, so these bases print model face up and solid, with the magnet pockets opening on the underside and the size label engraved beside them. A solid base uses more filament than a hollow one, though the slicer's infill keeps it well under the solid weight shown. Relief prints in layers, so a finer or adaptive layer height in your slicer keeps its gentler slopes from stepping.
+
+Every pattern except herringbone and diamond plate has a Variation, which rerolls its layout (the shuffle button picks one at random), and an Irregularity, which runs from tidy at 0% to wild at 100%.
 
 ## Magnets
 

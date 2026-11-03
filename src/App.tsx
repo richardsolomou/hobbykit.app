@@ -27,6 +27,7 @@ import { Viewer } from '@/components/Viewer'
 import { holderLayout, holderName, holderPlan, maxHolderMagnetThickness } from '@/core/geometry/holder'
 import { baseName, footprint, isElongated } from '@/core/geometry/outline'
 import { footprintKey, SIZES_BY_SHAPE } from '@/core/geometry/presets'
+import { isRelief } from '@/core/geometry/texture'
 import { movementTrayHeight, movementTrayLayout, movementTrayName } from '@/core/geometry/movementTray'
 import { maxTokenEdgeSize, tokenFootprint, tokenHeight, tokenName } from '@/core/geometry/token'
 import {
@@ -582,6 +583,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
             round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
             fitToPart={model !== 'base'}
             leaders={!(explodable && exploded)}
+            flipped={model === 'base' && config.texture.pattern !== 'none' && !isRelief(config.texture.pattern)}
           />
           {explodable && (
             <Toggle

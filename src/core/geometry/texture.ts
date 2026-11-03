@@ -1,14 +1,8 @@
-import type { CrossSection, Manifold, ManifoldToplevel, Vec2, Vec3 } from 'manifold-3d'
+import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d'
 import type { BaseConfig, TexturePattern, TextureSpec } from './types'
 
 /** Material kept between a joint's apex and the well above it. */
 export const MIN_TEXTURE_FLOOR = 0.4
-/** Plain band left round the face, outside the joint that runs round it. */
-export const TEXTURE_BORDER = 1
-/** How far each flagstone's centre may wander from its grid cell, as a fraction of the cell. */
-const JITTER = 0.4
-/** Planks run between these multiples of their width. */
-const PLANK_LENGTHS = [3, 6]
 /** The cut starts this far below the plate face, so it leaves no skin on it. */
 const OVERCUT = 0.5
 /**
@@ -16,40 +10,57 @@ const OVERCUT = 0.5
  * meet along a shared edge, which welds into a non-manifold edge.
  */
 const APEX = 0.01
+/** Offsets each variation's hash far past the channels any pattern uses. */
+const SEED_STRIDE = 97
+export const MAX_SEED = 9999
 
 /** Highest relief offered; the base's own height already gives the pockets their roof. */
 export const MAX_RELIEF = 4
 
-/** Every pattern a saved base may name. */
-export const TEXTURE_PATTERNS: readonly TexturePattern[] = ['none', 'flagstone', 'tile', 'plank', 'plate', 'rock', 'earth', 'rubble']
+export type JointPattern = Extract<
+  TexturePattern,
+  'flagstone' | 'cobblestone' | 'hex' | 'tile' | 'plank' | 'plate' | 'herringbone' | 'diamond'
+>
+export type ReliefPattern = Extract<TexturePattern, 'rock' | 'earth' | 'rubble' | 'sand' | 'cracked' | 'snow' | 'roots'>
 
-export type ReliefPattern = Extract<TexturePattern, 'rock' | 'earth' | 'rubble'>
+const JOINTS: readonly JointPattern[] = ['flagstone', 'cobblestone', 'hex', 'tile', 'plank', 'plate', 'herringbone', 'diamond']
+const RELIEFS: readonly ReliefPattern[] = ['rock', 'earth', 'rubble', 'sand', 'cracked', 'snow', 'roots']
+
+/** Every pattern a saved base may name. */
+export const TEXTURE_PATTERNS: readonly TexturePattern[] = ['none', ...JOINTS, ...RELIEFS]
 
 /** Patterns that rise from the model face, so the base prints face up instead of face down. */
-export const isRelief = (pattern: TexturePattern): pattern is ReliefPattern =>
-  pattern === 'rock' || pattern === 'earth' || pattern === 'rubble'
+export const isRelief = (pattern: TexturePattern): pattern is ReliefPattern => (RELIEFS as readonly string[]).includes(pattern)
 
-/** Sizes that read as the pattern on a 32mm base; a plank as wide as a flagstone reads as a plate. */
-export const DEFAULT_TEXTURE: Record<TexturePattern, Omit<TextureSpec, 'pattern'>> = {
-  none: { scale: 10, depth: 0.5 },
-  flagstone: { scale: 10, depth: 0.5 },
-  tile: { scale: 8, depth: 0.5 },
-  plank: { scale: 5, depth: 0.5 },
-  plate: { scale: 8, depth: 0.5 },
-  rock: { scale: 8, depth: 1.5 },
-  earth: { scale: 8, depth: 1.5 },
-  rubble: { scale: 4, depth: 1.5 },
+/** Regular patterns lay out the same whatever the variation and irregularity. */
+export const isRegular = (pattern: TexturePattern) => pattern === 'none' || pattern === 'herringbone' || pattern === 'diamond'
+
+/** Values that read as the pattern on a 32mm base; a plank as wide as a flagstone reads as a plate. */
+export const DEFAULT_TEXTURE: Record<TexturePattern, Omit<TextureSpec, 'pattern' | 'seed'>> = {
+  none: { scale: 10, depth: 0.5, irregularity: 50 },
+  flagstone: { scale: 10, depth: 0.5, irregularity: 50 },
+  cobblestone: { scale: 5, depth: 0.5, irregularity: 50 },
+  hex: { scale: 6, depth: 0.5, irregularity: 0 },
+  tile: { scale: 8, depth: 0.5, irregularity: 0 },
+  plank: { scale: 5, depth: 0.5, irregularity: 50 },
+  plate: { scale: 8, depth: 0.5, irregularity: 0 },
+  herringbone: { scale: 4, depth: 0.5, irregularity: 0 },
+  diamond: { scale: 4, depth: 0.5, irregularity: 0 },
+  rock: { scale: 8, depth: 2.5, irregularity: 50 },
+  earth: { scale: 8, depth: 2, irregularity: 50 },
+  rubble: { scale: 5, depth: 2.5, irregularity: 50 },
+  sand: { scale: 5, depth: 1, irregularity: 50 },
+  cracked: { scale: 7, depth: 1.2, irregularity: 50 },
+  snow: { scale: 8, depth: 2, irregularity: 50 },
+  roots: { scale: 10, depth: 2, irregularity: 50 },
 }
 
 /** Switches pattern, carrying any value the user set and taking the new defaults for the rest. */
 export function withPattern(texture: TextureSpec, pattern: TexturePattern): TextureSpec {
   const before = DEFAULT_TEXTURE[texture.pattern]
   const after = DEFAULT_TEXTURE[pattern]
-  return {
-    pattern,
-    scale: texture.scale === before.scale ? after.scale : texture.scale,
-    depth: texture.depth === before.depth ? after.depth : texture.depth,
-  }
+  const carried = (key: keyof typeof after) => (texture[key] === before[key] ? after[key] : texture[key])
+  return { pattern, seed: texture.seed, scale: carried('scale'), depth: carried('depth'), irregularity: carried('irregularity') }
 }
 
 /** Joints must stop short of the recess; relief rises from a solid body and has no such limit. */
@@ -61,6 +72,13 @@ export function noise(i: number, j: number, k: number): number {
   const s = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453
   return s - Math.floor(s)
 }
+
+/** The hash for one variation: every seed draws an unrelated pattern. */
+export type Hash = (i: number, j: number, k: number) => number
+export const seeded =
+  (seed: number): Hash =>
+  (i, j, k) =>
+    noise(i, j, k + SEED_STRIDE * seed)
 
 /** Clips a convex polygon to the side of the line through `[mx, my]` that `[nx, ny]` points away from. */
 function clip(cell: Vec2[], [mx, my]: Vec2, [nx, ny]: Vec2): Vec2[] {
@@ -81,29 +99,20 @@ function clip(cell: Vec2[], [mx, my]: Vec2, [nx, ny]: Vec2): Vec2[] {
 }
 
 /**
- * Irregular flagstones covering a rectangle centred on the origin: the Voronoi
- * cells of a jittered grid of stone centres.
+ * Voronoi cells of a lattice of stone centres. `site` may move each centre by
+ * under half a cell, which keeps every Voronoi neighbour within two indices.
  */
-function flagstones(scale: number, halfWidth: number, halfLength: number): Vec2[][] {
-  const columns = Math.ceil(halfWidth / scale) + 1
-  const rows = Math.ceil(halfLength / scale) + 1
-  const site = (i: number, j: number): Vec2 => [
-    (i + JITTER * (2 * noise(i, j, 0) - 1)) * scale,
-    (j + JITTER * (2 * noise(i, j, 1) - 1)) * scale,
-  ]
-
+function voronoi(site: (i: number, j: number) => Vec2, columns: number, rows: number, reach: number): Vec2[][] {
   const cells: Vec2[][] = []
   for (let i = -columns; i <= columns; i++) {
     for (let j = -rows; j <= rows; j++) {
       const own = site(i, j)
-      const reach = 3 * scale
       let cell: Vec2[] = [
         [own[0] - reach, own[1] - reach],
         [own[0] + reach, own[1] - reach],
         [own[0] + reach, own[1] + reach],
         [own[0] - reach, own[1] + reach],
       ]
-      // With the jitter under half a cell, every Voronoi neighbour lies within two cells.
       for (let di = -2; di <= 2; di++) {
         for (let dj = -2; dj <= 2; dj++) {
           if (di === 0 && dj === 0) continue
@@ -115,6 +124,40 @@ function flagstones(scale: number, halfWidth: number, halfLength: number): Vec2[
     }
   }
   return cells
+}
+
+/** A square grid of stone centres, each moved up to `jitter` cells either way. */
+function squareSites(scale: number, jitter: number, hash: Hash) {
+  return (i: number, j: number): Vec2 => [(i + jitter * (2 * hash(i, j, 0) - 1)) * scale, (j + jitter * (2 * hash(i, j, 1) - 1)) * scale]
+}
+
+/** A convex polygon with every corner rounded to `radius`, or nothing when it is too small to round. */
+function rounded(cell: Vec2[], radius: number): Vec2[] | undefined {
+  let inset = cell
+  for (let k = 0; k < cell.length && inset.length > 2; k++) {
+    const [p, q] = [cell[k], cell[(k + 1) % cell.length]]
+    const length = Math.hypot(q[0] - p[0], q[1] - p[1])
+    if (length < 1e-9) continue
+    const inward: Vec2 = [-(q[1] - p[1]) / length, (q[0] - p[0]) / length]
+    inset = clip(inset, [p[0] + radius * inward[0], p[1] + radius * inward[1]], [-inward[0], -inward[1]])
+  }
+  if (inset.length < 3) return undefined
+  const normal = (k: number) => {
+    const [p, q] = [inset[k], inset[(k + 1) % inset.length]]
+    return Math.atan2(-(q[0] - p[0]), q[1] - p[1])
+  }
+  const outline: Vec2[] = []
+  for (let k = 0; k < inset.length; k++) {
+    const from = normal((k + inset.length - 1) % inset.length)
+    let to = normal(k)
+    while (to < from) to += 2 * Math.PI
+    const steps = Math.max(1, Math.ceil((to - from) / (Math.PI / 4)))
+    for (let t = 0; t <= steps; t++) {
+      const a = from + ((to - from) * t) / steps
+      outline.push([inset[k][0] + radius * Math.cos(a), inset[k][1] + radius * Math.sin(a)])
+    }
+  }
+  return outline
 }
 
 /**
@@ -150,84 +193,147 @@ function courses(
 /** The first joint of a row of `length` pieces centred on the origin, shifted by `shift` pieces. */
 const alignedJoint = (halfLong: number, length: number, shift: number) => (shift - 0.5 - Math.ceil(halfLong / length + 0.5)) * length
 
+/**
+ * Bricks twice as long as `scale` in a herringbone covering a circle of `reach`.
+ * Each staircase of a flat brick and an upright one repeats along (1, 1), and the
+ * staircases repeat along (2, -2); the result is turned 45° so the zigzag runs along X.
+ */
+function herringbone(scale: number, reach: number): Vec2[][] {
+  const span = Math.ceil(reach / scale) + 4
+  const box = (x0: number, y0: number, x1: number, y1: number): Vec2[] => [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ]
+  const cells: Vec2[][] = []
+  for (let n = -span; n <= span; n++) {
+    for (let k = -2 * span; k <= 2 * span; k++) {
+      const [x, y] = [k + 2 * n, k - 2 * n]
+      if (Math.abs(x) > 2 * span || Math.abs(y) > 2 * span) continue
+      cells.push(box(x, y, x + 2, y + 1), box(x + 2, y - 1, x + 3, y + 1))
+    }
+  }
+  const turn = Math.SQRT1_2 * scale
+  return cells.map((cell) => cell.map(([u, v]): Vec2 => [(u - v) * turn, (u + v) * turn]))
+}
+
+/** Rhombi twice as long as they are wide, so their joints cross like the grooves of tread plate. */
+function diamonds(scale: number, halfLong: number, halfShort: number): Vec2[][] {
+  const [long, wide] = [2 * scale, scale]
+  const columns = Math.ceil(halfLong / long) + 1
+  const rows = Math.ceil((2 * halfShort) / wide) + 2
+  const cells: Vec2[][] = []
+  for (let j = -rows; j <= rows; j++) {
+    for (let i = -columns; i <= columns; i++) {
+      const [cx, cy] = [(i + (Math.abs(j) % 2) / 2) * long, (j * wide) / 2]
+      cells.push([
+        [cx, cy - wide / 2],
+        [cx + long / 2, cy],
+        [cx, cy + wide / 2],
+        [cx - long / 2, cy],
+      ])
+    }
+  }
+  return cells
+}
+
 /** Every convex, anticlockwise cell of a pattern covering a rectangle centred on the origin. */
 export function textureCells(
-  pattern: 'flagstone' | 'tile' | 'plank' | 'plate',
-  scale: number,
+  texture: Omit<TextureSpec, 'depth'> & { pattern: JointPattern },
   halfWidth: number,
   halfLength: number,
 ): Vec2[][] {
-  if (pattern === 'flagstone') return flagstones(scale, halfWidth, halfLength)
+  const { pattern, scale } = texture
+  const irregularity = texture.irregularity / 100
+  const hash = seeded(texture.seed)
+  const columns = Math.ceil(halfWidth / scale) + 2
+  const rows = Math.ceil(halfLength / scale) + 2
 
-  // Planks and plates run along the longer axis; a quarter turn keeps every cell anticlockwise.
+  if (pattern === 'flagstone') return voronoi(squareSites(scale, 0.1 + 0.35 * irregularity, hash), columns, rows, 3 * scale)
+  if (pattern === 'cobblestone') {
+    const cells = voronoi(squareSites(scale, 0.05 + 0.3 * irregularity, hash), columns, rows, 3 * scale)
+    return cells.flatMap((cell) => {
+      const cobble = rounded(cell, 0.18 * scale)
+      return cobble ? [cobble] : []
+    })
+  }
+  if (pattern === 'hex') {
+    const pitch = (scale * Math.sqrt(3)) / 2
+    const jitter = 0.25 * irregularity * scale
+    const site = (i: number, j: number): Vec2 => [
+      (i + (Math.abs(j) % 2) / 2) * scale + jitter * (2 * hash(i, j, 0) - 1),
+      j * pitch + jitter * (2 * hash(i, j, 1) - 1),
+    ]
+    return voronoi(site, columns, Math.ceil(halfLength / pitch) + 2, 3 * scale)
+  }
+  if (pattern === 'herringbone') return herringbone(scale, Math.hypot(halfWidth, halfLength))
+
+  // Rows run along the longer axis; a quarter turn keeps every cell anticlockwise.
   const along = halfWidth >= halfLength
   const [halfLong, halfShort] = along ? [halfWidth, halfLength] : [halfLength, halfWidth]
+  const offset = (row: number) => irregularity * (hash(row, 0, 4) - 0.5)
   const cells =
-    pattern === 'tile'
-      ? courses(
-          scale,
-          halfLong,
-          halfShort,
-          () => alignedJoint(halfLong, scale, 0),
-          () => scale,
-        )
-      : pattern === 'plate'
+    pattern === 'diamond'
+      ? diamonds(scale, halfLong, halfShort)
+      : pattern === 'tile'
         ? courses(
             scale,
             halfLong,
             halfShort,
-            (row) => alignedJoint(halfLong, 2 * scale, (Math.abs(row) % 2) / 2),
-            () => 2 * scale,
+            (row) => alignedJoint(halfLong, scale, offset(row)),
+            () => scale,
           )
-        : courses(
-            scale,
-            halfLong,
-            halfShort,
-            (row) => -halfLong - PLANK_LENGTHS[1] * scale * noise(row, 0, 2),
-            (row, piece) => scale * (PLANK_LENGTHS[0] + (PLANK_LENGTHS[1] - PLANK_LENGTHS[0]) * noise(row, piece, 3)),
-          )
+        : pattern === 'plate'
+          ? courses(
+              scale,
+              halfLong,
+              halfShort,
+              (row) => alignedJoint(halfLong, 2 * scale, (Math.abs(row) % 2) / 2 + offset(row)),
+              () => 2 * scale,
+            )
+          : courses(
+              scale,
+              halfLong,
+              halfShort,
+              (row) => -halfLong - 6 * scale * hash(row, 0, 2),
+              (row, piece) => scale * (3 + 6 * irregularity * hash(row, piece, 3)),
+            )
   return along ? cells : cells.map((cell) => cell.map(([u, v]): Vec2 => [-v, u]))
 }
 
 /**
  * The texture cut into the plate face, or nothing when the base is plain. Every
  * stone's sides stand at 45°, so the V joints between them have ceilings that
- * print without support even though they face the build plate.
+ * print without support even though they face the build plate. Joints run out
+ * through the edge, so the pattern reaches the lip.
  */
 export function textureCut(
   wasm: ManifoldToplevel,
   config: BaseConfig,
-  face: CrossSection,
+  outline: CrossSection,
   own: <T extends { delete: () => void }>(o: T) => T,
 ): Manifold | undefined {
   const { Manifold } = wasm
-  const { pattern, scale, depth } = config.texture
+  const { pattern, depth } = config.texture
   if (pattern === 'none' || isRelief(pattern) || depth <= 0) return undefined
   if (depth > maxTextureDepth(config) + 1e-6) throw new Error('Texture cuts too close to the recess — make it shallower or thicken the top')
 
-  // The stones fill this outline, and the joint round it closes off every edge stone.
-  const field = own(face.offset(-(TEXTURE_BORDER + depth), 'Miter', 2, config.segments))
-  if (field.isEmpty()) return undefined
-  const outline = field.toPolygons()[0]
-  const { min, max } = field.bounds()
-  const halfWidth = Math.max(-min[0], max[0])
-  const halfLength = Math.max(-min[1], max[1])
+  // The slab reaches past the wall, so no face of it meets the body except its top.
+  const top = depth - APEX
+  const footprint = own(outline.offset(1, 'Miter', 2, config.segments))
+  const { min, max } = footprint.bounds()
+  const slab = own(own(footprint.extrude(top + 2 * OVERCUT)).translate([0, 0, -2 * OVERCUT]))
 
   // Each stone is cut from a box by one plane per edge, so an edge that vanishes
   // partway down still leaves its neighbours at exactly 45°.
-  const top = depth - APEX
   const stones: Manifold[] = []
-  for (const layout of textureCells(pattern, scale, halfWidth, halfLength)) {
-    let cell = layout
-    for (let k = 0; k < outline.length && cell.length > 2; k++) {
-      const [p, q] = [outline[k], outline[(k + 1) % outline.length]]
-      cell = clip(cell, p, [q[1] - p[1], p[0] - q[0]])
-    }
-    if (cell.length < 3) continue
+  for (const cell of textureCells({ ...config.texture, pattern }, Math.max(-min[0], max[0]), Math.max(-min[1], max[1]))) {
     const xs = cell.map(([x]) => x)
     const ys = cell.map(([, y]) => y)
-    const [x0, y0] = [Math.min(...xs), Math.min(...ys)]
-    let stone = own(own(Manifold.cube([Math.max(...xs) - x0, Math.max(...ys) - y0, top + OVERCUT])).translate([x0, y0, -OVERCUT]))
+    const [x0, y0, x1, y1] = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
+    if (x0 > max[0] || x1 < min[0] || y0 > max[1] || y1 < min[1]) continue
+    let stone = own(own(Manifold.cube([x1 - x0, y1 - y0, top + OVERCUT])).translate([x0, y0, -OVERCUT]))
     for (let k = 0; k < cell.length; k++) {
       const [px, py] = cell[k]
       const [qx, qy] = cell[(k + 1) % cell.length]
@@ -240,12 +346,5 @@ export function textureCut(
     if (!stone.isEmpty()) stones.push(stone)
   }
   if (stones.length === 0) return undefined
-
-  // The slab leans in at 45° too, so the joint round the stones is a full V.
-  const ring = (grow: number, z: number): Vec3[] =>
-    own(field.offset(grow, 'Miter'))
-      .toPolygons()
-      .flatMap((contour) => contour.map(([x, y]): Vec3 => [x, y, z]))
-  const slab = own(Manifold.hull([...ring(depth + 2 * OVERCUT, -2 * OVERCUT), ...ring(APEX, top)]))
   return own(slab.subtract(own(Manifold.compose(stones))))
 }

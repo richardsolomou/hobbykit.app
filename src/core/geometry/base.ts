@@ -5,7 +5,7 @@ import { baseOutline, defaultLabel } from './outline'
 import { MIN_PROFILE_WALL, profileInsetAt, profileSteps } from './profile'
 import { curveTolerance } from './quality'
 import { MIN_POCKET_ROOF, reliefBlock } from './relief'
-import { isRelief, TEXTURE_BORDER, textureCut } from './texture'
+import { isRelief, textureCut } from './texture'
 import { GLYPH_FILL, polygonsWidth, textPolygons, type Polygon } from './text'
 import type { BaseConfig, BaseStats, MagnetLayout, ShapeKind } from './types'
 
@@ -188,15 +188,14 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
     }
     let solid = solidOf(Manifold.hull(points))
 
-    const modelInset = profileInsetAt(config.height, config.profile, config.profileSize, 0, tolerance)
-    const modelFace = modelInset > 0 ? section(outline.offset(-modelInset, 'Miter', 2, config.segments)) : outline
     if (faceUp) {
-      const relief = reliefBlock(wasm, config, modelFace, TEXTURE_BORDER, tolerance, own)
+      const modelInset = profileInsetAt(config.height, config.profile, config.profileSize, 0, tolerance)
+      const modelFace = modelInset > 0 ? section(outline.offset(-modelInset, 'Miter', 2, config.segments)) : outline
+      const relief = reliefBlock(wasm, config, modelFace, tolerance, own)
       if (relief) solid = solidOf(solid.add(relief))
-    } else {
-      const texture = textureCut(wasm, config, modelFace, own)
-      if (texture) solid = solidOf(solid.subtract(texture))
     }
+    const texture = textureCut(wasm, config, outline, own)
+    if (texture) solid = solidOf(solid.subtract(texture))
 
     // A footprint narrower than twice the wall offsets away to nothing. Its bounds
     // come back infinite, which would send everything downstream to NaN.
