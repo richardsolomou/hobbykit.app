@@ -29,6 +29,9 @@ check:
 samples *args:
     pnpm samples out {{ args }}
 
+makerworld *args:
+    pnpm exec tsx scripts/makerworld.ts {{ args }}
+
 e2e-install:
     pnpm test:e2e:install
 
