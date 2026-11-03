@@ -101,6 +101,20 @@ export function paintingHandleAxisCenter(config: PaintingTrayConfig): [number, n
   return [horizontal === 0 ? 0 : -horizontal, 0, HANDLE_PREVIEW_OVERLAP - handle.length / 2]
 }
 
+/** A box around the exploded tray and the grip standing off its front edge, centred on `target`, for framing the preview. */
+export function paintingTrayExplodedFrame(config: PaintingTrayConfig) {
+  const tray = paintingTrayLayout(config)
+  const grip = paintingHandleDimensions(paintingHandleConfig(config))
+  const front = -tray.length / 2 - EXPLODED_HANDLE_GAP - grip.length
+  const height = config.height + grip.height
+  return {
+    width: Math.max(tray.width, 2 * grip.width),
+    length: tray.length / 2 - front,
+    height,
+    target: [0, (front + tray.length / 2) / 2, height / 2 - grip.height] as [number, number, number],
+  }
+}
+
 export function paintingTrayAssemblyMinZ(config: PaintingTrayConfig): number {
   return HANDLE_PREVIEW_OVERLAP - config.handle.length
 }

@@ -69,16 +69,29 @@ export function fitLabel(
   return undefined
 }
 
-/** Directions a label may sit along, widest clear angle first. */
+/** Gaps are compared at this precision, so float noise never decides between equally wide ones. */
+const settle = (value: number) => Math.round(value / 1e-9) * 1e-9
+
+/**
+ * Directions a label may sit along, widest clear angle first. Equally wide gaps
+ * go nearest -y first, so a label sits below the centre where it can, then
+ * toward -x.
+ */
 export function labelAngles(spokes: number[], magnets: LabelCircle[]): number[] {
   const bosses = magnets.filter((m) => Math.hypot(m.x, m.y) > 1e-6).map((m) => Math.atan2(m.y, m.x))
   const solid = [...spokes, ...bosses].map((a) => ((a % TAU) + TAU) % TAU).sort((a, b) => a - b)
   const gaps = solid
     .map((angle, i) => {
       const next = i + 1 < solid.length ? solid[i + 1] : solid[0] + TAU
-      return { middle: (angle + next) / 2, span: next - angle }
+      const middle = (angle + next) / 2
+      return {
+        middle,
+        span: settle(next - angle),
+        down: settle(Math.abs(Math.atan2(Math.cos(middle), -Math.sin(middle)))),
+        across: settle(Math.cos(middle)),
+      }
     })
-    .sort((a, b) => b.span - a.span)
+    .sort((a, b) => b.span - a.span || a.down - b.down || a.across - b.across)
   const fallback = Array.from({ length: 8 }, (_, i) => (Math.PI / 4) * i)
   return [...gaps.map((gap) => gap.middle), ...fallback]
 }
