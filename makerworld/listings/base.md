@@ -23,7 +23,7 @@ What you can change:
 - Supports: number, thickness and height
 - Fit: magnet clearances, the wall around each pocket, and the label's emboss depth
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like exporting a whole batch of sizes at once with holders and trays that share your magnet settings, the full version is at hobbykit.app.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like textured tops (paving, plating, rock, rubble or snow) or exporting a whole batch of sizes at once, the full version is at hobbykit.app.
 
 ## Print settings
 
