@@ -44,3 +44,7 @@ e2e-run *args:
 social-cards:
     pnpm build
     pnpm exec tsx scripts/socialCards.ts
+
+makerworld-images *names:
+    pnpm build
+    pnpm exec tsx scripts/makerworldImages.ts {{ names }}

@@ -1,0 +1,41 @@
+# Gridfinity miniature holder
+
+- **Script:** `holder.scad`
+- **Category:** Household › Organization (or Toys & Games › Board Games)
+- **Tags:** gridfinity, miniature storage, miniature holder, magnetised, wargaming, warhammer, 40k, army transport, customizable, parametric
+
+## Summary
+
+A Gridfinity bin with a slot for each of your miniatures, magnetised to match your bases. Choose the base size and how many to hold.
+
+## Description
+
+Choose a base size and a number of miniatures. The holder packs them as tightly as it can into the fewest Gridfinity units, up to the size you allow. Each slot can have magnet pockets in the same places as the magnets in the matching base, so a magnetised base snaps into its slot and stays there while you carry the bin.
+
+What you can change:
+
+- Miniatures: any standard base size or a custom one, and how many to hold
+- Layout: the maximum Gridfinity columns and rows, the spacing between slots and from the edge, and the holder height in 7mm steps
+- Slots: depth, clearance, and whether to engrave the base size in each slot or once on the holder
+- Magnets: on or off, size, count per slot, and the pocket layout
+- Matching bases: the wall settings your bases were printed with, so the pockets line up with their magnets
+
+This holder takes one size of miniature. The HobbyKit app can mix base sizes in one holder and split a large group across several modules. If the miniatures do not all fit in the largest size you allow, the extra ones are left out, so check the count in the preview.
+
+## Print settings
+
+- Gridfinity feet on the plate, slots facing up
+- Supports off
+- 0.2mm layers
+- PLA or PETG
+
+## Bill of materials
+
+- A Gridfinity baseplate
+- Optional: neodymium magnets matching your bases, 5×2mm by default, with the same count per slot as each base
+
+## Real photos to take
+
+- A full holder in a Gridfinity baseplate
+- Lifting one miniature out, to show the slot
+- A close-up of a slot's magnets

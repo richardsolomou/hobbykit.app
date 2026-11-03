@@ -1,0 +1,39 @@
+# Magnetic spray painting tray
+
+- **Script:** `spray-tray.scad`
+- **Category:** Tools › Hobby Tools (or Hobby & DIY)
+- **Tags:** painting handle, spray tray, priming tray, miniature painting, airbrush, magnetised, wargaming, customizable, parametric, no supports
+
+## Summary
+
+A magnet-grid tray for priming and airbrushing magnetised miniatures, with a glue-on handle in four grip shapes.
+
+## Description
+
+The tray has a grid of magnet pockets, with an extra pocket in the centre of every four. Bases of different sizes can find a magnet wherever they sit. Set the grid and its spacing to suit your bases, then pick a handle. The handle prints as a separate part and glues to the centre of the underside, marked with an engraved +, so neither part needs supports.
+
+What you can change:
+
+- Magnet grid: columns, rows, centre spacing and edge margin
+- Tray thickness
+- Magnets: size and clearances
+- Handle: round, oval barrel, flared base or pistol grip, with length, width, lean, a rounded end, and ribs
+
+## Print settings
+
+- Tray: flat, with the pockets facing up
+- Handle: upright on its flat end
+- Supports off for both
+- 0.2mm layers
+- PLA or PETG
+
+## Bill of materials
+
+- Neodymium magnets, 5×2mm by default, one for each pocket
+- Superglue or two-part epoxy for the magnets and the handle
+
+## Real photos to take
+
+- The tray in hand with primed miniatures on it
+- Each grip shape you printed
+- The underside with the handle glued on
