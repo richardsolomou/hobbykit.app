@@ -102,21 +102,6 @@ describe('share links', () => {
     expect(opened(defaultWorkspace(), part)?.part).toBe(part)
   })
 
-  it('carries the shared magnets a movement tray uses', () => {
-    const sender = defaultWorkspace()
-    sender.shared.magnets.diameter = 6
-
-    expect(opened(sender, 'movementTray')?.workspace.movementTray.magnets.diameter).toBe(6)
-  })
-
-  it('replaces only the count override for a movement tray footprint', () => {
-    const recipient = defaultWorkspace()
-    const { shape, width, length } = recipient.movementTray
-    recipient.shared.magnetCounts = { [footprintKey(shape, width, length)]: 4, 'round:60x60': 6 }
-
-    expect(opened(defaultWorkspace(), 'movementTray', recipient)?.workspace.shared.magnetCounts).toEqual({ 'round:60x60': 6 })
-  })
-
   it('leaves the base batch out of a base link', () => {
     const sender = defaultWorkspace()
     sender.batch = [{ shape: 'round', width: 28.5, length: 28.5, quantity: 10 }]
@@ -139,16 +124,6 @@ describe('share links', () => {
     expect(applyWorkspaceSetup(defaultWorkspace(), setup)?.workspace.token).toMatchObject({ shape: 'round', size: 32.5 })
   })
 
-  it('keeps the recipient movement tray when opening a base link made at workspace version 8', () => {
-    const recipient = defaultWorkspace()
-    recipient.movementTray = { ...recipient.movementTray, columns: 7 }
-    const setup = readShareHash(
-      hashFor({ v: 1, version: 8, part: 'base', config: { ...defaultWorkspace().base, height: 5 }, shared: defaultWorkspace().shared }),
-    )
-
-    expect(applyWorkspaceSetup(recipient, setup)?.workspace).toMatchObject({ base: { height: 5 }, movementTray: { columns: 7 } })
-  })
-
   it.each(PARTS)('opens a %s link made at workspace version 11', (part) => {
     const setup = readShareHash(hashFor({ v: 1, ...workspaceSetup(defaultWorkspace(), part), version: 11 }))
 
@@ -162,6 +137,13 @@ describe('share links', () => {
       source: { shape: 'round', width: 25, length: 25 },
     }
     const setup = readShareHash(hashFor({ v: 1, version: 11, part: 'adapter', config: adapter, shared: defaultWorkspace().shared }))
+
+    expect(applyWorkspaceSetup(defaultWorkspace(), setup)).toBeUndefined()
+  })
+
+  it('ignores a link for the removed movement tray generator', () => {
+    const tray = { kind: 'movement-tray', shape: 'rect', width: 25, length: 25, columns: 5, ranks: 4 }
+    const setup = readShareHash(hashFor({ v: 1, version: 15, part: 'movementTray', config: tray, shared: defaultWorkspace().shared }))
 
     expect(applyWorkspaceSetup(defaultWorkspace(), setup)).toBeUndefined()
   })
