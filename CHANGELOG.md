@@ -1,5 +1,11 @@
 # hobbykit
 
+## 0.22.0
+
+### Minor Changes
+
+- af6c8e8: Remove the movement tray generator, so the Movement trays page is gone. Old movement tray links and bookmarks open on bases, and saved settings for every other generator carry over.
+
 ## 0.21.1
 
 ### Patch Changes
