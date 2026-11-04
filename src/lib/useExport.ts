@@ -8,7 +8,7 @@ import { paintingHandleConfig, paintingHandleDimensions, paintingHandleName, pai
 import { paintRackLayout, paintRackName, paintRackPieceName } from '@/core/geometry/paintRack'
 import { exportSegmentsFor } from '@/core/geometry/quality'
 import { stemName, stemOverallHeight } from '@/core/geometry/stem'
-import { counterLayout, counterName, counterParts } from '@/core/geometry/counter'
+import { counterLayout, counterName, counterParts, counterTileLayout } from '@/core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -18,11 +18,11 @@ import type {
   PaintRackConfig,
   PartConfig,
   CounterConfig,
-  CounterTile,
 } from '@/core/geometry/types'
 import posthog from '@/lib/posthog'
 import { batchFileName } from './batch'
 import { buildMesh } from './buildMesh'
+import { counterProject } from './counterProject'
 import { asMeshLike, download } from './download'
 
 export type ExportFormat = 'stl' | '3mf' | 'batch-stl' | 'batch-3mf' | 'piece-stl'
@@ -145,9 +145,9 @@ export function useExport({
     ]
   }
 
-  const buildCounterParts = () =>
+  const buildCounterParts = (parts = counterParts(counter)) =>
     Promise.all(
-      counterParts(counter).map(async ({ part, name: partName }): Promise<ExportPart> => {
+      parts.map(async ({ part, name: partName }): Promise<ExportPart> => {
         const mesh = await buildMesh({ ...counter, part, segments: exportSegmentsFor(counter.drumDiameter) })
         return {
           mesh: asMeshLike(mesh),
@@ -156,18 +156,6 @@ export function useExport({
         }
       }),
     )
-
-  /** One tile on its own, for reprinting one that failed: its base and raised mark, as in the full download. */
-  const exportCounterTile = (tile: CounterTile) =>
-    run('piece-stl', async () => {
-      const mesh = await buildMesh({ ...counter, part: 'inserts' as const, tile, segments: exportSegmentsFor(counter.drumDiameter) })
-      const tileName = `${name}-tile-${tile}`
-      const files = [
-        { mesh: asMeshLike(mesh), name: tileName },
-        { mesh: asMeshLike(mesh.inserts!), name: `${tileName}-marks` },
-      ]
-      download(`${tileName}.zip`, zipSync(Object.fromEntries(files.map((file) => [`${file.name}.stl`, toStl(file.mesh, file.name)]))))
-    })
 
   const rackPieces = model === 'rack' ? paintRackLayout(paintRack).pieces : []
   // Numbered left to right, which also keeps two modules of the same size from sharing a filename.
@@ -243,15 +231,23 @@ export function useExport({
         return
       }
       if (model === 'counter') {
-        const parts = await buildCounterParts()
-        // The inserts come last and take a plate of their own, the only one that changes filament.
-        const inserts = parts.findIndex(({ secondFilament }) => secondFilament)
-        const bodies = inserts < 0 ? parts : parts.slice(0, inserts)
-        const plates = packPlates(
-          bodies.map(({ mesh }) => mesh),
-          bodies.map(() => 1),
-        ).map((items, index, all) => ({ name: all.length === 1 ? name : `${name}-plate-${index + 1}`, items }))
-        if (inserts >= 0) plates.push({ name: `${name}-inserts`, items: [{ object: inserts, x: 30, y: 30 }] })
+        const bodies = await buildCounterParts(counterParts(counter).filter(({ part }) => part !== 'inserts'))
+        const layout = counter.inserts ? counterTileLayout(counter) : []
+        const unique = [...new Set(layout.map(({ tile }) => tile))]
+        const meshes = new Map(
+          await Promise.all(
+            unique.map(async (tile) => {
+              const mesh = await buildMesh({
+                ...counter,
+                part: 'inserts' as const,
+                tile,
+                segments: exportSegmentsFor(counter.drumDiameter),
+              })
+              return [tile, { base: asMeshLike(mesh), mark: asMeshLike(mesh.inserts!) }] as const
+            }),
+          ),
+        )
+        const { parts, plates } = counterProject(name, bodies, layout, (tile) => meshes.get(tile)!)
         download(`${name}.3mf`, to3mfPlates(parts, plates))
         return
       }
@@ -322,5 +318,5 @@ export function useExport({
       batchProperties,
     )
 
-  return { exporting, error, exportStl, export3mf, exportBatchStl, exportBatch3mf, exportRackPiece, exportCounterTile }
+  return { exporting, error, exportStl, export3mf, exportBatchStl, exportBatch3mf, exportRackPiece }
 }

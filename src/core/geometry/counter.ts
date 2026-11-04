@@ -67,9 +67,6 @@ export function counterParts(config: Pick<CounterConfig, 'inserts'>): { part: Co
   ]
 }
 
-/** Every tile that can be exported alone, in the order the panel offers them. */
-export const COUNTER_TILES: CounterTile[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'arrows']
-
 export function defaultCounterConfig(): CounterConfig {
   return {
     kind: 'counter',
@@ -116,6 +113,24 @@ export function counterLayout(config: Pick<CounterConfig, 'drumDiameter' | 'drum
     height: 2 * (flat + lift),
     minZ: -lift,
   }
+}
+
+export interface CounterTilePlacement {
+  tile: CounterTile
+  /** The drum a digit's tile is for; both drums' tiles for a digit are alike. */
+  drum?: 'tens' | 'units'
+  /** The tile base's lower-left corner, with the plate's at the origin. */
+  x: number
+  y: number
+}
+
+/** Every tile lies face up, a row of 0–9 for the tens drum, one for the units drum, then the arrows. */
+export function counterTileLayout(config: Pick<CounterConfig, 'drumDiameter' | 'drumWidth' | 'insertClearance'>): CounterTilePlacement[] {
+  const across = 2 * (config.drumWidth / 2 - WALL - config.insertClearance) + INSERT_SPACING
+  const down = 2 * ((config.drumDiameter / 2) * Math.sin(HALF_FACE) - WALL - config.insertClearance) + INSERT_SPACING
+  const digits = (drum: 'tens' | 'units', row: number) =>
+    Array.from({ length: FACES }, (_digit, digit) => ({ tile: digit as CounterTile, drum, x: digit * across, y: row * down }))
+  return [...digits('tens', 2), ...digits('units', 1), { tile: 'arrows', x: 0, y: 0 }]
 }
 
 export function counterName(config: CounterConfig): string {
@@ -324,27 +339,17 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
       pointer: mat4([0, 0, 1], [0, 1, 0], [-1, 0, 0]),
       units: mat4([0, 0, -1], [0, 1, 0], [1, 0, 0]),
     }
-    const digitTile = (mark: CrossSection) => ({ base: tileBase(pocketX), mark: tileMark(mark) })
-    const arrowsTile = () => ({ base: tileBase(pointerTileX), mark: tileMark(arrows) })
-    /** Every tile lies face up, a row of 0–9 for each drum and then the arrows, so pieces are easy to find. */
-    const insertPlate = (tile?: CounterTile) => {
-      const rows =
-        tile === undefined
-          ? [...[digitSections, digitSections].map((row) => row.map(digitTile)), [arrowsTile()]]
-          : [[tile === 'arrows' ? arrowsTile() : digitTile(digitSections[tile])]]
-      let y = 0
-      const placed = rows.flatMap((row) => {
-        let x = 0
-        let depth = 0
-        const moved = row.map(({ base, mark }) => {
-          const { min, max } = base.boundingBox()
-          const shift: Vec3 = [x - min[0], y - max[1], 0]
-          x += max[0] - min[0] + INSERT_SPACING
-          depth = Math.max(depth, max[1] - min[1])
-          return { base: own(base.translate(shift)), mark: own(mark.translate(shift)) }
-        })
-        y -= depth + INSERT_SPACING
-        return moved
+    const tileOf = (tile: CounterTile) =>
+      tile === 'arrows'
+        ? { base: tileBase(pointerTileX), mark: tileMark(arrows) }
+        : { base: tileBase(pocketX), mark: tileMark(digitSections[tile]) }
+    /** The whole plate of tiles, or one alone, centred on the origin. */
+    const insertPlate = (only?: CounterTile) => {
+      const placed = (only === undefined ? counterTileLayout(config) : [{ tile: only, x: 0, y: 0 }]).map(({ tile, x, y }) => {
+        const { base, mark } = tileOf(tile)
+        const { min } = base.boundingBox()
+        const shift: Vec3 = [x - min[0], y - min[1], 0]
+        return { base: own(base.translate(shift)), mark: own(mark.translate(shift)) }
       })
       const bases = own(Manifold.union(placed.map(({ base }) => base)))
       const { min, max } = bases.boundingBox()

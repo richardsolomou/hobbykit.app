@@ -16,7 +16,7 @@ import {
   counterLayout,
   counterName,
   counterParts,
-  COUNTER_TILES,
+  counterTileLayout,
 } from './counter'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
@@ -217,11 +217,11 @@ describe('buildCounter', () => {
     solid.delete()
   })
 
-  it('builds the single tiles exactly as the full set does', () => {
+  it('builds the tiles of its layout one at a time exactly as the full set does', () => {
     const tile = (choice: CounterTile) => build({ ...counter(), part: 'inserts', tile: choice }).stats.volume
-    const digits = COUNTER_TILES.filter((choice) => choice !== 'arrows').reduce<number>((sum, choice) => sum + tile(choice), 0)
+    const total = counterTileLayout(counter()).reduce((sum, { tile: choice }) => sum + tile(choice), 0)
 
-    expect(2 * digits + tile('arrows')).toBeCloseTo(part(counter(), 'inserts').stats.volume, 6)
+    expect(total).toBeCloseTo(part(counter(), 'inserts').stats.volume, 6)
   })
 
   it('shows the inserts in place', () => {

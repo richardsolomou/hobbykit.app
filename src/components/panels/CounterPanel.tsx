@@ -1,15 +1,8 @@
 import { Dimension, Section, ToggleSetting } from '@/components/controls'
-import { Button } from '@/components/ui/button'
-import { FieldDescription, FieldLegend, FieldSet } from '@/components/ui/field'
+import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import type { CounterConfig, CounterTile } from '@/core/geometry/types'
-import {
-  COUNTER_TILES,
-  defaultCounterConfig,
-  MAX_COUNTER_CLICK,
-  MIN_COUNTER_DRUM_WIDTH,
-  minimumCounterDrumDiameter,
-} from '@/core/geometry/counter'
+import type { CounterConfig } from '@/core/geometry/types'
+import { defaultCounterConfig, MAX_COUNTER_CLICK, MIN_COUNTER_DRUM_WIDTH, minimumCounterDrumDiameter } from '@/core/geometry/counter'
 import { tenthAbove } from '@/lib/workspace'
 import { PanelFooter, type ResetAction } from './shared'
 
@@ -19,12 +12,9 @@ interface Props {
   resets: ResetAction[]
   counter: CounterConfig
   setCounter: (counter: CounterConfig) => void
-  exporting: boolean
-  /** Downloads one tile, for reprinting one that failed. */
-  exportTile: (tile: CounterTile) => void
 }
 
-export function CounterPanel({ counter, setCounter, exporting, exportTile, resets }: Props) {
+export function CounterPanel({ counter, setCounter, resets }: Props) {
   const patch = (changes: Partial<CounterConfig>) => setCounter({ ...counter, ...changes })
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
@@ -86,25 +76,6 @@ export function CounterPanel({ counter, setCounter, exporting, exportTile, reset
               defaultValue={COUNTER_DEFAULTS.insertClearance}
               onChange={(insertClearance) => patch({ insertClearance })}
             />
-          )}
-          {counter.inserts && (
-            <FieldSet className="gap-2">
-              <FieldLegend variant="label">Download one tile</FieldLegend>
-              <div className="flex flex-wrap gap-1">
-                {COUNTER_TILES.map((tile) => (
-                  <Button
-                    key={tile}
-                    size="xs"
-                    variant="outline"
-                    aria-label={tile === 'arrows' ? 'Download the arrows tile' : `Download tile ${tile}`}
-                    disabled={exporting}
-                    onClick={() => exportTile(tile)}
-                  >
-                    {tile === 'arrows' ? 'Arrows' : tile}
-                  </Button>
-                ))}
-              </div>
-            </FieldSet>
           )}
           <FieldDescription>
             {counter.inserts ? 'Press each tile into its pocket. Raise the clearance if they will not go in.' : 'Engraved, ready to paint.'}

@@ -545,8 +545,10 @@ test('prints the dial counter tiles on their own plate, changing filament once',
   const archive = unzipSync(await readFile(path))
   const text = (file: string) => new TextDecoder().decode(archive[file])
   expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(2)
-  expect(text('Metadata/model_settings.config')).toContain('value="counter-34mm-inserts"')
-  expect(text('Metadata/model_settings.config')).toMatch(/value="counter-34mm-inserts-marks"\/>.*?<metadata key="extruder" value="2"\/>/)
+  expect(text('Metadata/model_settings.config')).toContain('value="counter-34mm-tile-units-7"')
+  expect(text('Metadata/model_settings.config')).toMatch(
+    /value="counter-34mm-tile-units-7-mark"\/>.*?<metadata key="extruder" value="2"\/>/,
+  )
 })
 
 test('engraves the dial counter without inserts', async ({ page }) => {
