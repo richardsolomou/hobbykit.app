@@ -10,25 +10,21 @@ Tapered flying stems at any height, with a peg or a ball joint on top for your f
 
 ## Description
 
-A replacement or a taller stand for flying miniatures. Set the height and width, then choose how it joins the model: a peg sized to the hole you drill, or a ball joint. The flat foot glues to any base.
+For replacing a snapped stem or giving a flyer more height. Set the height and the foot's diameter, then choose how it joins the model: a peg sized to the hole you drill, or a ball joint so you can pose it. The flat foot superglues to any base.
 
 What you can change:
 
-- Stem height and the foot's diameter
+- Stem height and foot diameter
 - Connection: a peg (diameter and length) or a ball (diameter)
 
-This comes from HobbyKit, a free browser generator I made. Magnetised bases to stand it on, and holders and trays to match, are at hobbykit.app.
+This is part of HobbyKit, a free generator I made. Magnetised bases to stand it on, and holders and trays to match, are at hobbykit.app.
 
 ## Print settings
 
 - Upright on its foot
-- Supports off
+- No supports
 - 0.12mm layers for a clean peg or ball
 - PLA or PETG. Tall stems hold up better in PETG.
-
-## Bill of materials
-
-- Superglue for the foot
 
 ## Real photos
 

@@ -10,7 +10,7 @@ Round, square or hex tokens with your own text, raised for a second colour or en
 
 ## Description
 
-Type the text and the token fits it to the face. Long text wraps onto up to three lines and shrinks to fit, but never below a 1.5mm cap height. Raised text is a separate part that starts on its own layer, so a single-nozzle printer needs only one filament change. Engraved text stays in the body so tokens stack flat.
+Type your text and it's fitted to the face. Longer text wraps onto up to three lines and shrinks to fit, but never below a 1.5mm cap height, so it stays printable. Raised text is a separate part that starts on its own layer, which means a single-nozzle printer only needs one filament change. Engraved text is cut into the body, so the tokens stack flat.
 
 What you can change:
 
@@ -18,22 +18,16 @@ What you can change:
 - Relief: raised, engraved or none, and how deep
 - Shape: round, square or hex, measured across the flats, with corner rounding for squares
 - Thickness, and a taper, bevel, round or straight top edge
-- Export: the body and text together, or each part on its own
+- Export: body and text together, or each on its own
 
-Tokens on MakerWorld take text only.
-
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like putting your own image on the face, the full version is at hobbykit.app.
+This is part of HobbyKit, a free generator I made. Tokens here take text only, and hobbykit.app can also put your own image on the face.
 
 ## Print settings
 
 - Face up, as the Customizer shows it
-- Supports off
-- 0.2mm layers; 0.12mm for small text
+- No supports
+- 0.2mm layers, 0.12mm for small text
 - For two colours, give the text part a second filament in the slicer
-
-## Bill of materials
-
-None.
 
 ## Real photos
 

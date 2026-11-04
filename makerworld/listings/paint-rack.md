@@ -6,37 +6,33 @@
 
 ## Summary
 
-A stepped rack for Citadel pots and Vallejo or Army Painter dropper bottles, in modules that sit side by side as your collection grows.
+A stepped rack for Citadel pots and dropper bottles like Vallejo and Army Painter, in modules that sit side by side as your collection grows.
 
 ## Description
 
-Every cell is a hex tube with a thin deck on top. The deck has a pocket for a pot and a bore for a dropper bottle, so one rack takes both. Each row stands higher than the one in front, so you can read every label. Modules share one hex pattern, so a new one fits against the old one without gaps, and the optional ends step each side back to match the rows.
+Every cell takes a pot or a dropper. Pots sit in a shallow pocket on top of the deck, and droppers go through a bore in the deck onto a ledge. Each row stands higher than the one in front, so you can read every label. Underneath it's all thin-walled hex cells, which keeps the print time down.
 
-The default pocket is 33.3mm, a snug fit for Citadel pots with a little play. Print one cell first if your pots or bottles are a different brand.
+All modules share the same hex pattern, so a new one fits right up against the last. The optional ends step each side back to match the rows.
+
+The default pocket is 33.3mm, which holds Citadel pots snugly with a little play. If your pots or bottles are a different brand, print a single cell first and adjust.
 
 What you can change:
 
 - Pieces: the module, a left end, a right end, or all of them on one plate
-- Size: columns, rows, and cell size
+- Size: columns, rows and cell size
 - Steps: front deck height and the rise for each row
-- Pot pockets: depth and diameter, or 0 for flat decks that print faster
-- Dropper seats: bore diameter and depth, and a push-out hole to free a stuck bottle
+- Pot pockets: depth and diameter, or a depth of 0 for flat decks that print faster
+- Dropper seats: bore diameter and depth, and a push-out hole for a stuck bottle
 - Wall thickness
 
-On MakerWorld this makes one straight module with optional ends.
-
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like chaining modules into a longer run, turning corners, or adding brush holders, the full version is at hobbykit.app.
+This is part of HobbyKit, a free generator I made. The Customizer here makes one straight module with optional ends, and hobbykit.app can also chain modules into a longer run, turn corners and add brush holders.
 
 ## Print settings
 
 - Upright, as the Customizer shows it
-- **Supports off.** The decks bridge between the walls, and automatic supports would fill every cell.
+- Supports off. The decks bridge between the walls, and auto supports would fill every cell.
 - 0.2mm layers. A 5×4 module takes about 5 hours on a Bambu Lab X2D at 0.20mm Standard.
 - PLA
-
-## Bill of materials
-
-None.
 
 ## Real photos
 

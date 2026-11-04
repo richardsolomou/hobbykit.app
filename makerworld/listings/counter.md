@@ -6,36 +6,34 @@
 
 ## Summary
 
-Two-drum counters that click through 00 to 99, with no hardware: the hub snaps together and every count clicks into place.
+Two-drum dial counters that click from 00 to 99, with no hardware. The hub snaps together and every count clicks into place.
 
 ## Description
 
-Two ten-sided drums turn on a snap-fit hub with a pointer between them. Printed bumps on each drum click into dimples on the pointer, so a count stays put when you put the counter down. The pointer's flat bottom keeps it upright while the drums turn. Digits are on press-in tiles in a second colour, which costs one filament change for the whole set instead of dozens. You can also turn the tiles off and paint engraved digits instead.
+Two ten-sided drums turn on a snap-fit hub with a pointer between them. Little printed bumps on each drum click into dimples on the pointer, so the count stays put when you set the counter down. The pointer has a flat bottom, so it stays upright while the drums roll.
+
+The digits are press-in tiles in a second colour. They print on their own plate, so the whole set costs one filament change instead of dozens. If you'd rather paint, turn the tiles off and the digits are engraved instead.
 
 What you can change:
 
-- Part: everything on one plate, or each drum, the pointer, or the tiles on their own
+- Part: everything on one plate, or each drum, the pointer or the tiles on their own
 - Drum diameter and width
-- Fit: the clearance around the hub, and the click, which you raise if the drums turn too easily
+- Fit: clearance around the hub, and the click (raise it if the drums turn too easily)
 - Inserts: colour tiles or engraved digits, and the tile clearance
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like a 3MF with the tiles already set to a second filament, the full version is at hobbykit.app.
+This is part of HobbyKit, a free generator I made. hobbykit.app can also give you a 3MF with the tiles already set to a second filament.
 
 ## Print settings
 
 - Every part lies flat on its outer face
-- Supports off
-- 0.2mm layers; 0.12mm sharpens the digits
-- Tiles: one filament for the base parts and another for the raised digits
+- No supports
+- 0.2mm layers, 0.12mm for sharper digits
+- Tiles: one filament for the bases and another for the raised digits
 
 ## Assembly
 
-1. Press the tiles into their pockets: digits 0–9 into each drum and the arrows into the pointer.
-2. Slide the pointer and then the tens drum onto the units drum's hub until the barb snaps in.
-
-## Bill of materials
-
-None.
+1. Press the tiles into their pockets: 0 to 9 into each drum and the arrows into the pointer.
+2. Slide the pointer, then the tens drum, onto the units drum's hub until the barb snaps in.
 
 ## Real photos
 
