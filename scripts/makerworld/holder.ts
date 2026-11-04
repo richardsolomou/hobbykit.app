@@ -20,7 +20,7 @@ function custom(name: string, quantity: number, group: Group, changes: Partial<H
       const module = holderPlan(config).modules[0]
       if (!module) throw new Error(`${name}: nothing fits`)
       const segments = exportSegmentsFor(Math.max(module.layout.width, module.layout.length))
-      return buildHolder(wasm, { ...module.config, segments }, font).mesh
+      return buildHolder(wasm, { ...config, module: 0, segments }, font).mesh
     },
     defines: { quantity, ...defines },
   }
@@ -33,9 +33,17 @@ export const cases: Case[] = [
   ...Object.values(SIZES_BY_SHAPE)
     .flat()
     .map((p) => custom(sizeKey(p), 3, sized(p), {}, { standard_size: sizeKey(p) })),
-  // Rows fail, so these come from the app's relaxation; the second also re-plans smaller on export.
+  // Rows fail, so these come from the app's relaxation; the second holds more than the capacity estimate for its size.
   custom('relaxed-round-60', 7, sized(standardSize('round', '60')), {}, { standard_size: 'round-60' }),
-  custom('relaxed-replanned-round-60', 10, sized(standardSize('round', '60')), {}, { standard_size: 'round-60' }),
+  custom('relaxed-beyond-estimate-round-60', 10, sized(standardSize('round', '60')), {}, { standard_size: 'round-60' }),
+  custom(
+    'edge-0-hex-60',
+    4,
+    sized(standardSize('polygon', '60')),
+    { edgeSpacing: 0 },
+    { standard_size: 'polygon-60', from_holder_edge: 0 },
+  ),
+  custom('edge-0-round-32', 7, sized(standardSize('round', '32')), { edgeSpacing: 0 }, { standard_size: 'round-32', from_holder_edge: 0 }),
   custom(
     'relaxed-hex-25',
     7,

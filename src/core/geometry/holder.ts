@@ -22,6 +22,8 @@ const PLA_DENSITY = 1.24e-3
 const MIN_SLOT_FLOOR_THICKNESS = 0.4
 const ENGRAVING_DEPTH = 0.4
 const HEX_ROW_HEIGHT = Math.sqrt(3) / 2
+/** A slot reaching the wall touches it at a vertex, which a slicer welds into a non-manifold edge. */
+export const MIN_EDGE_SPACING = 0.05
 const MAX_CACHE_ENTRIES = 100
 
 function cacheResult<T>(cache: Map<string, T>, key: string, value: T): T {
@@ -176,8 +178,9 @@ function maxPossibleGroupQuantity(
   edgeSpacing: number,
   clearance: number,
 ) {
-  const width = maxColumns * GRID - GAP - edgeSpacing * 2
-  const length = maxRows * GRID - GAP - edgeSpacing * 2
+  const edge = Math.max(edgeSpacing, MIN_EDGE_SPACING)
+  const width = maxColumns * GRID - GAP - edge * 2
+  const length = maxRows * GRID - GAP - edge * 2
   const itemWidth = slotWidth(group) + clearance
   const itemLength = slotLength(group) + clearance
   if (itemWidth > width || itemLength > length) return 0
@@ -431,6 +434,7 @@ function singleHolderLayout(
 ): HolderLayout {
   const maxColumns = Math.max(1, Math.round(config.maxColumns))
   const maxRows = Math.max(1, Math.round(config.maxRows))
+  const edgeSpacing = Math.max(config.edgeSpacing, MIN_EDGE_SPACING)
   const groups = config.groups
     .filter((group) => group.quantity > 0)
     .map((group) => ({
@@ -447,20 +451,20 @@ function singleHolderLayout(
       Array.from({ length: group.quantity }, (_, index): HolderSlot => ({ ...group, id: `${group.id}-${index}`, x: 0, y: 0 })),
     )
     .sort((a, b) => Math.max(slotWidth(b), slotLength(b)) - Math.max(slotWidth(a), slotLength(a)))
-  const key = `${exactSize ? '=' : ''}${maxColumns}:${maxRows}:${config.spacing}:${config.edgeSpacing}:${config.slotClearance}:${groups
+  const key = `${exactSize ? '=' : ''}${maxColumns}:${maxRows}:${config.spacing}:${edgeSpacing}:${config.slotClearance}:${groups
     .map((group) => `${group.quantity}x${group.shape}-${group.width}x${slotLength(group)}-${group.cornerRadius}-${group.sides}`)
     .join(',')}`
   const cached = layoutCache.get(key)
   if (cached) return cached
   const largestWidth = Math.max(0, ...slots.map(slotWidth))
-  const minimumColumns = Math.max(1, Math.ceil((largestWidth + config.slotClearance + config.edgeSpacing * 2 + GAP) / GRID))
+  const minimumColumns = Math.max(1, Math.ceil((largestWidth + config.slotClearance + edgeSpacing * 2 + GAP) / GRID))
   let layout: HolderLayout | undefined
   for (let unitsWide = exactSize ? maxColumns : minimumColumns; unitsWide <= maxColumns && !layout; unitsWide++) {
     const width = unitsWide * GRID - GAP
-    const packingWidth = width - config.edgeSpacing * 2
+    const packingWidth = width - edgeSpacing * 2
     for (let unitsDeep = exactSize ? maxRows : 1; unitsDeep <= maxRows; unitsDeep++) {
       const length = unitsDeep * GRID - GAP
-      const packingLength = length - config.edgeSpacing * 2
+      const packingLength = length - edgeSpacing * 2
       if (
         slots.some(
           (slot) => slotWidth(slot) + config.slotClearance > packingWidth || slotLength(slot) + config.slotClearance > packingLength,
@@ -712,10 +716,16 @@ export function defaultHolderConfig(): HolderConfig {
   }
 }
 
+function nameFor(layout: Pick<HolderLayout, 'unitsWide' | 'unitsDeep'>, groups: HolderGroup[]) {
+  return `holder-${layout.unitsWide}x${layout.unitsDeep}-${groups.map(holderGroupNamePart).join('-')}`
+}
+
 export function holderName(config: HolderConfig): string {
-  const layout = holderLayout(config)
-  const models = config.groups.map(holderGroupNamePart).join('-')
-  return `holder-${layout.unitsWide}x${layout.unitsDeep}-${models}`
+  return nameFor(holderLayout(config), config.groups)
+}
+
+export function holderModuleName(module: HolderModule): string {
+  return nameFor(module.layout, module.config.groups)
 }
 
 export function slotOutline(
@@ -746,7 +756,7 @@ export function slotOutline(
   return CrossSection.square([width - radius * 2, length - radius * 2], true).offset(radius, 'Round', 2, segments)
 }
 
-function buildSingleHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: Font): HolderBuildResult {
+function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderModule, font?: Font): HolderBuildResult {
   const { CrossSection, Manifold } = wasm
   const trash: { delete: () => void }[] = []
   const own = <T extends { delete: () => void }>(value: T): T => {
@@ -761,7 +771,6 @@ function buildSingleHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: 
     if (config.height < BASE_HEIGHT) throw new Error('Holder height must be at least one Gridfinity unit')
     if (config.slotDepth > maxHolderSlotDepth(config)) throw new Error('Slots leave too little material above the Gridfinity foot')
 
-    const layout = singleHolderLayout(config)
     if (layout.slotCenters.length === 0) throw new Error('Miniatures do not fit within the maximum Gridfinity rows and columns')
     const tolerance = curveTolerance(Math.max(layout.width, layout.length), config.segments)
     const preview = config.segments <= 256
@@ -914,9 +923,18 @@ function buildSingleHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: 
   }
 }
 
-export function buildHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: Font): HolderBuildResult {
+/**
+ * Builds every module where the plan puts it, or with `module` only that one at the origin. Each module is built from
+ * the layout the plan found for it, because planning a module again within its own size can fit fewer slots.
+ */
+export function buildHolder(wasm: ManifoldToplevel, { module: only, ...config }: HolderConfig, font?: Font): HolderBuildResult {
   const plan = holderPlan(config)
   if (plan.modules.length === 0) throw new Error('No requested miniatures fit within the available Gridfinity box')
+  if (only !== undefined) {
+    const module = plan.modules[only]
+    if (!module) throw new Error(`The holder plan has no module ${only + 1}`)
+    return buildSingleHolder(wasm, module, font)
+  }
   const solids: Manifold[] = []
   const previewGap = config.segments <= 256 && plan.modules.length > 1 ? 6 : 0
   const columns = [...new Set(plan.modules.map((module) => module.column))].sort((a, b) => a - b)
@@ -924,7 +942,7 @@ export function buildHolder(wasm: ManifoldToplevel, config: HolderConfig, font?:
   const previewShift = (value: number, positions: number[]) => (positions.indexOf(value) - (positions.length - 1) / 2) * previewGap
   try {
     for (const module of plan.modules) {
-      const built = buildSingleHolder(wasm, module.config, font)
+      const built = buildSingleHolder(wasm, module, font)
       const solid = new wasm.Manifold(built.mesh)
       solids.push(solid)
       const offsetX = (module.column + module.layout.unitsWide / 2 - plan.unitsWide / 2) * GRID

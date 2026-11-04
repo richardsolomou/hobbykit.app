@@ -23,7 +23,7 @@ maximum_rows = 5; // [1:1:12]
 // Edge-to-edge distance between slots.
 between_miniatures = 0.5; // [0:0.5:10]
 // Minimum distance from a slot to the holder edge. Half the spacing between miniatures is a good start.
-from_holder_edge = 0.25; // [0:0.05:10]
+from_holder_edge = 0.25; // [0.05:0.05:10]
 holder_height = 14; // [7:7:42]
 
 /* [Slots] */
@@ -329,7 +329,8 @@ CIRCLES = SHAPE == "round" || SHAPE == "polygon";
 COLUMNS = max(1, round(maximum_columns));
 ROWS = max(1, round(maximum_rows));
 SPACING = between_miniatures;
-EDGE = from_holder_edge;
+// A slot reaching the wall touches it at a vertex, which a slicer welds into a non-manifold edge.
+EDGE = max(from_holder_edge, 0.05);
 CLEARANCE = slot_clearance;
 ITEM_W = WIDTH + CLEARANCE;
 ITEM_L = LENGTH + CLEARANCE;
@@ -475,13 +476,11 @@ function box_at(n, wide, deep) =
   : let(packed = CIRCLES ? circle_packing(n, ITEM_W, w, l, SPACING) : box_packing(n, ITEM_W, ITEM_L, w, l, SPACING))
     is_undef(packed) ? undef : [wide, deep, distributed(packed, w, l)];
 
-// The app plans the largest count that fits, then exports that module by planning it again within its own size.
+// The app plans the largest count that fits and exports that module as planned.
 function plan(n, columns, rows) = n <= 0 ? undef : let(found = box_layout(n, columns, rows)) is_undef(found) ? plan(n - 1, columns, rows) : found;
-FIRST_PLAN = plan(min(max(0, round(quantity)), max_possible(COLUMNS, ROWS)), COLUMNS, ROWS);
-LAYOUT =
-  assert(!is_undef(FIRST_PLAN), "Miniatures do not fit within the maximum Gridfinity rows and columns")
-  let(fits = max_possible(FIRST_PLAN[0], FIRST_PLAN[1]))
-  len(FIRST_PLAN[2]) <= fits ? FIRST_PLAN : plan(fits, FIRST_PLAN[0], FIRST_PLAN[1]);
+LAYOUT = let(found = plan(min(max(0, round(quantity)), max_possible(COLUMNS, ROWS)), COLUMNS, ROWS))
+  assert(!is_undef(found), "Miniatures do not fit within the maximum Gridfinity rows and columns")
+  found;
 UNITS_WIDE = LAYOUT[0];
 UNITS_DEEP = LAYOUT[1];
 SLOTS = LAYOUT[2];

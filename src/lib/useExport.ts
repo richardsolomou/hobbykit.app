@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { zipSync } from 'fflate'
 import { packPlates, to3mf, to3mfPlates, toStl, type ExportPart } from '@/core/geometry/exporters'
-import { holderName, holderPlan } from '@/core/geometry/holder'
+import { holderModuleName, holderName, holderPlan } from '@/core/geometry/holder'
 import { tokenHeight, tokenName } from '@/core/geometry/token'
 import { baseName, footprint } from '@/core/geometry/outline'
 import { paintingHandleConfig, paintingHandleDimensions, paintingHandleName, paintingTrayName } from '@/core/geometry/paintingTray'
@@ -127,8 +127,8 @@ export function useExport({
   const plan = model === 'holder' ? holderPlan(holder) : undefined
   const buildModules = () =>
     Promise.all(
-      plan!.modules.map((module) =>
-        buildMesh({ ...module.config, segments: exportSegmentsFor(Math.max(module.layout.width, module.layout.length)) }),
+      plan!.modules.map((module, index) =>
+        buildMesh({ ...holder, module: index, segments: exportSegmentsFor(Math.max(module.layout.width, module.layout.length)) }),
       ),
     )
   const buildPaintingParts = async () => {
@@ -196,7 +196,7 @@ export function useExport({
         const meshes = await buildModules()
         const files = Object.fromEntries(
           meshes.map((mesh, index) => {
-            const moduleName = `module-${index + 1}-${holderName(plan.modules[index].config)}.stl`
+            const moduleName = `module-${index + 1}-${holderModuleName(plan.modules[index])}.stl`
             return [moduleName, toStl(asMeshLike(mesh), moduleName)]
           }),
         )
@@ -246,7 +246,7 @@ export function useExport({
         const meshes = await buildModules()
         const modules = meshes.map((mesh, index) => ({
           mesh: asMeshLike(mesh),
-          name: `module-${index + 1}-${holderName(plan.modules[index].config)}`,
+          name: `module-${index + 1}-${holderModuleName(plan.modules[index])}`,
         }))
         download(`${name.replace(/^holder-/, `holders-${modules.length}-`)}.3mf`, to3mf(modules, true))
         return

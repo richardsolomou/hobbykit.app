@@ -145,6 +145,8 @@ export interface HolderConfig {
   baseWallThickness: number
   magnetBossWall: number
   segments: number
+  /** Export-only: build this module of the plan on its own instead of the whole holder. */
+  module?: number
 }
 
 export interface HolderGroup {

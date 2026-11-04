@@ -16,6 +16,8 @@ import {
   minHolderHeight,
 } from './holder'
 import { loadManifold } from './manifold'
+import { exportSegmentsFor } from './quality'
+import type { HolderConfig } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
 let font: Font
@@ -37,6 +39,42 @@ function bounds(mesh: Mesh) {
     }
   }
   return { min, size: max.map((value, axis) => value - min[axis]) }
+}
+
+/** Edges not shared by exactly two triangles once vertices are welded by position, as a slicer loads them. */
+function openEdges(mesh: Mesh) {
+  const ids = new Map<string, number>()
+  const id = (vertex: number) => {
+    const key = [0, 1, 2].map((axis) => mesh.vertProperties[vertex * mesh.numProp + axis]).join()
+    if (!ids.has(key)) ids.set(key, ids.size)
+    return ids.get(key)!
+  }
+  const edges = new Map<string, number>()
+  for (let t = 0; t < mesh.triVerts.length; t += 3) {
+    const corners = [0, 1, 2].map((i) => id(mesh.triVerts[t + i]))
+    for (let i = 0; i < 3; i++) {
+      const edge = [corners[i], corners[(i + 1) % 3]].sort((a, b) => a - b).join()
+      edges.set(edge, (edges.get(edge) ?? 0) + 1)
+    }
+  }
+  return [...edges.values()].filter((count) => count !== 2).length
+}
+
+/** Each module the plan holds, built alone at export quality the way the export builds it. */
+function exportedModules(config: HolderConfig) {
+  return holderPlan(config).modules.map((module, index) =>
+    buildHolder(wasm, { ...config, module: index, segments: exportSegmentsFor(Math.max(module.layout.width, module.layout.length)) }, font),
+  )
+}
+
+/** Slot recesses cut through a horizontal slice just under the holder's top face. */
+function slotsCut(mesh: Mesh, config: HolderConfig) {
+  const solid = new wasm.Manifold(mesh)
+  const slice = solid.slice(config.height - config.slotDepth / 2)
+  const holes = slice.toPolygons().length - 1
+  slice.delete()
+  solid.delete()
+  return holes
 }
 
 describe('holderLayout', () => {
@@ -272,6 +310,13 @@ describe('holderLayout', () => {
     expect(holderLayout({ ...defaultHolderConfig(), groups: [group], edgeSpacing: 0.75 }).unitsWide).toBe(2)
   })
 
+  it('never lets a slot touch the holder wall at zero edge spacing', () => {
+    const config = { ...defaultHolderConfig(), edgeSpacing: 0, groups: [holderGroup('models-1', 4, { shape: 'polygon', width: 60 })] }
+    const layout = holderLayout(config)
+    const reach = Math.max(...layout.slotCenters.map((slot) => Math.abs(slot.x) + (slot.width + config.slotClearance) / 2))
+    expect(layout.width / 2 - reach).toBeGreaterThan(0)
+  })
+
   it('reports no layout when the box constraints are too small', () => {
     const config = { ...defaultHolderConfig(), groups: [holderGroup('models-1', 2, { width: 90 })], maxColumns: 3, maxRows: 2 }
     expect(holderLayout(config).slotCenters).toHaveLength(0)
@@ -379,6 +424,20 @@ describe('holderSpareCapacity', () => {
 })
 
 describe('buildHolder', () => {
+  it('exports every slot the plan holds when relaxation beats the capacity estimate', () => {
+    const config = { ...defaultHolderConfig(), groups: [holderGroup('models-1', 10, { width: 60 })] }
+    const [module] = exportedModules(config)
+    expect(slotsCut(module.mesh, config)).toBe(holderLayout(config).slotCenters.length)
+  })
+
+  it.each([
+    { shape: 'polygon' as const, width: 60, quantity: 4 },
+    { shape: 'round' as const, width: 32, quantity: 7 },
+  ])('exports $shape slots at zero edge spacing with no open edges', ({ shape, width, quantity }) => {
+    const config = { ...defaultHolderConfig(), edgeSpacing: 0, groups: [holderGroup('models-1', quantity, { shape, width })] }
+    expect(exportedModules(config).map(({ mesh }) => openEdges(mesh))).toEqual([0])
+  })
+
   it('builds a solid with the exact Gridfinity footprint and requested height', () => {
     const config = defaultHolderConfig()
     const result = buildHolder(wasm, config)
