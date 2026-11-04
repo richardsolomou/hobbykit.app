@@ -14,7 +14,7 @@ HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matc
 
 Everything runs in the browser. Models are built locally and nothing is uploaded.
 
-Each generator also has a [MakerWorld listing](https://makerworld.com/en/@richardsolomou) whose Customize button runs an OpenSCAD port of it, with fewer options.
+Each generator also has a [MakerWorld listing](https://makerworld.com/en/collections/39592835-hobbykit) whose Customize button runs an OpenSCAD port of it, with fewer options.
 
 ## Who is it for? 👋
 
