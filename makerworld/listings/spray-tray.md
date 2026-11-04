@@ -1,7 +1,7 @@
 # Magnetic spray painting tray
 
 - **Script:** `spray-tray.scad`
-- **Category:** Tools › Hobby Tools (or Hobby & DIY)
+- **Category:** Tools › Hand Tools
 - **Tags:** painting handle, spray tray, priming tray, miniature painting, airbrush, magnetised, wargaming, customizable, parametric, no supports
 
 ## Summary
@@ -40,6 +40,7 @@ Taken:
 
 - IMG_7708: in use, a primed miniature held on the tray (3:4 cover)
 - IMG_7707: the tray on its handle, with primer marks (4:3 cover)
+- IMG_7714: a miniature on the tray, from above
 
 Worth adding:
 

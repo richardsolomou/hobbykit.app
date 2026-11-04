@@ -2,7 +2,7 @@
 
 - **Script:** `counter.scad`
 - **Category:** Toys & Games › Board Games
-- **Tags:** dial counter, wound counter, life counter, score counter, counter, wargaming, board game, mtg, warhammer, print in place alternative, customizable, parametric, no supports
+- **Tags:** dial counter, wound counter, life counter, score counter, counter, wargaming, board game, mtg, customizable, parametric, no supports
 
 ## Summary
 
@@ -42,6 +42,8 @@ None.
 Taken:
 
 - IMG_7699: an assembled counter with green tiles (cover)
+- IMG_7718: the counter end on, showing the ten-sided drums
+- IMG_7719: the count and pointer arrows, from the front
 
 Worth adding:
 
