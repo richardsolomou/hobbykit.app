@@ -10,6 +10,7 @@ import {
   minimumCounterDrumDiameter,
   MAX_COUNTER_CLICK,
   MIN_COUNTER_DRUM_WIDTH,
+  minimumCounterDrumWidth,
   COUNTER_ENGRAVING,
   COUNTER_POCKET,
   COUNTER_TILE_BASE,
@@ -32,6 +33,8 @@ const counter = (changes: Partial<CounterConfig> = {}): CounterConfig => ({ ...d
 const build = (config: CounterConfig) => buildCounter(wasm, config, font)
 const part = (config: CounterConfig, name: CounterPart) => build({ ...config, part: name })
 const BODIES = ['tens', 'pointer', 'units'] as const
+const magnetic = (changes: Partial<CounterConfig> = {}) => counter({ detent: 'magnets', ...changes })
+const thickMagnets = magnetic({ magnets: { ...counter().magnets, diameter: 6, thickness: 6 } })
 
 function solidOf(mesh: Mesh) {
   return new wasm.Manifold(mesh)
@@ -48,6 +51,19 @@ const CONFIGS: [string, CounterConfig][] = [
   ['inserts with no clearance', counter({ insertClearance: 0 })],
   ['an exploded view', counter({ exploded: true })],
   ['an exploded view of the narrowest drums', counter({ drumWidth: MIN_COUNTER_DRUM_WIDTH, exploded: true })],
+  ['magnet detents', magnetic()],
+  ['magnets in the smallest drums', magnetic({ drumDiameter: Math.ceil(minimumCounterDrumDiameter(magnetic()) * 10) / 10 })],
+  ['magnets in the narrowest drums', magnetic({ drumWidth: minimumCounterDrumWidth(magnetic()) })],
+  [
+    'large thick magnets',
+    {
+      ...thickMagnets,
+      drumDiameter: Math.ceil(minimumCounterDrumDiameter(thickMagnets) * 10) / 10,
+      drumWidth: minimumCounterDrumWidth(thickMagnets),
+    },
+  ],
+  ['magnets with no inserts', magnetic({ inserts: false })],
+  ['an exploded view with magnets', magnetic({ exploded: true })],
 ]
 
 function vertices(mesh: Mesh) {
@@ -93,6 +109,7 @@ function unsupportedFaces(mesh: Mesh, recessed: (point: number[]) => boolean) {
 
 /**
  * Face pockets sit in the outer layer of a drum's flats, and the arrows in the pointer's top, which prints facing -X.
+ * The pointer lies on one of its magnet pockets, whose ceiling bridges the magnet's width.
  */
 function recessedIn(config: CounterConfig, name: CounterPart, mesh: Mesh) {
   if (name === 'inserts') return () => false
@@ -100,7 +117,8 @@ function recessedIn(config: CounterConfig, name: CounterPart, mesh: Mesh) {
   const depth = config.inserts ? COUNTER_POCKET : COUNTER_ENGRAVING
   const { min, max } = bounds(mesh)
   if (name === 'pointer') {
-    return (point: number[]) => point[0] <= min[0] + depth + 1e-3
+    const magnet = config.detent === 'magnets' ? config.magnets.thickness + config.magnets.depthClearance : 0
+    return (point: number[]) => point[0] <= min[0] + depth + 1e-3 || point[2] <= magnet + 1e-3
   }
   const [cx, cy] = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2]
   return (point: number[]) => Math.hypot(point[0] - cx, point[1] - cy) >= (flat - depth) * 0.999
@@ -199,8 +217,13 @@ describe('buildCounter', () => {
     expect(bounds(part(counter(), 'inserts').mesh).max[2]).toBeCloseTo(COUNTER_TILE_BASE, 6)
   })
 
-  it('prints a tile for every face and one for the arrows', () => {
-    const solid = solidOf(part(counter(), 'inserts').mesh)
+  const TILE_CONFIGS: [string, CounterConfig][] = [
+    ['printed bumps', counter()],
+    ['magnets that thicken the pointer', { ...thickMagnets, drumDiameter: 40, drumWidth: minimumCounterDrumWidth(thickMagnets) }],
+  ]
+
+  it.each(TILE_CONFIGS)('prints a tile for every face and one for the arrows with %s', (_name, config) => {
+    const solid = solidOf(part(config, 'inserts').mesh)
     const pieces = solid.decompose()
 
     expect(pieces.length).toBe(20 + 1)
@@ -217,11 +240,11 @@ describe('buildCounter', () => {
     solid.delete()
   })
 
-  it('builds the tiles of its layout one at a time exactly as the full set does', () => {
-    const tile = (choice: CounterTile) => build({ ...counter(), part: 'inserts', tile: choice }).stats.volume
-    const total = counterTileLayout(counter()).reduce((sum, { tile: choice }) => sum + tile(choice), 0)
+  it.each(TILE_CONFIGS)('builds the tiles of its layout one at a time exactly as the full set does with %s', (_name, config) => {
+    const tile = (choice: CounterTile) => build({ ...config, part: 'inserts', tile: choice }).stats.volume
+    const total = counterTileLayout(config).reduce((sum, { tile: choice }) => sum + tile(choice), 0)
 
-    expect(total).toBeCloseTo(part(counter(), 'inserts').stats.volume, 6)
+    expect(total).toBeCloseTo(part(config, 'inserts').stats.volume, 6)
   })
 
   it('shows the inserts in place', () => {
@@ -270,6 +293,78 @@ describe('buildCounter', () => {
 
   it('sinks ten dimples in each face of the pointer', () => {
     expect(part(light, 'pointer').stats.volume - part(firm, 'pointer').stats.volume).toBeCloseTo(20 * (dimple(firm) - dimple(light)), 1)
+  })
+
+  /** The printed part's cross-section area at a height above the plate. */
+  const areaAt = (config: CounterConfig, name: CounterPart, height: number) => {
+    const solid = solidOf(part(config, name).mesh)
+    const section = solid.slice(height)
+    const area = section.area()
+    section.delete()
+    solid.delete()
+    return area
+  }
+  const pocketArea = (config: CounterConfig) => {
+    const radius = (config.magnets.diameter + config.magnets.clearance) / 2
+    return (config.segments / 2) * radius * radius * Math.sin((2 * Math.PI) / config.segments)
+  }
+  const pocketDepth = (config: CounterConfig) => config.magnets.thickness + config.magnets.depthClearance
+  /** Each drum prints on its outer face, so its inner face is its top, under the units drum's hub. */
+  const innerFace = (config: CounterConfig) => config.drumWidth
+  /** Below the pockets and the hub's root, above the countersink; the face pockets run this deep too. */
+  const drumMiddle = (config: CounterConfig) => config.drumWidth / 2
+
+  it.each(['tens', 'units'] as const)('opens ten magnet pockets in the top of the %s drum as it prints', (name) => {
+    const config = magnetic()
+    const lost = areaAt(config, name, drumMiddle(config)) - areaAt(config, name, innerFace(config) - pocketDepth(config) / 2)
+
+    expect(lost / pocketArea(config)).toBeCloseTo(10, 6)
+  })
+
+  it.each(['tens', 'units'] as const)('leaves the %s drum solid behind its magnet pockets', (name) => {
+    const config = magnetic()
+    const behind = areaAt(config, name, innerFace(config) - pocketDepth(config) - 0.5)
+
+    expect(behind).toBeCloseTo(areaAt(config, name, drumMiddle(config)), 6)
+  })
+
+  it.each([
+    ['on the plate', (_thickness: number, depth: number) => depth / 2],
+    ['facing up', (thickness: number, depth: number) => thickness - depth / 2],
+  ])('opens one magnet pocket in the pointer face %s', (_face, height) => {
+    const config = magnetic()
+    const { pointer } = counterLayout(config)
+    const lost = areaAt(config, 'pointer', pointer / 2) - areaAt(config, 'pointer', height(pointer, pocketDepth(config)))
+
+    expect(lost / pocketArea(config)).toBeCloseTo(1, 6)
+  })
+
+  it.each(['tens', 'pointer', 'units'] as const)('raises no bumps or dimples on the %s with magnets', (name) => {
+    const volume = (click: number) => part(magnetic({ click }), name).stats.volume
+
+    expect(volume(MAX_COUNTER_CLICK)).toBe(volume(0.1))
+  })
+
+  it('thickens the pointer to fit thick magnets back to back', () => {
+    expect(counterLayout(thickMagnets).pointer).toBeCloseTo(2 * pocketDepth(thickMagnets) + 1, 6)
+  })
+
+  it('refuses drums too narrow for their magnets', () => {
+    expect(() => build({ ...thickMagnets, drumDiameter: 40, drumWidth: minimumCounterDrumWidth(thickMagnets) - 0.5 })).toThrow(
+      /too narrow for the hub and magnets/,
+    )
+  })
+
+  it('refuses drums too small to ring with magnets', () => {
+    const config = magnetic()
+
+    expect(() => build({ ...config, drumDiameter: minimumCounterDrumDiameter(config) - 0.5 })).toThrow(
+      /too small for their digits and magnets/,
+    )
+  })
+
+  it('fits magnets in the default drums', () => {
+    expect(minimumCounterDrumDiameter(magnetic())).toBeLessThanOrEqual(counter().drumDiameter)
   })
 
   it('fits the default drums above their minimum size', () => {

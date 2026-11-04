@@ -3,6 +3,7 @@ import type { Font } from 'opentype.js'
 import type { BuildResult } from './base'
 import { trimNumber } from './outline'
 import { previewSegmentsFor } from './quality'
+import { defaultHolderConfig } from './holder'
 import { GLYPH_FILL, polygonsWidth, textPolygons, type Polygon } from './text'
 import type { CounterConfig, CounterPart, CounterTile } from './types'
 
@@ -23,6 +24,8 @@ const OVERCUT = 0.05
 const WALL = 1
 /** Radius of the flat top of each click bump. */
 const BUMP_TIP = 0.3
+/** Material left between the pointer's two magnet pockets. */
+const MAGNET_FLOOR = 1
 const HUB_RADIUS = 2.5
 /** How far the hub's barb stands proud of the shaft; it seats in a 45° countersink. */
 const BARB = 0.5
@@ -49,14 +52,24 @@ const EXPLODED_LIFT = 4
 /** How far an exploded preview moves each drum along the hub, as a share of its width; three quarters keeps the barb clear of both the tens drum and the pointer, even at the narrowest drums. */
 const EXPLODED_SPREAD = 0.75
 
-type DetentFit = Pick<CounterConfig, 'clearance' | 'click'>
+type DetentFit = Pick<CounterConfig, 'clearance' | 'click' | 'detent' | 'magnets'>
 /** A bump clears the play either side of the pointer, then pushes the barb in by `click` as it rides over. */
 const bumpHeight = (config: DetentFit) => 2 * config.clearance + config.click
 /** Bumps and dimples are 45° cones, so this is also each dimple's depth. */
 const bumpRadius = (config: DetentFit) => BUMP_TIP + bumpHeight(config)
+const magnetRadius = ({ magnets }: Pick<DetentFit, 'magnets'>) => (magnets.diameter + magnets.clearance) / 2
+const magnetDepth = ({ magnets }: Pick<DetentFit, 'magnets'>) => magnets.thickness + magnets.depthClearance
+/** What rings the hub on each drum's inner face: a bump's foot or a magnet's pocket. */
+const detentRadius = (config: DetentFit) => (config.detent === 'magnets' ? magnetRadius(config) : bumpRadius(config))
 /** The most the barb can give before it leaves its countersink. */
 export const MAX_COUNTER_CLICK = BARB - 0.1
 export const MIN_COUNTER_DRUM_WIDTH = 6
+/** Wide enough for the hub's snap fit, and for a wall behind each magnet. */
+export const minimumCounterDrumWidth = (config: Pick<DetentFit, 'detent' | 'magnets'>): number =>
+  config.detent === 'magnets' ? Math.max(MIN_COUNTER_DRUM_WIDTH, magnetDepth(config) + WALL) : MIN_COUNTER_DRUM_WIDTH
+/** Wide enough for an arrow at each drum, and for two magnets back to back. */
+const pointerThickness = (config: Pick<DetentFit, 'detent' | 'magnets'>) =>
+  config.detent === 'magnets' ? Math.max(POINTER, 2 * magnetDepth(config) + MAGNET_FLOOR) : POINTER
 
 export function counterParts(config: Pick<CounterConfig, 'inserts'>): { part: CounterPart; name: string }[] {
   return [
@@ -76,19 +89,23 @@ export function defaultCounterConfig(): CounterConfig {
     insertClearance: 0.05,
     clearance: 0.2,
     click: 0.3,
+    detent: 'printed',
+    magnets: (({ diameter, thickness, clearance, depthClearance }) => ({ diameter, thickness, clearance, depthClearance }))(
+      defaultHolderConfig().magnets,
+    ),
     segments: previewSegmentsFor(34),
   }
 }
 
-/** The ten bumps on a drum sit this far from the hub, as far out as the face pockets allow. */
-const bumpBearing = (flat: number, config: DetentFit) => flat - COUNTER_POCKET - WALL - bumpRadius(config)
+/** The ten bumps or magnets on a drum sit this far from the hub, as far out as the face pockets allow. */
+const detentBearing = (flat: number, config: DetentFit) => flat - COUNTER_POCKET - WALL - detentRadius(config)
 
 /**
- * Large enough for a readable digit, and an arrow, on each tile, and for ten dimples to ring the hub
- * inside the pointer's pocket without touching each other.
+ * Large enough for a readable digit, and an arrow, on each tile, and for ten bumps or magnets to ring
+ * the hub inside the face pockets without touching each other.
  */
 export function minimumCounterDrumDiameter(config: DetentFit): number {
-  const radius = bumpRadius(config)
+  const radius = detentRadius(config)
   const bearing = Math.max(HUB_RADIUS + config.clearance + WALL + radius, (2 * radius + WALL) / (2 * Math.sin(HALF_FACE)))
   return Math.max(
     (Math.max(MIN_DIGIT_HEIGHT, ARROW_WIDTH) + 2 * (DIGIT_MARGIN + WALL)) / Math.sin(HALF_FACE),
@@ -97,8 +114,9 @@ export function minimumCounterDrumDiameter(config: DetentFit): number {
 }
 
 /** The assembly's extents, which grow to take in an exploded view's spread drums and lifted tiles. */
-export function counterLayout(config: Pick<CounterConfig, 'drumDiameter' | 'drumWidth' | 'clearance' | 'exploded'>) {
+export function counterLayout(config: Pick<CounterConfig, 'drumDiameter' | 'drumWidth' | 'clearance' | 'detent' | 'magnets' | 'exploded'>) {
   const corner = config.drumDiameter / 2
+  const pointer = pointerThickness(config)
   const flat = corner * Math.cos(HALF_FACE)
   const spread = config.exploded ? EXPLODED_SPREAD * config.drumWidth : 0
   const lift = config.exploded ? EXPLODED_LIFT : 0
@@ -107,8 +125,8 @@ export function counterLayout(config: Pick<CounterConfig, 'drumDiameter' | 'drum
     flat,
     spread,
     lift,
-    pointer: POINTER,
-    width: 2 * (config.drumWidth + config.clearance + spread) + POINTER,
+    pointer,
+    width: 2 * (config.drumWidth + config.clearance + spread) + pointer,
     length: 2 * (corner + lift),
     height: 2 * (flat + lift),
     minZ: -lift,
@@ -154,7 +172,8 @@ const rollX = (degrees: number): Mat4 => {
  * the tens drum, which both turn on it. The pointer's wide flat base keeps it upright while the drums
  * roll, so the arrows on its top always mark the count. Ten bumps on each drum's inner face drop into
  * ten dimples in the pointer's face; turning a drum lifts them out against the hub's barb, so every
- * count clicks into place and stays there.
+ * count clicks into place and stays there. With magnet detents, ten magnets in each drum's inner face
+ * take the bumps' places and one in each face of the pointer the dimples', so every count snaps to it.
  *
  * The assembly is modelled the way it is used, hub along X, front towards -Y. Each part then prints
  * on its outer face: the tens drum over its countersink, the pointer on either side, and the units
@@ -170,11 +189,14 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
   }
 
   try {
+    const magnets = config.detent === 'magnets'
     if (config.clearance <= 0) throw new Error('The drums need clearance to turn')
     if (config.drumDiameter < minimumCounterDrumDiameter(config) - 1e-6) {
-      throw new Error('Drums are too small for their digits — enlarge them')
+      throw new Error(`Drums are too small for their digits${magnets ? ' and magnets' : ''} — enlarge them`)
     }
-    if (config.drumWidth < MIN_COUNTER_DRUM_WIDTH - 1e-6) throw new Error('Drums are too narrow for the hub — widen them')
+    if (config.drumWidth < minimumCounterDrumWidth(config) - 1e-6) {
+      throw new Error(`Drums are too narrow for the hub${magnets ? ' and magnets' : ''} — widen them`)
+    }
     if (config.click <= 0 || config.click > MAX_COUNTER_CLICK + 1e-6) {
       throw new Error(`The click must be more than 0 and at most ${MAX_COUNTER_CLICK}mm, or the barb lets go`)
     }
@@ -199,18 +221,28 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
     const drumBody = alongX(own(own(CrossSection.ofPolygons([decagon], 'NonZero')).extrude(width)))
     const boreHole = (length: number) => alongX(own(own(Manifold.cylinder(length + 2, bore, bore, segments)).translate([0, 0, -1])))
 
-    // Ten 45° cones from x = -OVERCUT towards +X, under the hub and rolled to every flat's bearing.
-    const radius = bumpRadius(config)
-    const detents = (height: number, tip: number) => {
-      const cone = alongX(
-        own(own(Manifold.cylinder(height + OVERCUT, radius + OVERCUT, tip, segments)).translate([bumpBearing(flat, config), 0, -OVERCUT])),
-      )
-      return own(Manifold.union(Array.from({ length: FACES }, (_detent, k) => own(cone.transform(rollX((360 * k) / FACES))))))
-    }
-    /** Each stands from just inside its drum's face, so the two fuse without sharing a face. */
-    const bumps = detents(bumpHeight(config), BUMP_TIP)
-    /** The bumps' cone run on to its apex, so a seated bump stays `clearance` off it all round. */
-    const dimples = detents(radius, 0)
+    // A cone or cylinder from x = -OVERCUT towards +X, under the hub where the pointer's base is solid.
+    const radius = detentRadius(config)
+    const detent = (height: number, foot: number, tip: number) =>
+      alongX(own(own(Manifold.cylinder(height + OVERCUT, foot, tip, segments)).translate([detentBearing(flat, config), 0, -OVERCUT])))
+    /** One at every flat's bearing, so each count lines one up with the pointer's. */
+    const ring = (solid: Manifold) =>
+      own(Manifold.union(Array.from({ length: FACES }, (_detent, k) => own(solid.transform(rollX((360 * k) / FACES))))))
+    const magnetPocket = detent(magnetDepth(config), radius, radius)
+    /**
+     * A drum with its inner face at x = 0 and the pointer towards -X, which `place` moves to the drum's
+     * own inner face. Bumps stand from just inside the face, so the two fuse without sharing a face.
+     */
+    const buildDrum = (cuts: Manifold[], place: (solid: Manifold) => Manifold = (solid) => solid) =>
+      magnets
+        ? own(drumBody.subtract(own(Manifold.union([place(ring(magnetPocket)), ...cuts]))))
+        : own(
+            own(
+              Manifold.union([drumBody, place(own(ring(detent(bumpHeight(config), radius + OVERCUT, BUMP_TIP)).mirror([1, 0, 0])))]),
+            ).subtract(own(Manifold.union(cuts))),
+          )
+    /** Each pointer face loses one magnet's pocket, or ten dimples: the bumps' cone run on to its apex, so a seated bump stays `clearance` off it all round. */
+    const pointerFace = magnets ? magnetPocket : ring(detent(radius, radius + OVERCUT, 0))
 
     // The tens drum's outer face is at x = 0 as built, where the hub's barb seats in a countersink.
     const countersink = alongX(
@@ -223,11 +255,8 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
         [0, LEAD + 2 * BARB],
       ]),
     )
-    const tensBody = own(
-      own(
-        own(Manifold.union([drumBody, own(bumps.translate([width, 0, 0]))])).subtract(own(Manifold.union([boreHole(width), countersink]))),
-      ).translate([-inner - width, 0, 0]),
-    )
+    const tensFace = (solid: Manifold) => own(own(solid.mirror([1, 0, 0])).translate([width, 0, 0]))
+    const tensBody = own(buildDrum([boreHole(width), countersink], tensFace).translate([-inner - width, 0, 0]))
 
     // The pointer follows the drums' outline above the hub and stands on a base as long as theirs.
     const pointerOutline = [
@@ -238,16 +267,16 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
       yz(-corner, -flat),
       yz(corner, -flat),
     ]
-    const pointerDimples = own(
+    const pointerDetents = own(
       Manifold.union([
-        own(dimples.translate([-thickness / 2, 0, 0])),
-        own(own(dimples.mirror([1, 0, 0])).translate([thickness / 2, 0, 0])),
+        own(pointerFace.translate([-thickness / 2, 0, 0])),
+        own(own(pointerFace.mirror([1, 0, 0])).translate([thickness / 2, 0, 0])),
       ]),
     )
     const pointerBody = own(
       own(
         alongX(own(own(CrossSection.ofPolygons([pointerOutline], 'NonZero')).extrude(thickness))).translate([-thickness / 2, 0, 0]),
-      ).subtract(own(Manifold.union([own(boreHole(thickness).translate([-thickness / 2, 0, 0])), pointerDimples]))),
+      ).subtract(own(Manifold.union([own(boreHole(thickness).translate([-thickness / 2, 0, 0])), pointerDetents]))),
     )
     // An arrow each way along the pointer's top flat, at the digit on top of each drum.
     const arrows = own(
@@ -279,8 +308,7 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
       ]),
     )
     const hub = own(own(alongX(own(hubProfile.subtract(slot))).mirror([1, 0, 0])).translate([inner + HUB_ROOT, 0, 0]))
-    const unitsBumps = own(bumps.mirror([1, 0, 0]))
-    const unitsBody = own(Manifold.union([own(own(Manifold.union([drumBody, unitsBumps])).translate([inner, 0, 0])), hub]))
+    const unitsBody = own(Manifold.union([own(buildDrum([]).translate([inner, 0, 0])), hub]))
 
     const digitPolygons = Array.from({ length: FACES }, (_digit, digit) => textPolygons(font, String(digit), 1))
     const faceSide = 2 * corner * Math.sin(HALF_FACE)

@@ -561,6 +561,24 @@ test('engraves the dial counter without inserts', async ({ page }) => {
   expect(await triangles(page)).toBeLessThan(inserted)
 })
 
+test('holds the dial counter with magnets instead of printed bumps', async ({ page }) => {
+  await visit(page, 'Counters')
+  await expect(page.getByLabel('Click in mm')).toHaveCount(1)
+  const printed = await triangles(page)
+
+  await pickChoice(page, 'Detent', 'Magnets')
+  await rebuilt(page, printed)
+  await expect(page.getByLabel('Click in mm')).toHaveCount(0)
+  await expect(page.getByLabel('Magnet diameter in mm')).toHaveValue('5.0')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download 3MF' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  const settings = new TextDecoder().decode(unzipSync(await readFile(path))['Metadata/model_settings.config'])
+  expect(settings.match(/<object id="\d+"><metadata key="name" value="counter-34mm-tile-[^"]+"/g)).toHaveLength(2 * 10 + 1)
+})
+
 const SHIELD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="120" viewBox="0 0 100 120">
   <path d="M50 4 L94 20 L90 70 Q80 104 50 116 Q20 104 10 70 L6 20 Z" fill="#000"/>
 </svg>`
