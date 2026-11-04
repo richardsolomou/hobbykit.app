@@ -8,9 +8,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { chromium, type Browser } from '@playwright/test'
 import { preview } from 'vite'
 import { holderGroup } from '../src/core/geometry/holder.ts'
-import { movementTrayFootprint } from '../src/core/geometry/movementTray.ts'
 import { presetFor, standardSize } from '../src/core/geometry/presets.ts'
-import type { MovementTrayShape, ShapeKind } from '../src/core/geometry/types.ts'
+import type { ShapeKind } from '../src/core/geometry/types.ts'
 import { PAGES } from '../src/lib/pages.ts'
 import { shareLink } from '../src/lib/shareLink.ts'
 import { defaultWorkspace, synchronizeWorkspace, type GeneratorSettings, type WorkspaceState } from '../src/lib/workspace.ts'
@@ -46,10 +45,6 @@ const holder = (quantity: number, shape: ShapeKind, label: string) => (w: Worksp
   const { width, length = width } = standardSize(shape, label)
   return { ...w, holder: { ...w.holder, groups: [holderGroup('models-1', quantity, { shape, width, length })] } }
 }
-const tray = (shape: MovementTrayShape, width: number, length: number, columns: number, ranks: number) => (w: WorkspaceState) => ({
-  ...w,
-  movementTray: { ...w.movementTray, ...movementTrayFootprint(shape, width, length), columns, ranks },
-})
 const handle = (patch: Partial<WorkspaceState['paintingTray']['handle']>) => (w: WorkspaceState) => ({
   ...w,
   paintingTray: { ...w.paintingTray, handle: { ...w.paintingTray.handle, ...patch } },
@@ -95,23 +90,6 @@ const LISTINGS: Listing[] = [
       { caption: '4 × oval 60×35.5', edit: holder(4, 'oval', '60×35.5') },
       { caption: '3 × rectangle 25×50', edit: holder(3, 'rect', '25×50') },
       { caption: '2 × round 60', edit: holder(2, 'round', '60') },
-    ],
-  },
-  {
-    name: 'movement-tray',
-    part: 'movementTray',
-    title: 'Magnetised movement trays',
-    facts: [
-      ['Bases', 'Round or square'],
-      ['Ranks', 'Up to 10 × 10'],
-      ['Magnets', 'Match bases'],
-    ],
-    hero: { caption: '5 × 4 of 25×25' },
-    variants: [
-      { caption: '5 × 2 of round 32', edit: tray('round', 32, 32, 5, 2) },
-      { caption: '5 × 1 of 25×50', edit: tray('rect', 25, 50, 5, 1) },
-      { caption: '5 × 4 of 20×20', edit: tray('rect', 20, 20, 5, 4) },
-      { caption: '3 × 2 of round 40', edit: tray('round', 40, 40, 3, 2) },
     ],
   },
   {

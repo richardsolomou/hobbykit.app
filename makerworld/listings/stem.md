@@ -30,7 +30,13 @@ This comes from HobbyKit, a free browser generator I made. Magnetised bases to s
 
 - Superglue for the foot
 
-## Real photos to take
+## Real photos
 
-- A flyer on its stem on a base
+Taken:
+
+- IMG_7706: a flyer on its stem on a base (cover)
+- IMG_7705: a stem on its own
+
+Worth adding:
+
 - Several heights side by side

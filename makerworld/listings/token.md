@@ -35,7 +35,13 @@ This comes from HobbyKit, a free browser generator I made. If you need something
 
 None.
 
-## Real photos to take
+## Real photos
 
-- A set of two-colour tokens on the table
+Taken:
+
+- IMG_7701: a two-colour Battle-shocked token (cover)
+
+Worth adding:
+
+- A set of tokens on the table
 - An engraved stack

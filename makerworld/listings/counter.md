@@ -37,8 +37,13 @@ This comes from HobbyKit, a free browser generator I made. If you need something
 
 None.
 
-## Real photos to take
+## Real photos
 
-- An assembled counter at a mid count, such as 42
+Taken:
+
+- IMG_7699: an assembled counter with green tiles (cover)
+
+Worth adding:
+
 - The parts laid out before assembly
 - Two counters side by side, in different colours

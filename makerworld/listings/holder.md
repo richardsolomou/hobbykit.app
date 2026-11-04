@@ -36,8 +36,15 @@ This comes from HobbyKit, a free browser generator I made. If you need something
 - A Gridfinity baseplate
 - Optional: neodymium magnets matching your bases, 5×2mm by default, with the same count per slot as each base
 
-## Real photos to take
+## Real photos
 
-- A full holder in a Gridfinity baseplate
+Taken:
+
+- IMG_7703: a holder of four 50mm slots, some magnets fitted (cover)
+- IMG_7704: the underside, on its Gridfinity feet
+- IMG_7702: a one-unit holder with a 40mm slot
+
+Worth adding:
+
+- The holder in a Gridfinity baseplate
 - Lifting one miniature out, to show the slot
-- A close-up of a slot's magnets

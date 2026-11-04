@@ -37,8 +37,15 @@ This comes from HobbyKit, a free browser generator I made. If you need something
 - Neodymium disc magnets, 5×2mm by default. The count depends on the size, and the Customizer preview shows every pocket.
 - Superglue to hold each magnet flush with the underside
 
-## Real photos to take
+## Real photos
 
+Taken:
+
+- IMG_7700: the underside of a 32mm base, ribs and label (cover)
+- IMG_7706: a flyer on its stem on a base
+
+Worth adding:
+
+- The underside with a magnet fitted
 - A painted miniature on its base, at an angle
-- The underside, with the magnets fitted
 - A few sizes side by side

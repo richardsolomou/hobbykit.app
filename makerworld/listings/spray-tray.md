@@ -34,8 +34,13 @@ This comes from HobbyKit, a free browser generator I made. If you need something
 - Neodymium magnets, 5×2mm by default, one for each pocket
 - Superglue or two-part epoxy for the magnets and the handle
 
-## Real photos to take
+## Real photos
 
-- The tray in hand with primed miniatures on it
+Taken:
+
+- IMG_7708: in use, a primed miniature held on the tray (3:4 cover)
+- IMG_7707: the tray on its handle, with primer marks (4:3 cover)
+
+Worth adding:
+
 - Each grip shape you printed
-- The underside with the handle glued on

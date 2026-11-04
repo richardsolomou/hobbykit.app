@@ -38,8 +38,14 @@ This comes from HobbyKit, a free browser generator I made. If you need something
 
 None.
 
-## Real photos to take
+## Real photos
 
-- A filled rack from the front, with pots and droppers
-- A side view, to show the steps
+Taken:
+
+- IMG_7710: a filled rack with pots and droppers (cover)
+- IMG_7711: a closer view of the same
+- IMG_7709: the empty rack, showing the steps and cells
+
+Worth adding:
+
 - Two modules and an end side by side
