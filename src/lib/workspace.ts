@@ -11,7 +11,7 @@ import { defaultTokenConfig } from '../core/geometry/token'
 import { TEXTURE_PATTERNS } from '../core/geometry/texture'
 import { automaticMagnetCount, DEFAULT_PRESET, footprintKey, presetFor, ribCountFor } from '../core/geometry/presets'
 import { defaultFlightStemConfig } from '../core/geometry/stem'
-import { defaultCounterConfig } from '../core/geometry/counter'
+import { defaultCounterConfig, minimumCounterDrumDiameter, minimumCounterDrumWidth } from '../core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -24,7 +24,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 16
+const WORKSPACE_VERSION = 17
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -110,8 +110,15 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
           shared.magnets.diameter,
           shared.magnets.thickness,
         ))
+  const { diameter, thickness, clearance, depthClearance } = shared.magnets
+  const counter = { ...state.counter, magnets: { diameter, thickness, clearance, depthClearance } }
   return {
     ...state,
+    counter: {
+      ...counter,
+      drumDiameter: atLeast(counter.drumDiameter, minimumCounterDrumDiameter(counter)),
+      drumWidth: atLeast(counter.drumWidth, minimumCounterDrumWidth(counter)),
+    },
     base: {
       ...state.base,
       wallThickness: shared.wallThickness,
@@ -194,6 +201,7 @@ const MIGRATIONS = [
   migrateWorkspaceV13,
   migrateWorkspaceV14,
   migrateWorkspaceV15,
+  migrateWorkspaceV16,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -221,7 +229,7 @@ export function loadWorkspace(storage: SettingsStorage): WorkspaceState {
 }
 
 const PARTS: readonly GeneratorSettings[] = ['base', 'holder', 'paintingTray', 'paintRack', 'stem', 'token', 'counter']
-const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'paintingTray'])
+const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'paintingTray', 'counter'])
 
 /**
  * One generator's settings and the shared settings that shape it, as a share link carries them.
@@ -261,7 +269,8 @@ export function applyWorkspaceSetup(
   const { version, part, config, shared } = setup as Record<string, unknown>
   const key = PARTS.find((candidate) => candidate === part)
   if (!key) return undefined
-  const usesShared = PARTS_USING_SHARED.has(key)
+  // Counter links made before counters read the shared magnets carry none, so they keep the recipient's.
+  const usesShared = PARTS_USING_SHARED.has(key) && shared !== undefined
   const migrated = migrateWorkspace(version, { ...workspace, [key]: config, shared: usesShared ? shared : workspace.shared })
   if (typeof migrated !== 'object' || migrated === null) return undefined
   const incoming = migrated as Record<string, unknown>
@@ -272,6 +281,15 @@ export function applyWorkspaceSetup(
   const kept = Object.entries(workspace.shared.magnetCounts).filter(([footprint]) => !replaced.includes(footprint))
   const magnetCounts = { ...Object.fromEntries(kept), ...candidate.shared.magnetCounts }
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
+}
+
+/** Counters saved before magnet detents keep their printed bumps; synchronising fills in the shared magnets. */
+function migrateWorkspaceV16(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  if (typeof workspace.counter !== 'object' || workspace.counter === null) return value
+  const { detent, magnets } = defaultCounterConfig()
+  return { ...workspace, counter: { ...workspace.counter, detent, magnets } }
 }
 
 function migrateWorkspaceV15(value: unknown): unknown {
@@ -443,6 +461,7 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
     isTokenImage(workspace.token.image) &&
     workspace.paintingTray.kind === 'painting-tray' &&
     workspace.counter.kind === 'counter' &&
+    ['printed', 'magnets'].includes(workspace.counter.detent) &&
     workspace.paintRack.kind === 'paint-rack' &&
     workspace.paintRack.items.length > 0 &&
     workspace.paintRack.items.every((item) => ['module', 'corner'].includes(item.kind)) &&

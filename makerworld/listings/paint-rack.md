@@ -1,7 +1,7 @@
 # Modular paint rack
 
 - **Script:** `paint-rack.scad`
-- **Category:** Household › Organization (or Hobby & DIY)
+- **Category:** Tools › Organizers
 - **Tags:** paint rack, paint storage, citadel, vallejo, army painter, dropper bottle, paint organiser, miniature painting, modular, customizable, parametric
 
 ## Summary

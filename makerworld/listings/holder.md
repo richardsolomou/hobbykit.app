@@ -1,8 +1,8 @@
 # Gridfinity miniature holder
 
 - **Script:** `holder.scad`
-- **Category:** Household › Organization (or Toys & Games › Board Games)
-- **Tags:** gridfinity, miniature storage, miniature holder, magnetised, wargaming, warhammer, 40k, army transport, customizable, parametric
+- **Category:** Tools › Organizers
+- **Tags:** gridfinity, miniature storage, miniature holder, magnetised, wargaming, 40k, army transport, customizable, parametric
 
 ## Summary
 

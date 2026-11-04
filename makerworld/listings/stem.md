@@ -2,7 +2,7 @@
 
 - **Script:** `stem.scad`
 - **Category:** Toys & Games › Board Games
-- **Tags:** flying stem, flight stand, miniature stand, flying base, wargaming, warhammer, peg, ball joint, customizable, parametric, no supports
+- **Tags:** flying stem, flight stand, miniature stand, flying base, wargaming, peg, ball joint, customizable, parametric, no supports
 
 ## Summary
 
@@ -32,6 +32,7 @@ Taken:
 
 - IMG_7706: a flyer on its stem on a base (cover)
 - IMG_7705: a stem on its own
+- IMG_7715: a stem beside a flyer on its stem, at table height
 
 Worth adding:
 

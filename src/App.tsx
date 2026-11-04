@@ -412,7 +412,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const resetSharedSettings: ResetAction = {
     label: 'shared settings',
     description:
-      'Magnet size and fit, pocket layout, magnet counts, wall thickness, magnet boss wall and the labels toggle return to their defaults on bases, holders and spray trays.',
+      'Magnet size and fit, pocket layout, magnet counts, wall thickness, magnet boss wall and the labels toggle return to their defaults on bases, holders, spray trays and dial counters.',
     onReset: () => {
       posthog.capture('settings_reset', { scope: 'shared' })
       setWorkspace(resetShared)
@@ -473,7 +473,14 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     ) : model === 'stem' ? (
       <StemPanel stem={stem} setStem={setStem} resets={[resetPart('stem', 'stem', false)]} />
     ) : model === 'counter' ? (
-      <CounterPanel counter={counter} setCounter={setCounter} resets={[resetPart('counter', 'dial counter', false)]} />
+      <CounterPanel
+        counter={counter}
+        setCounter={setCounter}
+        maxSharedMagnetThickness={maxSharedMagnetThickness}
+        maxSharedDepthClearance={maxSharedDepthClearance}
+        setSharedMagnets={setSharedMagnets}
+        resets={[resetPart('counter', 'dial counter', true), resetSharedSettings]}
+      />
     ) : (
       <TokenPanel
         token={token}

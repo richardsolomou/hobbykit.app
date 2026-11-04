@@ -1,8 +1,8 @@
 # Magnetised miniature bases
 
 - **Script:** `base.scad`
-- **Category:** Toys & Games › Board Games (pick Miniatures instead if the form offers it)
-- **Tags:** miniature base, magnetised base, magnet base, wargaming, warhammer, 40k, age of sigmar, old world, kings of war, customizable, parametric, no supports
+- **Category:** Toys & Games › Board Games
+- **Tags:** miniature base, magnetised base, magnet base, wargaming, 40k, age of sigmar, old world, kings of war, customizable, parametric, no supports
 
 ## Summary
 
@@ -40,9 +40,9 @@ Taken:
 
 - IMG_7700: the underside of a 32mm base, ribs and label (cover)
 - IMG_7706: a flyer on its stem on a base
+- IMG_7712: a miniature on its base, from above
+- IMG_7713: a base tipped up to show its magnet
 
 Worth adding:
 
-- The underside with a magnet fitted
-- A painted miniature on its base, at an angle
 - A few sizes side by side

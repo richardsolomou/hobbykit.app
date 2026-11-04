@@ -45,6 +45,28 @@ describe('share links', () => {
     expect(opened(sender, 'holder')?.workspace.holder.magnets.diameter).toBe(6)
   })
 
+  it('carries the shared magnets a counter depends on', () => {
+    const sender = defaultWorkspace()
+    sender.counter.detent = 'magnets'
+    sender.shared.magnets.diameter = 6
+
+    expect(opened(sender, 'counter')?.workspace.counter.magnets.diameter).toBe(6)
+  })
+
+  it('keeps the recipient shared settings for a counter link made before counters used them', () => {
+    const recipient = defaultWorkspace()
+    recipient.shared.magnets.diameter = 6
+    const legacy: Record<string, unknown> = { ...defaultWorkspace().counter, drumWidth: 16 }
+    delete legacy.detent
+    delete legacy.magnets
+    const setup = readShareHash(hashFor({ v: 1, version: 16, part: 'counter', config: legacy }))
+
+    expect(applyWorkspaceSetup(recipient, setup)?.workspace).toMatchObject({
+      counter: { drumWidth: 16, detent: 'printed', magnets: { diameter: 6 } },
+      shared: { magnets: { diameter: 6 } },
+    })
+  })
+
   it('leaves shared settings alone for a generator that does not use them', () => {
     const sender = defaultWorkspace()
     sender.shared.magnets.diameter = 6

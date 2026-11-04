@@ -2,7 +2,7 @@
 
 - **Script:** `token.scad`
 - **Category:** Toys & Games › Board Games
-- **Tags:** tokens, objective markers, wargaming, board game, two colour, multicolour, warhammer, kill team, customizable, parametric
+- **Tags:** tokens, objective markers, wargaming, board game, two colour, multicolour, kill team, customizable, parametric
 
 ## Summary
 
@@ -34,6 +34,8 @@ This is part of HobbyKit, a free generator I made. Tokens here take text only, a
 Taken:
 
 - IMG_7701: a two-colour Battle-shocked token (cover)
+- IMG_7716: the token from above
+- IMG_7717: the token at table height, showing the raised text
 
 Worth adding:
 

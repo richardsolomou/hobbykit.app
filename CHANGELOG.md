@@ -1,5 +1,12 @@
 # hobbykit
 
+## 0.22.1
+
+### Patch Changes
+
+- a7573fd: Holder slots now stop at least 0.05mm inside the wall, so a zero edge spacing no longer leaves open edges a slicer has to repair.
+- ef657a4: Holder exports now hold every slot the preview shows. Some round and hex holders packed more slots than the app's own capacity estimate, and the downloaded module came out with fewer.
+
 ## 0.22.0
 
 ### Minor Changes

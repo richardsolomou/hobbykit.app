@@ -59,7 +59,7 @@ Track wounds, victory points, or command points from 00 to 99 on two ten-sided d
 - Printable 15, 20, 30, and 35mm flying stems with adjustable peg or ball-joint connections.
 - Round, square, and hex tokens with wrapped text and traced image silhouettes, raised in a second colour or engraved.
 - Stepped honeycomb paint racks for dropper bottles and pots.
-- Two-drum 00–99 dial counters held at each count by printed click detents, joined by a snap-fit hub, with a pointer marking the count and raised digits on press-in tiles in a second colour or engraved for paint.
+- Two-drum 00–99 dial counters held at each count by printed click detents or magnets, joined by a snap-fit hub, with a pointer marking the count and raised digits on press-in tiles in a second colour or engraved for paint.
 - Shared magnet dimensions across bases, holders, and spray trays.
 - Balanced or five-pocket cross magnet arrangements for bases and holders. Saved cross layouts keep one centre pocket and four outer pockets on both axes, including elongated footprints.
 - Exact size labels, filenames, dimensions, and high-quality exports.

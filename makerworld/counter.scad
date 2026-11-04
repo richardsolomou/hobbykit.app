@@ -1,13 +1,16 @@
 // HobbyKit dial counter, for MakerWorld's Parametric Model Maker.
 // A port of src/core/geometry/counter.ts: change both together, then run `just makerworld check`.
 // Two ten-sided drums count 00 to 99 on a snap-fit hub, with a pointer between them. Each count
-// clicks in as ten bumps on each drum seat in ten dimples in the pointer. Every part prints flat
+// clicks in as ten bumps on each drum seat in ten dimples in the pointer, or snaps to the pointer's
+// magnets with ten magnets in each drum. Every part prints flat
 // on its outer face without supports; colour tiles press into the pockets on every face.
 // Licensed under CC BY-SA 4.0, unlike the AGPL-3.0-only app, because MakerWorld offers no GPL licence.
 
 /* [Part] */
 // All lays every part out on one plate. The tiles come as bases and raised marks so each can take its own filament.
 part = "all"; // [all:All parts, tens:Tens drum, pointer:Pointer, units:Units drum and hub, tiles:Colour tiles, tile-bases:Colour tile bases, tile-marks:Colour tile marks]
+// Which tiles the tile parts give: every one, or one on its own to reprint. Tens and units tiles are alike.
+tiles = "all"; // [all:Every tile, 0:Digit 0, 1:Digit 1, 2:Digit 2, 3:Digit 3, 4:Digit 4, 5:Digit 5, 6:Digit 6, 7:Digit 7, 8:Digit 8, 9:Digit 9, arrows:Pointer arrows]
 
 /* [Drums] */
 // Across the corners of each ten-sided drum.
@@ -16,8 +19,19 @@ drum_diameter = 34; // [32.4:0.1:60]
 drum_width = 12; // [6:0.1:24]
 // Play around the hub and the gap either side of the pointer.
 fit_clearance = 0.2; // [0.1:0.05:0.6]
-// How far the hub's barb gives as each count passes. Raise it if the drums turn too easily.
+
+/* [Detent] */
+// What holds each count: printed bumps that click into dimples, or 22 magnets glued into pockets.
+detent = "printed"; // [printed:Printed bumps, magnets:Magnets]
+// With printed bumps: how far the hub's barb gives as each count passes. Raise it if the drums turn too easily.
 click = 0.3; // [0.1:0.05:0.4]
+// With magnets: ten in each drum and one in each face of the pointer.
+magnet_diameter = 5; // [2:0.5:8]
+magnet_thickness = 2; // [0.5:0.1:6]
+// Added to the diameter so a magnet drops in.
+magnet_clearance = 0.2; // [0:0.05:0.6]
+// Added to the pocket depth for glue.
+magnet_depth_clearance = 0.1; // [0:0.05:0.5]
 
 /* [Inserts] */
 // Print each face's digit or arrows on a tile that presses into a pocket; otherwise they are engraved for paint.
@@ -37,6 +51,8 @@ ENGRAVING = 1;
 OVERCUT = 0.05;
 WALL = 1;
 BUMP_TIP = 0.3;
+// Material left between the pointer's two magnet pockets.
+MAGNET_FLOOR = 1;
 HUB_RADIUS = 2.5;
 BARB = 0.5;
 LEAD = 1.2;
@@ -80,23 +96,33 @@ SEGMENTS = segments_for_tolerance(drum_diameter, EXPORT_CURVE_TOLERANCE);
 BUMP_HEIGHT = 2 * fit_clearance + click;
 // Bumps and dimples are 45° cones, so this is also each dimple's depth.
 BUMP_RADIUS = BUMP_TIP + BUMP_HEIGHT;
+MAGNETS = detent == "magnets";
+MAGNET_RADIUS = (magnet_diameter + magnet_clearance) / 2;
+MAGNET_DEPTH = magnet_thickness + magnet_depth_clearance;
+// What rings the hub on each drum's inner face: a bump's foot or a magnet's pocket.
+DETENT_RADIUS = MAGNETS ? MAGNET_RADIUS : BUMP_RADIUS;
 MIN_DIAMETER =
-  let(bearing = max(HUB_RADIUS + fit_clearance + WALL + BUMP_RADIUS, (2 * BUMP_RADIUS + WALL) / (2 * sin(HALF_FACE))))
-  max((max(MIN_DIGIT_HEIGHT, ARROW_WIDTH) + 2 * (DIGIT_MARGIN + WALL)) / sin(HALF_FACE), 2 * (bearing + BUMP_RADIUS + WALL + POCKET) / cos(HALF_FACE));
+  let(bearing = max(HUB_RADIUS + fit_clearance + WALL + DETENT_RADIUS, (2 * DETENT_RADIUS + WALL) / (2 * sin(HALF_FACE))))
+  max((max(MIN_DIGIT_HEIGHT, ARROW_WIDTH) + 2 * (DIGIT_MARGIN + WALL)) / sin(HALF_FACE), 2 * (bearing + DETENT_RADIUS + WALL + POCKET) / cos(HALF_FACE));
+// Wide enough for the hub's snap fit, and for a wall behind each magnet.
+MIN_WIDTH = MAGNETS ? max(MIN_DRUM_WIDTH, MAGNET_DEPTH + WALL) : MIN_DRUM_WIDTH;
+// Wide enough for an arrow at each drum, and for two magnets back to back.
+POINTER_THICKNESS = MAGNETS ? max(POINTER, 2 * MAGNET_DEPTH + MAGNET_FLOOR) : POINTER;
 
 CORNER =
   assert(fit_clearance > 0, "The drums need clearance to turn")
-  assert(drum_diameter >= MIN_DIAMETER - 1e-6, "Drums are too small for their digits — enlarge them")
-  assert(drum_width >= MIN_DRUM_WIDTH - 1e-6, "Drums are too narrow for the hub — widen them")
+  assert(drum_diameter >= MIN_DIAMETER - 1e-6, str("Drums are too small for their digits", MAGNETS ? " and magnets" : "", " — enlarge them"))
+  assert(drum_width >= MIN_WIDTH - 1e-6, str("Drums are too narrow for the hub", MAGNETS ? " and magnets" : "", " — widen them"))
+  assert(detent == "printed" || detent == "magnets", "Detent must be printed or magnets")
   assert(click > 0 && click <= MAX_CLICK + 1e-6, str("The click must be more than 0 and at most ", MAX_CLICK, "mm, or the barb lets go"))
   assert(insert_clearance >= 0, "Inserts need a clearance of zero or more")
   drum_diameter / 2;
 FLAT = CORNER * cos(HALF_FACE);
-INNER = POINTER / 2 + fit_clearance;
+INNER = POINTER_THICKNESS / 2 + fit_clearance;
 BORE = HUB_RADIUS + fit_clearance;
 SINK = BORE + BARB;
-// The ten bumps on a drum sit this far from the hub, as far out as the face pockets allow.
-BEARING = FLAT - POCKET - WALL - BUMP_RADIUS;
+// The ten bumps or magnets on a drum sit this far from the hub, as far out as the face pockets allow.
+BEARING = FLAT - POCKET - WALL - DETENT_RADIUS;
 HUB_LENGTH = drum_width + 2 * INNER + HUB_ROOT;
 UNITS_CENTRE = INNER + drum_width / 2;
 
@@ -107,7 +133,7 @@ DIGIT_BOUNDS = [for (contours = DIGIT_CONTOURS) let(points = [for (c = contours)
 // Half the size of each face's pocket, along the hub and across the face.
 POCKET_X = drum_width / 2 - WALL;
 POCKET_Y = CORNER * sin(HALF_FACE) - WALL;
-POINTER_POCKET_X = POINTER / 2 + OVERCUT;
+POINTER_POCKET_X = POINTER_THICKNESS / 2 + OVERCUT;
 DIGIT_HEIGHT =
   let(widest = max([for (b = DIGIT_BOUNDS) (b[1] - b[0]) / (b[3] - b[2])]), height = min(2 * (POCKET_Y - DIGIT_MARGIN), 2 * (POCKET_X - DIGIT_MARGIN) / widest))
   assert(2 * (POCKET_Y - DIGIT_MARGIN) >= ARROW_WIDTH, "Arrows would not fit the pointer — enlarge the drums")
@@ -117,10 +143,12 @@ DIGIT_HEIGHT =
 // Tiles: half extents of a drum's and the pointer's, and the plate they are laid out on.
 TILE_X = POCKET_X - insert_clearance;
 TILE_Y = POCKET_Y - insert_clearance;
-POINTER_TILE_X = POINTER / 2 - insert_clearance;
+POINTER_TILE_X = POINTER_THICKNESS / 2 - insert_clearance;
 PLATE_WIDTH = max(FACES * 2 * TILE_X + (FACES - 1) * INSERT_SPACING, 2 * POINTER_TILE_X);
 PLATE_DEPTH = 3 * 2 * TILE_Y + 2 * INSERT_SPACING;
 
+ONE_DIGIT = [for (d = [0:FACES - 1]) if (tiles == str(d)) d];
+assert(tiles == "all" || tiles == "arrows" || len(ONE_DIGIT) == 1, "Tiles must be all, arrows or a digit from 0 to 9");
 assert(colour_inserts || (part != "tiles" && part != "tile-bases" && part != "tile-marks"), "Tiles need colour inserts turned on");
 
 // The assembly has the hub along X and the front at -Y; [y, z] points in the YZ plane extrude along +X.
@@ -161,14 +189,17 @@ module drum_body() yz_prism([for (i = [0:FACES - 1]) let(a = 90 + HALF_FACE + 36
 
 module bore_hole(length) along_x() translate([0, 0, -1]) cylinder(h = length + 2, r = BORE, $fn = SEGMENTS);
 
-// Ten 45° cones along +X from x = -OVERCUT, one under the hub at every flat's bearing.
-module detents(height, tip) {
-  for (k = [0:FACES - 1]) rotate([360 * k / FACES, 0, 0]) along_x()
-    translate([BEARING, 0, -OVERCUT]) cylinder(h = height + OVERCUT, r1 = BUMP_RADIUS + OVERCUT, r2 = tip, $fn = SEGMENTS);
+// A cone or cylinder along +X from x = -OVERCUT, under the hub where the pointer's base is solid.
+module detent(height, foot, tip) along_x() translate([BEARING, 0, -OVERCUT]) cylinder(h = height + OVERCUT, r1 = foot, r2 = tip, $fn = SEGMENTS);
+// One at every flat's bearing, so each count lines one up with the pointer's.
+module ring() for (k = [0:FACES - 1]) rotate([360 * k / FACES, 0, 0]) children();
+module bumps() ring() detent(BUMP_HEIGHT, BUMP_RADIUS + OVERCUT, BUMP_TIP);
+module magnet_pocket() detent(MAGNET_DEPTH, MAGNET_RADIUS, MAGNET_RADIUS);
+// Each pointer face loses one magnet's pocket, or ten dimples: the bumps' cone run on to its apex, so a seated bump stays clear of it all round.
+module pointer_face() {
+  if (MAGNETS) magnet_pocket();
+  else ring() detent(BUMP_RADIUS, BUMP_RADIUS + OVERCUT, 0);
 }
-module bumps() detents(BUMP_HEIGHT, BUMP_TIP);
-// The bumps' cone run on to its apex, so a seated bump stays clear of it all round.
-module dimples() detents(BUMP_RADIUS, 0);
 
 // The cone runs on inside the bore, so its rim never lands on the bore wall.
 module countersink() along_x() rotate_extrude($fn = SEGMENTS)
@@ -179,10 +210,11 @@ module tens() {
     translate([-INNER - drum_width, 0, 0]) difference() {
       union() {
         drum_body();
-        translate([drum_width, 0, 0]) bumps();
+        if (!MAGNETS) translate([drum_width, 0, 0]) bumps();
       }
       bore_hole(drum_width);
       countersink();
+      if (MAGNETS) translate([drum_width, 0, 0]) mirror([1, 0, 0]) ring() magnet_pocket();
     }
     digit_cuts(-UNITS_CENTRE);
   }
@@ -191,10 +223,10 @@ module tens() {
 module pointer() {
   outline = concat([for (i = [0:FACES / 2]) let(a = 360 * i / FACES) [CORNER * cos(a), CORNER * sin(a)]], [[-CORNER, -FLAT], [CORNER, -FLAT]]);
   difference() {
-    translate([-POINTER / 2, 0, 0]) yz_prism(outline, POINTER);
-    translate([-POINTER / 2, 0, 0]) bore_hole(POINTER);
-    translate([-POINTER / 2, 0, 0]) dimples();
-    translate([POINTER / 2, 0, 0]) mirror([1, 0, 0]) dimples();
+    translate([-POINTER_THICKNESS / 2, 0, 0]) yz_prism(outline, POINTER_THICKNESS);
+    translate([-POINTER_THICKNESS / 2, 0, 0]) bore_hole(POINTER_THICKNESS);
+    translate([-POINTER_THICKNESS / 2, 0, 0]) pointer_face();
+    translate([POINTER_THICKNESS / 2, 0, 0]) mirror([1, 0, 0]) pointer_face();
     // The pointer's pocket runs right through it, so the drums hold its tile in.
     translate([0, 0, FLAT]) cut(POINTER_POCKET_X, -1);
   }
@@ -219,27 +251,30 @@ module units() {
     union() {
       translate([INNER, 0, 0]) {
         drum_body();
-        mirror([1, 0, 0]) bumps();
+        if (!MAGNETS) mirror([1, 0, 0]) bumps();
       }
       hub();
     }
     digit_cuts(UNITS_CENTRE);
+    if (MAGNETS) translate([INNER, 0, 0]) ring() magnet_pocket();
   }
 }
 
 // Each part on its outer face, centred on the plate: the tens drum over its countersink, the pointer on
 // either side, and the units drum with its hub standing up.
 module tens_part() translate([0, 0, INNER + drum_width]) rotate([0, -90, 0]) tens();
-module pointer_part() translate([0, 0, POINTER / 2]) rotate([0, -90, 0]) pointer();
+module pointer_part() translate([0, 0, POINTER_THICKNESS / 2]) rotate([0, -90, 0]) pointer();
 module units_part() translate([0, 0, INNER + drum_width]) rotate([0, 90, 0]) units();
 
-// Every tile face up, a row of 0–9 for each drum and then the arrows; a base, and its mark from z = TILE_BASE.
+// Every tile face up, a row of 0–9 for each drum and then the arrows, or one tile on its own; a base, and its mark from z = TILE_BASE.
 module tiles(marks) {
   module tile(x, d, marks) {
     if (marks) translate([0, 0, TILE_BASE]) linear_extrude(RELIEF) mark(d);
     else linear_extrude(TILE_BASE) square([2 * x, 2 * TILE_Y], center = true);
   }
-  translate([-PLATE_WIDTH / 2, PLATE_DEPTH / 2, 0]) {
+  if (tiles == "arrows") tile(POINTER_TILE_X, -1, marks);
+  else if (tiles != "all") tile(TILE_X, ONE_DIGIT[0], marks);
+  else translate([-PLATE_WIDTH / 2, PLATE_DEPTH / 2, 0]) {
     for (row = [0:1], d = [0:FACES - 1]) translate([TILE_X + d * (2 * TILE_X + INSERT_SPACING), -TILE_Y - row * (2 * TILE_Y + INSERT_SPACING), 0]) tile(TILE_X, d, marks);
     translate([POINTER_TILE_X, -TILE_Y - 2 * (2 * TILE_Y + INSERT_SPACING), 0]) tile(POINTER_TILE_X, -1, marks);
   }

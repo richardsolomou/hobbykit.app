@@ -21,8 +21,10 @@ For other sizes, or engraved digits you can paint instead of tiles, open `counte
 What you can change in the .scad:
 
 - Part: everything on one plate, or each drum, the pointer or the tiles on their own
+- Tiles: every tile, or one digit or the arrows on its own, to reprint one that failed
 - Drum diameter and width
-- Fit: clearance around the hub, and the click (raise it if the drums turn too easily)
+- Fit: the clearance around the hub
+- Detent: printed bumps with a click you raise if the drums turn too easily, or 22 magnets, with their diameter, thickness and fit
 - Inserts: colour tiles or engraved digits, and the tile clearance
 
 This is part of HobbyKit, a free generator I made. hobbykit.app does all of this in a browser, and can also give you a 3MF with the tiles already set to a second filament.
@@ -46,7 +48,7 @@ This is part of HobbyKit, a free generator I made. hobbykit.app does all of this
 - `counter-34mm-pointer.stl`: the pointer that sits between the drums
 - `counter-34mm-inserts.stl`: the tile bases, 0 to 9 for each drum plus the arrow tile
 - `counter-34mm-inserts-marks.stl`: the raised digits and arrows, to print on the tile bases in a second colour
-- `counter.scad`: the OpenSCAD source for other sizes and engraved digits
+- `counter.scad`: the OpenSCAD source for other sizes, engraved digits, single tiles and the magnet version
 
 ## Images
 

@@ -2,7 +2,7 @@
 
 - **Script:** `counter.scad`
 - **Category:** Toys & Games › Board Games
-- **Tags:** dial counter, wound counter, life counter, score counter, counter, wargaming, board game, mtg, warhammer, print in place alternative, customizable, parametric, no supports
+- **Tags:** dial counter, wound counter, life counter, score counter, counter, wargaming, board game, mtg, customizable, parametric, no supports
 
 ## Summary
 
@@ -17,8 +17,10 @@ The digits are press-in tiles in a second colour. They print on their own plate,
 What you can change:
 
 - Part: everything on one plate, or each drum, the pointer or the tiles on their own
+- Tiles: every tile, or one digit or the arrows on its own, to reprint one that failed
 - Drum diameter and width
-- Fit: clearance around the hub, and the click (raise it if the drums turn too easily)
+- Fit: the clearance around the hub
+- Detent: printed bumps with a click you raise if the drums turn too easily, or 22 magnets, with their diameter, thickness and fit
 - Inserts: colour tiles or engraved digits, and the tile clearance
 
 This is part of HobbyKit, a free generator I made. hobbykit.app can also give you a 3MF with the tiles already set to a second filament.
@@ -40,6 +42,8 @@ This is part of HobbyKit, a free generator I made. hobbykit.app can also give yo
 Taken:
 
 - IMG_7699: an assembled counter with green tiles (cover)
+- IMG_7718: the counter end on, showing the ten-sided drums
+- IMG_7719: the count and pointer arrows, from the front
 
 Worth adding:
 
