@@ -1,8 +1,8 @@
 # Gridfinity miniature holder
 
 - **Script:** `holder.scad`
-- **Category:** Household › Organization (or Toys & Games › Board Games)
-- **Tags:** gridfinity, miniature storage, miniature holder, magnetised, wargaming, warhammer, 40k, army transport, customizable, parametric
+- **Category:** Tools › Organizers
+- **Tags:** gridfinity, miniature storage, miniature holder, magnetised, wargaming, 40k, army transport, customizable, parametric
 
 ## Summary
 
@@ -22,7 +22,7 @@ What you can change:
 
 This holder takes one size of miniature. If the miniatures do not all fit in the largest size you allow, the extra ones are left out, so check the count in the preview.
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like mixing base sizes in one holder or splitting a big army across several modules, the full version is at hobbykit.app.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like mixing base sizes in one holder or splitting a big army across several modules, HobbyKit does that at hobbykit.app.
 
 ## Print settings
 

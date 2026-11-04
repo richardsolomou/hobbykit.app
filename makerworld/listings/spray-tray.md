@@ -1,7 +1,7 @@
 # Magnetic spray painting tray
 
 - **Script:** `spray-tray.scad`
-- **Category:** Tools › Hobby Tools (or Hobby & DIY)
+- **Category:** Tools › Hand Tools
 - **Tags:** painting handle, spray tray, priming tray, miniature painting, airbrush, magnetised, wargaming, customizable, parametric, no supports
 
 ## Summary
@@ -19,7 +19,7 @@ What you can change:
 - Magnets: size and clearances
 - Handle: round, oval barrel, flared base or pistol grip, with length, width, lean, a rounded end, and ribs
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like a 3MF with the tray and handle on separate plates, ready to slice, the full version is at hobbykit.app.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like a 3MF with the tray and handle on separate plates, ready to slice, HobbyKit does that at hobbykit.app.
 
 ## Print settings
 
@@ -40,6 +40,7 @@ Taken:
 
 - IMG_7708: in use, a primed miniature held on the tray (3:4 cover)
 - IMG_7707: the tray on its handle, with primer marks (4:3 cover)
+- IMG_7714: a miniature on the tray, from above
 
 Worth adding:
 

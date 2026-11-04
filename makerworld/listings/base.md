@@ -1,8 +1,8 @@
 # Magnetised miniature bases
 
 - **Script:** `base.scad`
-- **Category:** Toys & Games › Board Games (pick Miniatures instead if the form offers it)
-- **Tags:** miniature base, magnetised base, magnet base, wargaming, warhammer, 40k, age of sigmar, old world, kings of war, customizable, parametric, no supports
+- **Category:** Toys & Games › Board Games
+- **Tags:** miniature base, magnetised base, magnet base, wargaming, 40k, age of sigmar, old world, kings of war, customizable, parametric, no supports
 
 ## Summary
 
@@ -12,7 +12,7 @@ Hollow miniature bases with flush magnet pockets, in every standard round, oval,
 
 Every base has a recess underneath with pockets for magnets. Each magnet sits flush with the underside, so the base holds itself down on a steel or magnetised tray. Internal ribs run through each pocket to keep the floor stiff. The base size is embossed in the recess so you can tell your bases apart once they are painted.
 
-Click Customize to pick a standard size. There are 40+ of them, from GW's Warhammer 40,000 and Age of Sigmar guides, The Old World, and Kings of War. Choose Custom to type your own shape and size instead. Auto picks a magnet count from the size and the magnet you use, and you can set it yourself.
+Click Customize to pick a standard size. There are 40+ of them, from Games Workshop's published base guides for 40K, Age of Sigmar and The Old World, and from Kings of War. Choose Custom to type your own shape and size instead. Auto picks a magnet count from the size and the magnet you use, and you can set it yourself.
 
 What you can change:
 
@@ -23,7 +23,7 @@ What you can change:
 - Supports: number, thickness and height
 - Fit: magnet clearances, the wall around each pocket, and the label's emboss depth
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like textured tops (paving, plating, rock, rubble or snow) or exporting a whole batch of sizes at once, the full version is at hobbykit.app.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like textured tops (paving, plating, rock, rubble or snow) or exporting a whole batch of sizes at once, HobbyKit does that at hobbykit.app.
 
 ## Print settings
 
@@ -43,9 +43,9 @@ Taken:
 
 - IMG_7700: the underside of a 32mm base, ribs and label (cover)
 - IMG_7706: a flyer on its stem on a base
+- IMG_7712: a miniature on its base, from above
+- IMG_7713: a base tipped up to show its magnet
 
 Worth adding:
 
-- The underside with a magnet fitted
-- A painted miniature on its base, at an angle
 - A few sizes side by side

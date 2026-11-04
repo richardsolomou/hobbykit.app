@@ -2,7 +2,7 @@
 
 - **Script:** `token.scad`
 - **Category:** Toys & Games › Board Games
-- **Tags:** tokens, objective markers, wargaming, board game, two colour, multicolour, warhammer, kill team, customizable, parametric
+- **Tags:** tokens, objective markers, wargaming, board game, two colour, multicolour, kill team, customizable, parametric
 
 ## Summary
 
@@ -22,7 +22,7 @@ What you can change:
 
 Tokens on MakerWorld take text only.
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like putting your own image on the face, the full version is at hobbykit.app.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like putting your own image on the face, HobbyKit does that at hobbykit.app.
 
 ## Print settings
 
@@ -40,6 +40,8 @@ None.
 Taken:
 
 - IMG_7701: a two-colour Battle-shocked token (cover)
+- IMG_7716: the token from above
+- IMG_7717: the token at table height, showing the raised text
 
 Worth adding:
 
