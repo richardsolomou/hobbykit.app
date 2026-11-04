@@ -475,13 +475,11 @@ function box_at(n, wide, deep) =
   : let(packed = CIRCLES ? circle_packing(n, ITEM_W, w, l, SPACING) : box_packing(n, ITEM_W, ITEM_L, w, l, SPACING))
     is_undef(packed) ? undef : [wide, deep, distributed(packed, w, l)];
 
-// The app plans the largest count that fits, then exports that module by planning it again within its own size.
+// The app plans the largest count that fits and exports that module as planned.
 function plan(n, columns, rows) = n <= 0 ? undef : let(found = box_layout(n, columns, rows)) is_undef(found) ? plan(n - 1, columns, rows) : found;
-FIRST_PLAN = plan(min(max(0, round(quantity)), max_possible(COLUMNS, ROWS)), COLUMNS, ROWS);
-LAYOUT =
-  assert(!is_undef(FIRST_PLAN), "Miniatures do not fit within the maximum Gridfinity rows and columns")
-  let(fits = max_possible(FIRST_PLAN[0], FIRST_PLAN[1]))
-  len(FIRST_PLAN[2]) <= fits ? FIRST_PLAN : plan(fits, FIRST_PLAN[0], FIRST_PLAN[1]);
+LAYOUT = let(found = plan(min(max(0, round(quantity)), max_possible(COLUMNS, ROWS)), COLUMNS, ROWS))
+  assert(!is_undef(found), "Miniatures do not fit within the maximum Gridfinity rows and columns")
+  found;
 UNITS_WIDE = LAYOUT[0];
 UNITS_DEEP = LAYOUT[1];
 SLOTS = LAYOUT[2];

@@ -712,10 +712,16 @@ export function defaultHolderConfig(): HolderConfig {
   }
 }
 
+function nameFor(layout: Pick<HolderLayout, 'unitsWide' | 'unitsDeep'>, groups: HolderGroup[]) {
+  return `holder-${layout.unitsWide}x${layout.unitsDeep}-${groups.map(holderGroupNamePart).join('-')}`
+}
+
 export function holderName(config: HolderConfig): string {
-  const layout = holderLayout(config)
-  const models = config.groups.map(holderGroupNamePart).join('-')
-  return `holder-${layout.unitsWide}x${layout.unitsDeep}-${models}`
+  return nameFor(holderLayout(config), config.groups)
+}
+
+export function holderModuleName(module: HolderModule): string {
+  return nameFor(module.layout, module.config.groups)
 }
 
 export function slotOutline(
@@ -746,7 +752,7 @@ export function slotOutline(
   return CrossSection.square([width - radius * 2, length - radius * 2], true).offset(radius, 'Round', 2, segments)
 }
 
-function buildSingleHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: Font): HolderBuildResult {
+function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderModule, font?: Font): HolderBuildResult {
   const { CrossSection, Manifold } = wasm
   const trash: { delete: () => void }[] = []
   const own = <T extends { delete: () => void }>(value: T): T => {
@@ -761,7 +767,6 @@ function buildSingleHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: 
     if (config.height < BASE_HEIGHT) throw new Error('Holder height must be at least one Gridfinity unit')
     if (config.slotDepth > maxHolderSlotDepth(config)) throw new Error('Slots leave too little material above the Gridfinity foot')
 
-    const layout = singleHolderLayout(config)
     if (layout.slotCenters.length === 0) throw new Error('Miniatures do not fit within the maximum Gridfinity rows and columns')
     const tolerance = curveTolerance(Math.max(layout.width, layout.length), config.segments)
     const preview = config.segments <= 256
@@ -914,9 +919,18 @@ function buildSingleHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: 
   }
 }
 
-export function buildHolder(wasm: ManifoldToplevel, config: HolderConfig, font?: Font): HolderBuildResult {
+/**
+ * Builds every module where the plan puts it, or with `module` only that one at the origin. Each module is built from
+ * the layout the plan found for it, because planning a module again within its own size can fit fewer slots.
+ */
+export function buildHolder(wasm: ManifoldToplevel, { module: only, ...config }: HolderConfig, font?: Font): HolderBuildResult {
   const plan = holderPlan(config)
   if (plan.modules.length === 0) throw new Error('No requested miniatures fit within the available Gridfinity box')
+  if (only !== undefined) {
+    const module = plan.modules[only]
+    if (!module) throw new Error(`The holder plan has no module ${only + 1}`)
+    return buildSingleHolder(wasm, module, font)
+  }
   const solids: Manifold[] = []
   const previewGap = config.segments <= 256 && plan.modules.length > 1 ? 6 : 0
   const columns = [...new Set(plan.modules.map((module) => module.column))].sort((a, b) => a - b)
@@ -924,7 +938,7 @@ export function buildHolder(wasm: ManifoldToplevel, config: HolderConfig, font?:
   const previewShift = (value: number, positions: number[]) => (positions.indexOf(value) - (positions.length - 1) / 2) * previewGap
   try {
     for (const module of plan.modules) {
-      const built = buildSingleHolder(wasm, module.config, font)
+      const built = buildSingleHolder(wasm, module, font)
       const solid = new wasm.Manifold(built.mesh)
       solids.push(solid)
       const offsetX = (module.column + module.layout.unitsWide / 2 - plan.unitsWide / 2) * GRID

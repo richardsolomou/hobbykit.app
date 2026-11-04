@@ -16,6 +16,8 @@ import {
   minHolderHeight,
 } from './holder'
 import { loadManifold } from './manifold'
+import { exportSegmentsFor } from './quality'
+import type { HolderConfig } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
 let font: Font
@@ -37,6 +39,23 @@ function bounds(mesh: Mesh) {
     }
   }
   return { min, size: max.map((value, axis) => value - min[axis]) }
+}
+
+/** Each module the plan holds, built alone at export quality the way the export builds it. */
+function exportedModules(config: HolderConfig) {
+  return holderPlan(config).modules.map((module, index) =>
+    buildHolder(wasm, { ...config, module: index, segments: exportSegmentsFor(Math.max(module.layout.width, module.layout.length)) }, font),
+  )
+}
+
+/** Slot recesses cut through a horizontal slice just under the holder's top face. */
+function slotsCut(mesh: Mesh, config: HolderConfig) {
+  const solid = new wasm.Manifold(mesh)
+  const slice = solid.slice(config.height - config.slotDepth / 2)
+  const holes = slice.toPolygons().length - 1
+  slice.delete()
+  solid.delete()
+  return holes
 }
 
 describe('holderLayout', () => {
@@ -379,6 +398,12 @@ describe('holderSpareCapacity', () => {
 })
 
 describe('buildHolder', () => {
+  it('exports every slot the plan holds when relaxation beats the capacity estimate', () => {
+    const config = { ...defaultHolderConfig(), groups: [holderGroup('models-1', 10, { width: 60 })] }
+    const [module] = exportedModules(config)
+    expect(slotsCut(module.mesh, config)).toBe(holderLayout(config).slotCenters.length)
+  })
+
   it('builds a solid with the exact Gridfinity footprint and requested height', () => {
     const config = defaultHolderConfig()
     const result = buildHolder(wasm, config)
