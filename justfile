@@ -29,6 +29,9 @@ check:
 samples *args:
     pnpm samples out {{ args }}
 
+makerworld *args:
+    pnpm exec tsx scripts/makerworld.ts {{ args }}
+
 e2e-install:
     pnpm test:e2e:install
 
@@ -41,3 +44,7 @@ e2e-run *args:
 social-cards:
     pnpm build
     pnpm exec tsx scripts/socialCards.ts
+
+makerworld-images *names:
+    pnpm build
+    pnpm exec tsx scripts/makerworldImages.ts {{ names }}

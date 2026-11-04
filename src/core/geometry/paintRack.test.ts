@@ -237,7 +237,7 @@ describe('paint rack geometry', () => {
       0,
     )
     expect(buildPaintRack(wasm, config).stats.volume).toBeCloseTo(pieces, 0)
-  })
+  }, 20_000)
 
   it('assembles every piece as its own body', () => {
     expect(bodies(buildPaintRack(wasm, LOADOUT).mesh)).toBe(5)

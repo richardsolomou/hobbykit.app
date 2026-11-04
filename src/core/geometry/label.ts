@@ -75,7 +75,7 @@ const settle = (value: number) => Math.round(value / 1e-9) * 1e-9
 /**
  * Directions a label may sit along, widest clear angle first. Equally wide gaps
  * go nearest -y first, so a label sits below the centre where it can, then
- * toward -x.
+ * toward -x; makerworld/base.scad orders them the same way.
  */
 export function labelAngles(spokes: number[], magnets: LabelCircle[]): number[] {
   const bosses = magnets.filter((m) => Math.hypot(m.x, m.y) > 1e-6).map((m) => Math.atan2(m.y, m.x))
