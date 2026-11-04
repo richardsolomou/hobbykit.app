@@ -208,7 +208,7 @@ export function PaintingTrayPanel({
             the tray and exports as a separate upright, support-free part.
           </FieldDescription>
         </Section>
-        <PanelFooter resets={resets} />
+        <PanelFooter page="painting" resets={resets} />
       </aside>
     </ScrollArea>
   )

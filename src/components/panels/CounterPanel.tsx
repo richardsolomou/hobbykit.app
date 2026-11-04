@@ -82,7 +82,7 @@ export function CounterPanel({ counter, setCounter, resets }: Props) {
           </FieldDescription>
         </Section>
 
-        <PanelFooter resets={resets} />
+        <PanelFooter page="counter" resets={resets} />
       </aside>
     </ScrollArea>
   )

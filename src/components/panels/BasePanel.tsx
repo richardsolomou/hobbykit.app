@@ -600,7 +600,7 @@ export function BasePanel({
             )}
           </Section>
         )}
-        <PanelFooter resets={resets} />
+        <PanelFooter page="base" resets={resets} />
       </aside>
     </ScrollArea>
   )

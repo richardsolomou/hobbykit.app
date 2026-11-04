@@ -134,6 +134,14 @@ test('links to the source repository', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com/richardsolomou/hobbykit.app')
 })
 
+test("links to the current generator's MakerWorld listing", async ({ page }) => {
+  await visit(page, 'Holders')
+  await expect(page.getByRole('link', { name: 'MakerWorld' })).toHaveAttribute(
+    'href',
+    'https://makerworld.com/en/models/3545623-gridfinity-miniature-holder',
+  )
+})
+
 test('starts every dimension on a value its own input accepts', async ({ page }) => {
   const invalid = () =>
     page
