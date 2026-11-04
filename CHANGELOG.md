@@ -1,5 +1,12 @@
 # hobbykit
 
+## 0.23.0
+
+### Minor Changes
+
+- c5df845: Dial counters can hold each count with magnets instead of printed bumps: ten in each drum and one in each face of the pointer, sized by the shared magnet settings.
+- 1cd8809: Every dial counter tile is now its own object in the 3MF, named by its drum and digit, so a few failed tiles can be reprinted by deleting the rest from the plate.
+
 ## 0.22.1
 
 ### Patch Changes
