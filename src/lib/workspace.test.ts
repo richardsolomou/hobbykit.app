@@ -219,6 +219,42 @@ describe('workspace state', () => {
     expect(loadWorkspace(storage).base.height).toBe(defaultWorkspace().base.height)
   })
 
+  it('keeps the printed detent on counters saved before magnet detents', () => {
+    const storage = memoryStorage()
+    const legacy = JSON.parse(JSON.stringify(defaultWorkspace()))
+    legacy.counter.drumWidth = 16
+    delete legacy.counter.detent
+    delete legacy.counter.magnets
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 16, workspace: legacy }))
+
+    expect(loadWorkspace(storage).counter).toMatchObject({ drumWidth: 16, detent: 'printed' })
+  })
+
+  it('discards a saved counter detent it does not know', () => {
+    const storage = memoryStorage()
+    const workspace = defaultWorkspace()
+    saveWorkspace(storage, { ...workspace, counter: { ...workspace.counter, drumWidth: 16, detent: 'springs' as 'printed' } })
+
+    expect(loadWorkspace(storage).counter.drumWidth).toBe(defaultWorkspace().counter.drumWidth)
+  })
+
+  it('gives counters the shared magnet size', () => {
+    const workspace = defaultWorkspace()
+
+    expect(
+      synchronizeWorkspace({ ...workspace, shared: { ...workspace.shared, magnets: { ...workspace.shared.magnets, diameter: 6 } } }).counter
+        .magnets.diameter,
+    ).toBe(6)
+  })
+
+  it('widens magnet counter drums to fit thicker shared magnets', () => {
+    const workspace = defaultWorkspace()
+    const counter = { ...workspace.counter, detent: 'magnets' as const, drumWidth: 6 }
+    const shared = { ...workspace.shared, magnets: { ...workspace.shared.magnets, thickness: 6 } }
+
+    expect(synchronizeWorkspace({ ...workspace, counter, shared }).counter.drumWidth).toBe(7.1)
+  })
+
   it('keeps a saved counter drum width', () => {
     const storage = memoryStorage()
     const workspace = defaultWorkspace()

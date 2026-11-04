@@ -15,8 +15,10 @@ Two ten-sided drums turn on a snap-fit hub with a pointer between them. Printed 
 What you can change:
 
 - Part: everything on one plate, or each drum, the pointer, or the tiles on their own
+- Tiles: every tile, or one digit or the arrows on its own, to reprint one that failed
 - Drum diameter and width
-- Fit: the clearance around the hub, and the click, which you raise if the drums turn too easily
+- Fit: the clearance around the hub
+- Detent: printed bumps with a click you raise if the drums turn too easily, or 22 magnets, with their diameter, thickness and fit
 - Inserts: colour tiles or engraved digits, and the tile clearance
 
 This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like a 3MF with the tiles already set to a second filament, HobbyKit does that at hobbykit.app.

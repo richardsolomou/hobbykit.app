@@ -291,6 +291,11 @@ export interface TokenConfig {
 
 /** Each part of a counter, laid flat for printing on its own. */
 export type CounterPart = 'tens' | 'pointer' | 'units' | 'inserts'
+/** One of the press-in tiles: a digit, alike on both drums, or the pointer's arrows. */
+export type CounterTile = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 'arrows'
+
+/** Printed bumps that seat in dimples, or magnets glued into pockets that attract. */
+export type CounterDetent = 'printed' | 'magnets'
 
 export interface CounterConfig {
   kind: 'counter'
@@ -306,9 +311,15 @@ export interface CounterConfig {
   clearance: number
   /** How far the hub's barb gives as a drum's bumps ride out of the pointer's dimples; more holds each count harder. */
   click: number
+  /** What holds each count. */
+  detent: CounterDetent
+  /** With magnet detents: one in each face of the pointer and ten in each drum's inner face. */
+  magnets: Pick<MagnetSpec, 'diameter' | 'thickness' | 'clearance' | 'depthClearance'>
   segments: number
   /** Export-only: build one part flat on the plate instead of the assembly. */
   part?: CounterPart
+  /** Export-only, with the inserts part: build just this tile, which the 3MF makes an object of its own. */
+  tile?: CounterTile
   /** Preview-only: spread the drums along the hub and lift each tile out of its pocket. */
   exploded?: boolean
 }
