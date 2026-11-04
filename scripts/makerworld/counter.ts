@@ -4,6 +4,7 @@ import type { CounterConfig, CounterPart } from '../../src/core/geometry/types'
 import { type Case, font } from './shared'
 
 const DRUM_PARTS: CounterPart[] = ['tens', 'pointer', 'units']
+const TILE_PARTS = ['tile-bases', 'tile-marks']
 
 /** One case per part, each built the way the app exports it; the tiles' bases and raised marks are separate pieces. */
 function parts(name: string, changes: Partial<CounterConfig>, defines: Case['defines'], only?: string[]): Case[] {
@@ -37,4 +38,6 @@ export const cases: Case[] = [
   ...parts('tight', { clearance: 0.1, click: 0.1 }, { fit_clearance: 0.1, click: 0.1 }, DRUM_PARTS),
   ...parts('snug-tiles', { insertClearance: 0 }, { insert_clearance: 0 }, ['tile-bases']),
   ...parts('loose-tiles', { insertClearance: 0.2 }, { insert_clearance: 0.2 }, ['tile-bases']),
+  ...parts('one-tile', { tile: 7 }, { tiles: '7' }, TILE_PARTS),
+  ...parts('arrows-tile', { tile: 'arrows', insertClearance: 0.2 }, { tiles: 'arrows', insert_clearance: 0.2 }, TILE_PARTS),
 ]

@@ -15,6 +15,7 @@ Two ten-sided drums turn on a snap-fit hub with a pointer between them. Printed 
 What you can change:
 
 - Part: everything on one plate, or each drum, the pointer, or the tiles on their own
+- Tiles: every tile, or one digit or the arrows on its own, to reprint one that failed
 - Drum diameter and width
 - Fit: the clearance around the hub, and the click, which you raise if the drums turn too easily
 - Inserts: colour tiles or engraved digits, and the tile clearance

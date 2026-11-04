@@ -8,6 +8,8 @@
 /* [Part] */
 // All lays every part out on one plate. The tiles come as bases and raised marks so each can take its own filament.
 part = "all"; // [all:All parts, tens:Tens drum, pointer:Pointer, units:Units drum and hub, tiles:Colour tiles, tile-bases:Colour tile bases, tile-marks:Colour tile marks]
+// Which tiles the tile parts give: every one, or one on its own to reprint. Tens and units tiles are alike.
+tiles = "all"; // [all:Every tile, 0:Digit 0, 1:Digit 1, 2:Digit 2, 3:Digit 3, 4:Digit 4, 5:Digit 5, 6:Digit 6, 7:Digit 7, 8:Digit 8, 9:Digit 9, arrows:Pointer arrows]
 
 /* [Drums] */
 // Across the corners of each ten-sided drum.
@@ -121,6 +123,8 @@ POINTER_TILE_X = POINTER / 2 - insert_clearance;
 PLATE_WIDTH = max(FACES * 2 * TILE_X + (FACES - 1) * INSERT_SPACING, 2 * POINTER_TILE_X);
 PLATE_DEPTH = 3 * 2 * TILE_Y + 2 * INSERT_SPACING;
 
+ONE_DIGIT = [for (d = [0:FACES - 1]) if (tiles == str(d)) d];
+assert(tiles == "all" || tiles == "arrows" || len(ONE_DIGIT) == 1, "Tiles must be all, arrows or a digit from 0 to 9");
 assert(colour_inserts || (part != "tiles" && part != "tile-bases" && part != "tile-marks"), "Tiles need colour inserts turned on");
 
 // The assembly has the hub along X and the front at -Y; [y, z] points in the YZ plane extrude along +X.
@@ -233,13 +237,15 @@ module tens_part() translate([0, 0, INNER + drum_width]) rotate([0, -90, 0]) ten
 module pointer_part() translate([0, 0, POINTER / 2]) rotate([0, -90, 0]) pointer();
 module units_part() translate([0, 0, INNER + drum_width]) rotate([0, 90, 0]) units();
 
-// Every tile face up, a row of 0–9 for each drum and then the arrows; a base, and its mark from z = TILE_BASE.
+// Every tile face up, a row of 0–9 for each drum and then the arrows, or one tile on its own; a base, and its mark from z = TILE_BASE.
 module tiles(marks) {
   module tile(x, d, marks) {
     if (marks) translate([0, 0, TILE_BASE]) linear_extrude(RELIEF) mark(d);
     else linear_extrude(TILE_BASE) square([2 * x, 2 * TILE_Y], center = true);
   }
-  translate([-PLATE_WIDTH / 2, PLATE_DEPTH / 2, 0]) {
+  if (tiles == "arrows") tile(POINTER_TILE_X, -1, marks);
+  else if (tiles != "all") tile(TILE_X, ONE_DIGIT[0], marks);
+  else translate([-PLATE_WIDTH / 2, PLATE_DEPTH / 2, 0]) {
     for (row = [0:1], d = [0:FACES - 1]) translate([TILE_X + d * (2 * TILE_X + INSERT_SPACING), -TILE_Y - row * (2 * TILE_Y + INSERT_SPACING), 0]) tile(TILE_X, d, marks);
     translate([POINTER_TILE_X, -TILE_Y - 2 * (2 * TILE_Y + INSERT_SPACING), 0]) tile(POINTER_TILE_X, -1, marks);
   }
