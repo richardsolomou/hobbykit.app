@@ -10,6 +10,7 @@ Read [README.md](README.md) first for what the app does and what the controls me
 - `just e2e` builds and runs Playwright; `just e2e-run` reuses the current `dist/`. Install the browser once with `just e2e-install`.
 - `just social-cards` — rebuilds and retakes every page's link preview image in `public/og`.
 - `just makerworld-images [name...]` — rebuilds and renders MakerWorld listing images into `makerworld/images`, which git ignores: 4:3 and 3:4 covers, a grid of other configurations, and a plain render. Every configuration shown must be one the MakerWorld script can make, because MakerWorld treats a render the download cannot produce as misleading, and each listing still needs a photo of a real print.
+- `just printables` — writes the ready-to-print STLs and `.scad` for each Printables listing into the git-ignored `printables/files/<name>/`; the copy in `printables/listings` names every file, so change both together.
 - `just samples [round|oval|painting|rack|counter]` — writes preset base STLs, the default painting tray, the default paint rack, or the default dial counter's parts and inserts for inspection outside the browser.
 - `just makerworld` regenerates the generated tables in every `makerworld/*.scad`; `just makerworld check [name[/case]]` renders each script's cases from `scripts/makerworld/<name>.ts` with OpenSCAD and compares them against the app.
 - Lint and format are oxlint + oxfmt, not ESLint/Prettier. Warnings are denied in CI.
