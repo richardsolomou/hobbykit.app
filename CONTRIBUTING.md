@@ -32,7 +32,6 @@ Geometry changes need inspection outside the preview. Write sample STLs with:
 just samples
 just samples oval
 just samples painting
-just samples movement
 just samples rack
 just samples counter
 ```

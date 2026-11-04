@@ -186,32 +186,6 @@ export interface PaintingTrayConfig {
   exploded?: boolean
 }
 
-export type MovementTrayShape = 'round' | 'rect'
-
-export interface MovementTrayConfig {
-  kind: 'movement-tray'
-  shape: MovementTrayShape
-  /** Base footprint across the frontage. The diameter for round. */
-  width: number
-  /** Base footprint front to back. Ignored by round. */
-  length: number
-  cornerRadius: number
-  columns: number
-  ranks: number
-  /** Added to each base footprint so a unit drops in without binding. */
-  slotClearance: number
-  slotDepth: number
-  /** Material between the slot floor and the table, which the magnet pockets cut into. */
-  floorThickness: number
-  /** Wall left around the recess. */
-  rim: number
-  magnets: HolderConfig['magnets']
-  magnetCounts: Record<string, number>
-  baseWallThickness: number
-  magnetBossWall: number
-  segments: number
-}
-
 export interface PaintRackItem {
   id: string
   /** A corner turns the rack a quarter round an inside corner, with the back rows against both walls. */
@@ -344,7 +318,6 @@ export interface BasePartConfig extends BaseConfig {
 export type PartConfig =
   | BasePartConfig
   | HolderConfig
-  | MovementTrayConfig
   | PaintingTrayConfig
   | PaintRackConfig
   | FlightStemConfig
