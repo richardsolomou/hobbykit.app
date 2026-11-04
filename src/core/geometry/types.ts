@@ -291,6 +291,8 @@ export interface TokenConfig {
 
 /** Each part of a counter, laid flat for printing on its own. */
 export type CounterPart = 'tens' | 'pointer' | 'units' | 'inserts'
+/** One tile on its own: a digit, alike on both drums, or the pointer's arrows. */
+export type CounterTile = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 'arrows'
 
 export interface CounterConfig {
   kind: 'counter'
@@ -309,6 +311,8 @@ export interface CounterConfig {
   segments: number
   /** Export-only: build one part flat on the plate instead of the assembly. */
   part?: CounterPart
+  /** Export-only, with the inserts part: build just this tile, to reprint one that failed. */
+  tile?: CounterTile
   /** Preview-only: spread the drums along the hub and lift each tile out of its pocket. */
   exploded?: boolean
 }

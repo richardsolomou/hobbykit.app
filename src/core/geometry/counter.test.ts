@@ -3,7 +3,7 @@ import type { Mesh } from 'manifold-3d'
 import { parse, type Font } from 'opentype.js'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { loadManifold } from './manifold'
-import type { CounterConfig, CounterPart } from './types'
+import type { CounterConfig, CounterPart, CounterTile } from './types'
 import {
   buildCounter,
   defaultCounterConfig,
@@ -16,6 +16,7 @@ import {
   counterLayout,
   counterName,
   counterParts,
+  COUNTER_TILES,
 } from './counter'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
@@ -205,6 +206,22 @@ describe('buildCounter', () => {
     expect(pieces.length).toBe(20 + 1)
     for (const piece of pieces) piece.delete()
     solid.delete()
+  })
+
+  it('prints a single tile on its own', () => {
+    const solid = solidOf(build({ ...counter(), part: 'inserts', tile: 3 }).mesh)
+    const pieces = solid.decompose()
+
+    expect(pieces.length).toBe(1)
+    for (const piece of pieces) piece.delete()
+    solid.delete()
+  })
+
+  it('builds the single tiles exactly as the full set does', () => {
+    const tile = (choice: CounterTile) => build({ ...counter(), part: 'inserts', tile: choice }).stats.volume
+    const digits = COUNTER_TILES.filter((choice) => choice !== 'arrows').reduce<number>((sum, choice) => sum + tile(choice), 0)
+
+    expect(2 * digits + tile('arrows')).toBeCloseTo(part(counter(), 'inserts').stats.volume, 6)
   })
 
   it('shows the inserts in place', () => {

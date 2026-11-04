@@ -18,6 +18,7 @@ import type {
   PaintRackConfig,
   PartConfig,
   CounterConfig,
+  CounterTile,
 } from '@/core/geometry/types'
 import posthog from '@/lib/posthog'
 import { batchFileName } from './batch'
@@ -155,6 +156,18 @@ export function useExport({
         }
       }),
     )
+
+  /** One tile on its own, for reprinting one that failed: its base and raised mark, as in the full download. */
+  const exportCounterTile = (tile: CounterTile) =>
+    run('piece-stl', async () => {
+      const mesh = await buildMesh({ ...counter, part: 'inserts' as const, tile, segments: exportSegmentsFor(counter.drumDiameter) })
+      const tileName = `${name}-tile-${tile}`
+      const files = [
+        { mesh: asMeshLike(mesh), name: tileName },
+        { mesh: asMeshLike(mesh.inserts!), name: `${tileName}-marks` },
+      ]
+      download(`${tileName}.zip`, zipSync(Object.fromEntries(files.map((file) => [`${file.name}.stl`, toStl(file.mesh, file.name)]))))
+    })
 
   const rackPieces = model === 'rack' ? paintRackLayout(paintRack).pieces : []
   // Numbered left to right, which also keeps two modules of the same size from sharing a filename.
@@ -309,5 +322,5 @@ export function useExport({
       batchProperties,
     )
 
-  return { exporting, error, exportStl, export3mf, exportBatchStl, exportBatch3mf, exportRackPiece }
+  return { exporting, error, exportStl, export3mf, exportBatchStl, exportBatch3mf, exportRackPiece, exportCounterTile }
 }

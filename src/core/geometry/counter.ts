@@ -4,7 +4,7 @@ import type { BuildResult } from './base'
 import { trimNumber } from './outline'
 import { previewSegmentsFor } from './quality'
 import { GLYPH_FILL, polygonsWidth, textPolygons, type Polygon } from './text'
-import type { CounterConfig, CounterPart } from './types'
+import type { CounterConfig, CounterPart, CounterTile } from './types'
 
 const PLA_DENSITY = 1.24e-3
 const FACES = 10
@@ -66,6 +66,9 @@ export function counterParts(config: Pick<CounterConfig, 'inserts'>): { part: Co
     ...(config.inserts ? [{ part: 'inserts' as const, name: 'inserts' }] : []),
   ]
 }
+
+/** Every tile that can be exported alone, in the order the panel offers them. */
+export const COUNTER_TILES: CounterTile[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 'arrows']
 
 export function defaultCounterConfig(): CounterConfig {
   return {
@@ -321,10 +324,14 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
       pointer: mat4([0, 0, 1], [0, 1, 0], [-1, 0, 0]),
       units: mat4([0, 0, -1], [0, 1, 0], [1, 0, 0]),
     }
+    const digitTile = (mark: CrossSection) => ({ base: tileBase(pocketX), mark: tileMark(mark) })
+    const arrowsTile = () => ({ base: tileBase(pointerTileX), mark: tileMark(arrows) })
     /** Every tile lies face up, a row of 0–9 for each drum and then the arrows, so pieces are easy to find. */
-    const insertPlate = () => {
-      const rows = [digitSections, digitSections].map((row) => row.map((mark) => ({ base: tileBase(pocketX), mark: tileMark(mark) })))
-      rows.push([{ base: tileBase(pointerTileX), mark: tileMark(arrows) }])
+    const insertPlate = (tile?: CounterTile) => {
+      const rows =
+        tile === undefined
+          ? [...[digitSections, digitSections].map((row) => row.map(digitTile)), [arrowsTile()]]
+          : [[tile === 'arrows' ? arrowsTile() : digitTile(digitSections[tile])]]
       let y = 0
       const placed = rows.flatMap((row) => {
         let x = 0
@@ -352,7 +359,7 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
     const part = config.part
     let solid: Manifold
     let inserts: Manifold | undefined
-    if (part === 'inserts') ({ bases: solid, marks: inserts } = insertPlate())
+    if (part === 'inserts') ({ bases: solid, marks: inserts } = insertPlate(config.tile))
     else if (part) solid = onPlate(own(bodies[part].transform(printed[part])))
     else {
       const onFaces = (drum: (mark: CrossSection) => Manifold, pointerMark: Manifold) => [

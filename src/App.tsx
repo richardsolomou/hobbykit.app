@@ -337,6 +337,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     exportBatchStl,
     exportBatch3mf,
     exportRackPiece,
+    exportCounterTile,
   } = useExport({
     model,
     base: config,
@@ -473,7 +474,13 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     ) : model === 'stem' ? (
       <StemPanel stem={stem} setStem={setStem} resets={[resetPart('stem', 'stem', false)]} />
     ) : model === 'counter' ? (
-      <CounterPanel counter={counter} setCounter={setCounter} resets={[resetPart('counter', 'dial counter', false)]} />
+      <CounterPanel
+        counter={counter}
+        setCounter={setCounter}
+        exporting={exporting !== undefined}
+        exportTile={exportCounterTile}
+        resets={[resetPart('counter', 'dial counter', false)]}
+      />
     ) : (
       <TokenPanel
         token={token}
