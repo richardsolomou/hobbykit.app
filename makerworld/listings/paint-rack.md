@@ -25,7 +25,7 @@ What you can change:
 
 On MakerWorld this makes one straight module with optional ends.
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like chaining modules into a longer run, turning corners, or adding brush holders, the full version is at hobbykit.app.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like chaining modules into a longer run, turning corners, or adding brush holders, HobbyKit does that at hobbykit.app.
 
 ## Print settings
 

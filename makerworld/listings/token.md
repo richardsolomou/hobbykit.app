@@ -22,7 +22,7 @@ What you can change:
 
 Tokens on MakerWorld take text only.
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like putting your own image on the face, the full version is at hobbykit.app.
+This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like putting your own image on the face, HobbyKit does that at hobbykit.app.
 
 ## Print settings
 
