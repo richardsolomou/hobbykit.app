@@ -1,5 +1,11 @@
 # hobbykit
 
+## 0.23.1
+
+### Patch Changes
+
+- b912312: Every generator's panel now links its MakerWorld listing, where the Customize button runs a smaller version of it.
+
 ## 0.23.0
 
 ### Minor Changes
