@@ -231,7 +231,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
           <FieldDescription>Sized for Vallejo, AK and Army Painter droppers. Print with supports off.</FieldDescription>
         </Section>
 
-        <PanelFooter resets={resets} />
+        <PanelFooter page="rack" resets={resets} />
       </aside>
     </ScrollArea>
   )

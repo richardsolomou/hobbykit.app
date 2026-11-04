@@ -95,9 +95,13 @@ export const notFoundHtml = (template: string) =>
     .replace('</head>', `  <title>Page not found — ${NAME}</title>\n    ${tag('meta', { name: 'robots', content: 'noindex' })}\n  </head>`)
     .replace('<div id="root"></div>', `<div id="root">${content('Page not found', DESCRIPTION)}</div>`)
 
-/** A generator's guide from `docs/generators`, with a link back to the generator under its heading. */
+/** A generator's guide from `docs/generators`, with links to the generator and its MakerWorld listing under its heading. */
 export const pageMarkdown = (page: Page, source: string) =>
-  source.replace(/^# .*\n/, (heading) => `${heading}\nOpen the generator at ${url(page.href)}.\n`)
+  source.replace(
+    /^# .*\n/,
+    (heading) =>
+      `${heading}\nOpen the generator at ${url(page.href)}. A smaller version runs in MakerWorld's customizer at ${page.makerworld}.\n`,
+  )
 
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${url('/sitemap.xml')}\n`
 
@@ -122,6 +126,7 @@ ${PAGES.map((page) => `- [${page.title}](${url(markdownPath(page))}): ${page.des
 - Which base sizes are supported? Presets cover common Games Workshop, The Old World, Kings of War, and historical sizes, and custom round, oval, pill, rectangle, and polygon footprints from 15 to 180mm work too. A base's exact size is embossed inside it, so a 28.5mm base reads 28.5.
 - Which magnets does it fit? Set the diameter and thickness of the round magnets you have. Magnet pockets sit flush with the face that meets a magnetised tray, and bases, holders, and spray trays share the same magnet settings.
 - Can I make several base sizes at once? Add sizes to the batch and download them together: one STL per size in a ZIP, or one 3MF with every copy laid out across build plates.
+- Is there a version on MakerWorld? Each generator has a MakerWorld listing whose Customize button runs an OpenSCAD port of it, with fewer options; its guide links the listing.
 - How do I share a design? Copy link puts the generator's settings after the \`#\` in the address, which browsers never send to a server.
 
 ## Source

@@ -8,3 +8,4 @@ playwright-report
 *.local
 .DS_Store
 makerworld/images
+printables/files

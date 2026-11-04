@@ -274,7 +274,7 @@ export function HolderPanel({
             </>
           )}
         </Section>
-        <PanelFooter resets={resets} />
+        <PanelFooter page="holder" resets={resets} />
       </aside>
     </ScrollArea>
   )

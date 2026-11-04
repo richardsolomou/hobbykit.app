@@ -89,7 +89,7 @@ describe('generator guides', () => {
     expect(pageMarkdown(holders, guide(holders)).split('\n').slice(0, 3)).toEqual([
       '# Gridfinity miniature holder generator',
       '',
-      'Open the generator at https://hobbykit.app/holders.',
+      "Open the generator at https://hobbykit.app/holders. A smaller version runs in MakerWorld's customizer at https://makerworld.com/en/models/3545623-gridfinity-miniature-holder.",
     ])
   })
 

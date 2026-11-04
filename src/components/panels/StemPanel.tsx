@@ -103,7 +103,7 @@ export function StemPanel({ stem, setStem, resets }: Props) {
           )}
         </Section>
 
-        <PanelFooter resets={resets} />
+        <PanelFooter page="stem" resets={resets} />
       </aside>
     </ScrollArea>
   )

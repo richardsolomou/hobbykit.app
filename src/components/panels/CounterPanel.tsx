@@ -155,7 +155,7 @@ export function CounterPanel({ counter, setCounter, resets, maxSharedMagnetThick
           </FieldDescription>
         </Section>
 
-        <PanelFooter resets={resets} />
+        <PanelFooter page="counter" resets={resets} />
       </aside>
     </ScrollArea>
   )

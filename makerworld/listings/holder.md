@@ -6,35 +6,32 @@
 
 ## Summary
 
-A Gridfinity bin with a slot for each of your miniatures, magnetised to match your bases. Choose the base size and how many to hold.
+A Gridfinity bin with a slot for each miniature, with magnet pockets that line up with your magnetised bases.
 
 ## Description
 
-Choose a base size and a number of miniatures. The holder packs them as tightly as it can into the fewest Gridfinity units, up to the size you allow. Each slot can have magnet pockets in the same places as the magnets in the matching base, so a magnetised base snaps into its slot and stays there while you carry the bin.
+Pick a base size and how many miniatures you want to carry. The holder packs them into as few Gridfinity units as it can, up to the size you allow. Each slot can have magnet pockets in the same spots as the magnets in the matching base, so a magnetised miniature snaps into its slot and stays there while you move the bin around.
+
+One holder takes one base size. If they don't all fit in the largest size you allow, the extras are left out, so check the count in the preview.
+
+You'll need a Gridfinity baseplate. Magnets are optional: use the same ones as your bases (5×2mm by default), as many per slot as each base has.
 
 What you can change:
 
-- Miniatures: any standard base size or a custom one, and how many to hold
-- Layout: the maximum Gridfinity columns and rows, the spacing between slots and from the edge, and the holder height in 7mm steps
-- Slots: depth, clearance, and whether to engrave the base size in each slot or once on the holder
-- Magnets: on or off, size, count per slot, and the pocket layout
-- Matching bases: the wall settings your bases were printed with, so the pockets line up with their magnets
+- Miniatures: a standard or custom base size, and how many
+- Layout: the most Gridfinity columns and rows to use, spacing between slots and from the edge, and the height in 7mm steps
+- Slots: depth, clearance, and the size engraved in each slot or once on the holder
+- Magnets: on or off, size, count per slot and pocket layout
+- Matching bases: the wall settings your bases were printed with, so the pockets line up
 
-This holder takes one size of miniature. If the miniatures do not all fit in the largest size you allow, the extra ones are left out, so check the count in the preview.
-
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like mixing base sizes in one holder or splitting a big army across several modules, HobbyKit does that at hobbykit.app.
+This is part of HobbyKit, a free generator I made. On hobbykit.app you can also mix base sizes in one holder or split a big army across several modules.
 
 ## Print settings
 
 - Gridfinity feet on the plate, slots facing up
-- Supports off
+- No supports
 - 0.2mm layers
 - PLA or PETG
-
-## Bill of materials
-
-- A Gridfinity baseplate
-- Optional: neodymium magnets matching your bases, 5×2mm by default, with the same count per slot as each base
 
 ## Real photos
 

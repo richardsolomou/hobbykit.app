@@ -48,3 +48,6 @@ social-cards:
 makerworld-images *names:
     pnpm build
     pnpm exec tsx scripts/makerworldImages.ts {{ names }}
+
+printables:
+    pnpm exec tsx scripts/printables.ts

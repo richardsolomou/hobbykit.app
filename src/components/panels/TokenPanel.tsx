@@ -197,7 +197,7 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
           <FieldDescription>Print flat on the table face with the artwork facing up.</FieldDescription>
         </Section>
 
-        <PanelFooter resets={resets} />
+        <PanelFooter page="token" resets={resets} />
       </aside>
     </ScrollArea>
   )

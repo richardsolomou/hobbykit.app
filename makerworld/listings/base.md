@@ -6,36 +6,33 @@
 
 ## Summary
 
-Hollow miniature bases with flush magnet pockets, in every standard round, oval, rectangle and hex size, or any size you type. Print them upside down without supports.
+Hollow miniature bases with flush magnet pockets, in all the usual round, oval, rectangle and hex sizes or any size you type. They print upside down with no supports.
 
 ## Description
 
-Every base has a recess underneath with pockets for magnets. Each magnet sits flush with the underside, so the base holds itself down on a steel or magnetised tray. Internal ribs run through each pocket to keep the floor stiff. The base size is embossed in the recess so you can tell your bases apart once they are painted.
+The underside of each base is hollow, with a pocket for every magnet. The magnets sit flush with the bottom, so the base holds itself down on a steel or magnetised tray. Small ribs run out to each pocket to keep the floor stiff, and the size is embossed inside, so you can still tell a 28.5 from a 32 once they're painted.
 
-Click Customize to pick a standard size. There are 40+ of them, from Games Workshop's published base guides for 40K, Age of Sigmar and The Old World, and from Kings of War. Choose Custom to type your own shape and size instead. Auto picks a magnet count from the size and the magnet you use, and you can set it yourself.
+Open Customize and pick a size from the list. There are 43 standard ones, covering the common rounds and ovals, The Old World and Kings of War rectangles, and hexes that fit in place of a round. Choose Custom if you need your own shape or size. The magnet count is picked for you from the base size and the magnet you use, but you can set it yourself.
+
+You'll need neodymium disc magnets (5×2mm by default, and the preview shows how many) and a bit of superglue to hold them flush.
 
 What you can change:
 
-- Size and shape: round, oval, pill, rectangle or hex (or any polygon), with corner rounding for rectangles
-- Magnets: diameter, thickness, count per base, and the pocket layout
+- Size: a standard size, or a custom round, oval, pill, rectangle or hex (3 to 12 sides), with corner rounding for rectangles
+- Magnets: diameter, thickness, count and pocket layout
 - Label: on or off, your own text, and its size
-- Construction: base height, wall, top thickness, and a taper, bevel, round or straight bottom edge
-- Supports: number, thickness and height
-- Fit: magnet clearances, the wall around each pocket, and the label's emboss depth
+- Body: height, wall, top thickness, and a taper, bevel, round or straight bottom edge
+- Internal supports (the ribs): count, thickness and height
+- Fit: magnet clearances, the wall around each pocket, and the label depth
 
-This comes from HobbyKit, a free browser generator I made. If you need something the Customizer can't do here, like textured tops (paving, plating, rock, rubble or snow) or exporting a whole batch of sizes at once, HobbyKit does that at hobbykit.app.
+This is part of HobbyKit, a free generator I made. hobbykit.app also does textured tops (paving, plating, rock, rubble, snow) and exports a batch of sizes in one go.
 
 ## Print settings
 
-- Prints the way it comes out of the Customizer: the face your miniature is glued to sits on the plate, and the recess opens upward
-- Supports off
-- 0.2mm layers are fine; 0.12mm gives a crisper label
+- Print it as the Customizer shows it: the face your miniature glues to goes on the plate, recess facing up
+- No supports
+- 0.2mm layers are fine, 0.12mm gives a crisper label
 - PLA or PETG
-
-## Bill of materials
-
-- Neodymium disc magnets, 5×2mm by default. The count depends on the size, and the Customizer preview shows every pocket.
-- Superglue to hold each magnet flush with the underside
 
 ## Real photos
 

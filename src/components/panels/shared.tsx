@@ -1,4 +1,4 @@
-import { Code2, RotateCcw } from 'lucide-react'
+import { Boxes, Code2, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import {
   AlertDialog,
@@ -17,6 +17,7 @@ import { DEFAULT_PRESET, presetFor } from '@/core/geometry/presets'
 import { maxProfileSize } from '@/core/geometry/profile'
 import { maxTextureDepth } from '@/core/geometry/texture'
 import type { BaseConfig, EdgeProfile, HolderConfig, MagnetLayout } from '@/core/geometry/types'
+import { PAGES, type Page } from '@/lib/pages'
 
 export const PROFILES: { value: EdgeProfile; label: string }[] = [
   { value: 'taper', label: 'Taper' },
@@ -82,7 +83,9 @@ function ResetButton({ label, description, onReset }: ResetAction) {
   )
 }
 
-export function PanelFooter({ resets }: { resets: ResetAction[] }) {
+const footerLink = buttonVariants({ variant: 'link', size: 'sm', className: 'text-muted-foreground' })
+
+export function PanelFooter({ page, resets }: { page: Page['value']; resets: ResetAction[] }) {
   return (
     <div className="flex flex-col items-center gap-1 border-t border-border px-5 pt-4">
       <div className="flex flex-wrap justify-center gap-1">
@@ -90,15 +93,16 @@ export function PanelFooter({ resets }: { resets: ResetAction[] }) {
           <ResetButton key={reset.label} {...reset} />
         ))}
       </div>
-      <a
-        href="https://github.com/richardsolomou/hobbykit.app"
-        target="_blank"
-        rel="noreferrer"
-        className={buttonVariants({ variant: 'link', size: 'sm', className: 'text-muted-foreground' })}
-      >
-        <Code2 className="size-3.5" />
-        GitHub
-      </a>
+      <div className="flex flex-wrap justify-center gap-1">
+        <a href={PAGES.find((item) => item.value === page)!.makerworld} target="_blank" rel="noreferrer" className={footerLink}>
+          <Boxes className="size-3.5" />
+          MakerWorld
+        </a>
+        <a href="https://github.com/richardsolomou/hobbykit.app" target="_blank" rel="noreferrer" className={footerLink}>
+          <Code2 className="size-3.5" />
+          GitHub
+        </a>
+      </div>
     </div>
   )
 }
