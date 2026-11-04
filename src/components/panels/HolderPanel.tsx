@@ -9,6 +9,7 @@ import {
   holderGroupLabel,
   holderSpareCapacity,
   maxHolderSlotDepth,
+  MIN_EDGE_SPACING,
   minHolderHeight,
   type holderLayout,
   type holderPlan,
@@ -137,7 +138,7 @@ export function HolderPanel({
           <Dimension
             label="From holder edge"
             value={holder.edgeSpacing}
-            min={0}
+            min={MIN_EDGE_SPACING}
             max={10}
             step={0.05}
             defaultValue={holder.spacing / 2}

@@ -37,6 +37,14 @@ export const cases: Case[] = [
   custom('relaxed-round-60', 7, sized(standardSize('round', '60')), {}, { standard_size: 'round-60' }),
   custom('relaxed-beyond-estimate-round-60', 10, sized(standardSize('round', '60')), {}, { standard_size: 'round-60' }),
   custom(
+    'edge-0-hex-60',
+    4,
+    sized(standardSize('polygon', '60')),
+    { edgeSpacing: 0 },
+    { standard_size: 'polygon-60', from_holder_edge: 0 },
+  ),
+  custom('edge-0-round-32', 7, sized(standardSize('round', '32')), { edgeSpacing: 0 }, { standard_size: 'round-32', from_holder_edge: 0 }),
+  custom(
     'relaxed-hex-25',
     7,
     sized(standardSize('polygon', '25')),

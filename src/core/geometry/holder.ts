@@ -22,6 +22,8 @@ const PLA_DENSITY = 1.24e-3
 const MIN_SLOT_FLOOR_THICKNESS = 0.4
 const ENGRAVING_DEPTH = 0.4
 const HEX_ROW_HEIGHT = Math.sqrt(3) / 2
+/** A slot reaching the wall touches it at a vertex, which a slicer welds into a non-manifold edge. */
+export const MIN_EDGE_SPACING = 0.05
 const MAX_CACHE_ENTRIES = 100
 
 function cacheResult<T>(cache: Map<string, T>, key: string, value: T): T {
@@ -176,8 +178,9 @@ function maxPossibleGroupQuantity(
   edgeSpacing: number,
   clearance: number,
 ) {
-  const width = maxColumns * GRID - GAP - edgeSpacing * 2
-  const length = maxRows * GRID - GAP - edgeSpacing * 2
+  const edge = Math.max(edgeSpacing, MIN_EDGE_SPACING)
+  const width = maxColumns * GRID - GAP - edge * 2
+  const length = maxRows * GRID - GAP - edge * 2
   const itemWidth = slotWidth(group) + clearance
   const itemLength = slotLength(group) + clearance
   if (itemWidth > width || itemLength > length) return 0
@@ -431,6 +434,7 @@ function singleHolderLayout(
 ): HolderLayout {
   const maxColumns = Math.max(1, Math.round(config.maxColumns))
   const maxRows = Math.max(1, Math.round(config.maxRows))
+  const edgeSpacing = Math.max(config.edgeSpacing, MIN_EDGE_SPACING)
   const groups = config.groups
     .filter((group) => group.quantity > 0)
     .map((group) => ({
@@ -447,20 +451,20 @@ function singleHolderLayout(
       Array.from({ length: group.quantity }, (_, index): HolderSlot => ({ ...group, id: `${group.id}-${index}`, x: 0, y: 0 })),
     )
     .sort((a, b) => Math.max(slotWidth(b), slotLength(b)) - Math.max(slotWidth(a), slotLength(a)))
-  const key = `${exactSize ? '=' : ''}${maxColumns}:${maxRows}:${config.spacing}:${config.edgeSpacing}:${config.slotClearance}:${groups
+  const key = `${exactSize ? '=' : ''}${maxColumns}:${maxRows}:${config.spacing}:${edgeSpacing}:${config.slotClearance}:${groups
     .map((group) => `${group.quantity}x${group.shape}-${group.width}x${slotLength(group)}-${group.cornerRadius}-${group.sides}`)
     .join(',')}`
   const cached = layoutCache.get(key)
   if (cached) return cached
   const largestWidth = Math.max(0, ...slots.map(slotWidth))
-  const minimumColumns = Math.max(1, Math.ceil((largestWidth + config.slotClearance + config.edgeSpacing * 2 + GAP) / GRID))
+  const minimumColumns = Math.max(1, Math.ceil((largestWidth + config.slotClearance + edgeSpacing * 2 + GAP) / GRID))
   let layout: HolderLayout | undefined
   for (let unitsWide = exactSize ? maxColumns : minimumColumns; unitsWide <= maxColumns && !layout; unitsWide++) {
     const width = unitsWide * GRID - GAP
-    const packingWidth = width - config.edgeSpacing * 2
+    const packingWidth = width - edgeSpacing * 2
     for (let unitsDeep = exactSize ? maxRows : 1; unitsDeep <= maxRows; unitsDeep++) {
       const length = unitsDeep * GRID - GAP
-      const packingLength = length - config.edgeSpacing * 2
+      const packingLength = length - edgeSpacing * 2
       if (
         slots.some(
           (slot) => slotWidth(slot) + config.slotClearance > packingWidth || slotLength(slot) + config.slotClearance > packingLength,

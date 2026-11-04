@@ -23,7 +23,7 @@ maximum_rows = 5; // [1:1:12]
 // Edge-to-edge distance between slots.
 between_miniatures = 0.5; // [0:0.5:10]
 // Minimum distance from a slot to the holder edge. Half the spacing between miniatures is a good start.
-from_holder_edge = 0.25; // [0:0.05:10]
+from_holder_edge = 0.25; // [0.05:0.05:10]
 holder_height = 14; // [7:7:42]
 
 /* [Slots] */
@@ -329,7 +329,8 @@ CIRCLES = SHAPE == "round" || SHAPE == "polygon";
 COLUMNS = max(1, round(maximum_columns));
 ROWS = max(1, round(maximum_rows));
 SPACING = between_miniatures;
-EDGE = from_holder_edge;
+// A slot reaching the wall touches it at a vertex, which a slicer welds into a non-manifold edge.
+EDGE = max(from_holder_edge, 0.05);
 CLEARANCE = slot_clearance;
 ITEM_W = WIDTH + CLEARANCE;
 ITEM_L = LENGTH + CLEARANCE;
