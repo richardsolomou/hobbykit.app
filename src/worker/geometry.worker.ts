@@ -4,7 +4,6 @@ import fontUrl from '@/assets/fonts/oswald-700.woff?url'
 import { buildBase, type BuildResult } from '@/core/geometry/base'
 import { buildHolder } from '@/core/geometry/holder'
 import { loadManifold } from '@/core/geometry/manifold'
-import { buildMovementTray } from '@/core/geometry/movementTray'
 import { buildToken } from '@/core/geometry/token'
 import { buildPaintingHandle, buildPaintingTray } from '@/core/geometry/paintingTray'
 import { buildPaintRack } from '@/core/geometry/paintRack'
@@ -37,21 +36,19 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const result =
       config.kind === 'holder'
         ? buildHolder(wasm, config, font)
-        : config.kind === 'movement-tray'
-          ? buildMovementTray(wasm, config)
-          : config.kind === 'painting-handle'
-            ? buildPaintingHandle(wasm, config)
-            : config.kind === 'painting-tray'
-              ? buildPaintingTray(wasm, config)
-              : config.kind === 'paint-rack'
-                ? buildPaintRack(wasm, config)
-                : config.kind === 'stem'
-                  ? buildFlightStem(wasm, config)
-                  : config.kind === 'token'
-                    ? buildToken(wasm, config, font)
-                    : config.kind === 'counter'
-                      ? buildCounter(wasm, config, font)
-                      : buildBase(wasm, config, font)
+        : config.kind === 'painting-handle'
+          ? buildPaintingHandle(wasm, config)
+          : config.kind === 'painting-tray'
+            ? buildPaintingTray(wasm, config)
+            : config.kind === 'paint-rack'
+              ? buildPaintRack(wasm, config)
+              : config.kind === 'stem'
+                ? buildFlightStem(wasm, config)
+                : config.kind === 'token'
+                  ? buildToken(wasm, config, font)
+                  : config.kind === 'counter'
+                    ? buildCounter(wasm, config, font)
+                    : buildBase(wasm, config, font)
     const mesh = toMeshData(result)
     const buffers = [mesh, mesh.inserts].flatMap((part) => (part ? [part.positions.buffer, part.indices.buffer] : []))
     send({ id, kind: 'mesh', mesh, grams: result.stats.grams }, buffers)

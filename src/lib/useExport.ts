@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { zipSync } from 'fflate'
 import { packPlates, to3mf, to3mfPlates, toStl, type ExportPart } from '@/core/geometry/exporters'
 import { holderName, holderPlan } from '@/core/geometry/holder'
-import { movementTrayHeight, movementTrayName } from '@/core/geometry/movementTray'
 import { tokenHeight, tokenName } from '@/core/geometry/token'
 import { baseName, footprint } from '@/core/geometry/outline'
 import { paintingHandleConfig, paintingHandleDimensions, paintingHandleName, paintingTrayName } from '@/core/geometry/paintingTray'
@@ -14,7 +13,6 @@ import type {
   BaseConfig,
   FlightStemConfig,
   HolderConfig,
-  MovementTrayConfig,
   TokenConfig,
   PaintingTrayConfig,
   PaintRackConfig,
@@ -34,10 +32,9 @@ interface BatchPart {
 }
 
 interface ExportOptions {
-  model: 'base' | 'holder' | 'movement' | 'painting' | 'rack' | 'stem' | 'token' | 'counter'
+  model: 'base' | 'holder' | 'painting' | 'rack' | 'stem' | 'token' | 'counter'
   base: BaseConfig
   holder: HolderConfig
-  movementTray: MovementTrayConfig
   paintingTray: PaintingTrayConfig
   paintRack: PaintRackConfig
   stem: FlightStemConfig
@@ -53,7 +50,6 @@ export function useExport({
   model,
   base,
   holder,
-  movementTray,
   paintingTray,
   paintRack,
   stem,
@@ -71,33 +67,29 @@ export function useExport({
       ? base
       : model === 'holder'
         ? holder
-        : model === 'movement'
-          ? movementTray
-          : model === 'painting'
-            ? paintingTray
-            : model === 'rack'
-              ? paintRack
-              : model === 'stem'
-                ? stem
-                : model === 'token'
-                  ? token
-                  : counter
+        : model === 'painting'
+          ? paintingTray
+          : model === 'rack'
+            ? paintRack
+            : model === 'stem'
+              ? stem
+              : model === 'token'
+                ? token
+                : counter
   const name =
     model === 'base'
       ? baseName(base)
       : model === 'holder'
         ? holderName(holder)
-        : model === 'movement'
-          ? movementTrayName(movementTray)
-          : model === 'painting'
-            ? paintingTrayName(paintingTray)
-            : model === 'rack'
-              ? paintRackName(paintRack)
-              : model === 'stem'
-                ? stemName(stem)
-                : model === 'token'
-                  ? tokenName(token)
-                  : counterName(counter)
+        : model === 'painting'
+          ? paintingTrayName(paintingTray)
+          : model === 'rack'
+            ? paintRackName(paintRack)
+            : model === 'stem'
+              ? stemName(stem)
+              : model === 'token'
+                ? tokenName(token)
+                : counterName(counter)
 
   const run = async (
     format: ExportFormat,
@@ -111,13 +103,11 @@ export function useExport({
           ? stemOverallHeight(config)
           : config.kind === 'token'
             ? tokenHeight(config)
-            : config.kind === 'movement-tray'
-              ? movementTrayHeight(config)
-              : config.kind === 'paint-rack'
-                ? paintRackLayout(config).height
-                : config.kind === 'counter'
-                  ? counterLayout(config).height
-                  : config.height,
+            : config.kind === 'paint-rack'
+              ? paintRackLayout(config).height
+              : config.kind === 'counter'
+                ? counterLayout(config).height
+                : config.height,
     },
   ) => {
     setExporting(format)

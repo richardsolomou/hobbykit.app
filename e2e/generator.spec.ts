@@ -141,7 +141,7 @@ test('starts every dimension on a value its own input accepts', async ({ page })
       .evaluateAll((inputs) =>
         inputs.filter((input) => !(input as HTMLInputElement).checkValidity()).map((input) => input.getAttribute('aria-label')),
       )
-  for (const name of ['Holders', 'Movement trays', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Counters', 'Bases']) {
+  for (const name of ['Holders', 'Spray tray', 'Paint racks', 'Stems', 'Tokens', 'Counters', 'Bases']) {
     await visit(page, name)
     expect(await invalid(), name).toEqual([])
   }
@@ -362,13 +362,27 @@ test('opens the retired adapters address on bases with a saved workspace intact'
   expect(await generators.evaluateAll((links) => links.map((link) => link.getAttribute('aria-label')))).toEqual([
     'Bases',
     'Holders',
-    'Movement trays',
     'Spray tray',
     'Paint racks',
     'Stems',
     'Tokens',
     'Counters',
   ])
+})
+
+test('opens the retired movement trays address on bases with a saved workspace intact', async ({ page }) => {
+  await page.evaluate(() => {
+    const key = 'mini-bases.workspace'
+    const { workspace } = JSON.parse(window.localStorage.getItem(key)!)
+    workspace.base.height = 5
+    workspace.movementTray = { kind: 'movement-tray', shape: 'rect', width: 25, length: 25, columns: 5, ranks: 4 }
+    window.localStorage.setItem(key, JSON.stringify({ version: 15, workspace }))
+  })
+  await page.goto('/movement-trays')
+  await settled(page)
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('link', { name: 'Bases' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByLabel('Base height in mm')).toHaveValue('5.0')
 })
 
 test('ignores a garbled link and keeps the saved workspace', async ({ page }) => {
@@ -416,21 +430,6 @@ test('carries a small token image in its link', async ({ page, browser }) => {
 
   const recipient = await openLink(browser, await copyLink(page))
   await expect(footer(recipient)).toContainText('shield.svg')
-})
-
-test('opens a movement tray link with the shared magnets it uses', async ({ page, browser }) => {
-  await page.getByLabel('Magnet diameter in mm').fill('6')
-  await page.getByLabel('Magnet diameter in mm').press('Enter')
-  await visit(page, 'Movement trays')
-  const square = await triangles(page)
-  await page.getByLabel('Columns in ', { exact: true }).fill('6')
-  await page.getByLabel('Columns in ', { exact: true }).press('Enter')
-  await rebuilt(page, square)
-
-  const recipient = await openLink(browser, await copyLink(page))
-  await expect(recipient).toHaveURL(/\/movement-trays$/)
-  await expect(footer(recipient)).toContainText('movement-tray-6x4-rect-25x25mm')
-  await expect(footer(recipient)).toContainText('24 × 6.2 mm hole')
 })
 
 async function setDimension(page: Page, label: string, value: string) {
@@ -723,42 +722,6 @@ test('builds a low-profile spray tray with an interleaved magnet grid', async ({
   await rebuilt(page, gridTriangles)
   await expect(footer(page)).toContainText('5×4 + 4×3 · 50 mm pitch')
   await expect(footer(page)).toContainText('32 × 5.2 mm hole')
-})
-
-test('builds a rank-and-file movement tray with magnet pockets', async ({ page }) => {
-  await visit(page, 'Movement trays')
-
-  await expect(page).toHaveURL(/\/movement-trays$/)
-  await expect(page.getByRole('complementary', { name: 'Movement tray settings' })).toBeVisible()
-  await expect(across(page)).toHaveText('133.5 × 108')
-  await expect(tall(page)).toHaveText('5')
-  await expect(footer(page)).toContainText('movement-tray-5x4-rect-25x25mm')
-  await expect(footer(page)).toContainText('5 × 4 · 25×25')
-  await expect(footer(page)).toContainText('20 × 5.2 mm hole')
-  await expect(footer(page)).toContainText(/Filament\s*≈\d+ g solid PLA/)
-
-  const square = await triangles(page)
-  await page.getByLabel('Columns in ', { exact: true }).fill('6')
-  await page.getByLabel('Columns in ', { exact: true }).press('Enter')
-  await rebuilt(page, square)
-  await expect(across(page)).toHaveText('159 × 108')
-  await expect(footer(page)).toContainText('24 × 5.2 mm hole')
-
-  const wider = await triangles(page)
-  await pickChoice(page, 'Base shape', 'Round')
-  await rebuilt(page, wider)
-  await pickSize(page, '32')
-  await expect(footer(page)).toContainText('movement-tray-6x4-round-32mm')
-  await expect(footer(page)).toContainText('6 × 4 · Ø32')
-
-  const magnetised = await triangles(page)
-  await page.getByRole('switch', { name: 'Slot magnets' }).click()
-  await rebuilt(page, magnetised)
-  await expect(footer(page)).toContainText('Magnetsnone')
-
-  const pending = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Download STL' }).click()
-  expect((await pending).suggestedFilename()).toBe('movement-tray-6x4-round-32mm.stl')
 })
 
 test('builds a stepped paint rack', async ({ page }) => {

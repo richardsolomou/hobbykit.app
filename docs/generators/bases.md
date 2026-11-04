@@ -20,7 +20,7 @@ Every pattern except herringbone and diamond plate has a Variation, which reroll
 
 ## Magnets
 
-Set the diameter, thickness, fit clearance, and depth clearance of the magnets you have. Each magnet sits flush with the face that meets a magnetised tray, and the depth clearance leaves room for adhesive behind it. The magnet count is recommended from the footprint and the magnet's size, or set it yourself for each footprint. Pockets follow a balanced arrangement or a five-pocket cross. Bases share their magnet settings with holders, movement trays, and spray trays, so every magnetised part lands on the same pattern.
+Set the diameter, thickness, fit clearance, and depth clearance of the magnets you have. Each magnet sits flush with the face that meets a magnetised tray, and the depth clearance leaves room for adhesive behind it. The magnet count is recommended from the footprint and the magnet's size, or set it yourself for each footprint. Pockets follow a balanced arrangement or a five-pocket cross. Bases share their magnet settings with holders and spray trays, so every magnetised part lands on the same pattern.
 
 ## Underside
 

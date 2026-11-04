@@ -2,7 +2,6 @@ import { Box, Download, Link, PanelLeft, UnfoldHorizontal } from 'lucide-react'
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { BasePanel } from '@/components/panels/BasePanel'
 import { HolderPanel } from '@/components/panels/HolderPanel'
-import { isStandardMovementSize, MovementTrayPanel } from '@/components/panels/MovementTrayPanel'
 import { PaintingTrayPanel } from '@/components/panels/PaintingTrayPanel'
 import { PaintRackPanel } from '@/components/panels/PaintRackPanel'
 import {
@@ -28,7 +27,6 @@ import { holderLayout, holderName, holderPlan, maxHolderMagnetThickness } from '
 import { baseName, footprint, isElongated } from '@/core/geometry/outline'
 import { footprintKey, SIZES_BY_SHAPE } from '@/core/geometry/presets'
 import { isRelief } from '@/core/geometry/texture'
-import { movementTrayHeight, movementTrayLayout, movementTrayName } from '@/core/geometry/movementTray'
 import { maxTokenEdgeSize, tokenFootprint, tokenHeight, tokenName } from '@/core/geometry/token'
 import {
   paintingHandleAxisCenter,
@@ -46,7 +44,6 @@ import type {
   FlightStemConfig,
   TokenConfig,
   HolderConfig,
-  MovementTrayConfig,
   PaintingTrayConfig,
   PaintRackConfig,
   CounterConfig,
@@ -78,17 +75,15 @@ const modelLabel = (model: Generator) =>
     ? 'Base'
     : model === 'holder'
       ? 'Holder'
-      : model === 'movement'
-        ? 'Movement tray'
-        : model === 'painting'
-          ? 'Spray tray'
-          : model === 'rack'
-            ? 'Paint rack'
-            : model === 'stem'
-              ? 'Stem'
-              : model === 'token'
-                ? 'Token'
-                : 'Dial counter'
+      : model === 'painting'
+        ? 'Spray tray'
+        : model === 'rack'
+          ? 'Paint rack'
+          : model === 'stem'
+            ? 'Stem'
+            : model === 'token'
+              ? 'Token'
+              : 'Dial counter'
 
 const SHARE_NOTICE_MS = 5000
 
@@ -105,7 +100,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const [workspace, setWorkspaceState] = useState(opened.workspace)
   const config = workspace.base
   const holder = workspace.holder
-  const movementTray = workspace.movementTray
   const paintingTray = workspace.paintingTray
   const paintRack = workspace.paintRack
   const stem = workspace.stem
@@ -117,7 +111,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     setWorkspace((current) => ({ ...current, base: typeof next === 'function' ? next(current.base) : next }))
   const setHolder = (next: HolderConfig | ((current: HolderConfig) => HolderConfig)) =>
     setWorkspace((current) => ({ ...current, holder: typeof next === 'function' ? next(current.holder) : next }))
-  const setMovementTray = (next: MovementTrayConfig) => setWorkspace((current) => ({ ...current, movementTray: next }))
   const setPaintingTray = (next: PaintingTrayConfig | ((current: PaintingTrayConfig) => PaintingTrayConfig)) =>
     setWorkspace((current) => ({
       ...current,
@@ -144,7 +137,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     const { width, length } = footprint(workspace.base)
     return !SIZES_BY_SHAPE[workspace.base.shape].some((size) => size.width === width && (size.length ?? size.width) === length)
   })
-  const [customMovementSize, setCustomMovementSize] = useState(() => !isStandardMovementSize(workspace.movementTray))
   const [model, setModel] = useState<Generator>(opened.model)
   /** A view of the preview, not part of the design, so it is neither saved nor shared. */
   const [exploded, setExploded] = useState(false)
@@ -184,17 +176,15 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
       ? config
       : model === 'holder'
         ? holder
-        : model === 'movement'
-          ? movementTray
-          : model === 'painting'
-            ? { ...paintingTray, exploded }
-            : model === 'rack'
-              ? paintRack
-              : model === 'stem'
-                ? stem
-                : model === 'token'
-                  ? token
-                  : { ...counter, exploded }
+        : model === 'painting'
+          ? { ...paintingTray, exploded }
+          : model === 'rack'
+            ? paintRack
+            : model === 'stem'
+              ? stem
+              : model === 'token'
+                ? token
+                : { ...counter, exploded }
   const { preview, grams, error } = useGenerator(partConfig)
 
   useEffect(() => {
@@ -255,7 +245,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const { width, length } = footprint(config)
   const holderSize = useMemo(() => holderLayout(holder), [holder])
   const paintingSize = useMemo(() => paintingTrayLayout(paintingTray), [paintingTray])
-  const movementSize = useMemo(() => movementTrayLayout(movementTray), [movementTray])
   const rackSize = useMemo(() => paintRackLayout(paintRack), [paintRack])
   const maxBaseMagnetThickness = Math.max(0.5, config.height - config.floorThickness) - config.magnets.depthClearance
   const maxSharedMagnetThickness = Math.max(0.5, Math.min(maxBaseMagnetThickness, Math.floor(maxHolderMagnetThickness(holder) * 10) / 10))
@@ -270,49 +259,43 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
       ? width
       : model === 'holder'
         ? holderSize.width
-        : model === 'movement'
-          ? movementSize.width
-          : model === 'painting'
-            ? paintingSize.width
-            : model === 'rack'
-              ? rackSize.width
-              : model === 'stem'
-                ? stemDiameter
-                : model === 'token'
-                  ? tokenFootprint(token).width
-                  : counterSize.width
+        : model === 'painting'
+          ? paintingSize.width
+          : model === 'rack'
+            ? rackSize.width
+            : model === 'stem'
+              ? stemDiameter
+              : model === 'token'
+                ? tokenFootprint(token).width
+                : counterSize.width
   const partLength =
     model === 'base'
       ? length
       : model === 'holder'
         ? holderSize.length
-        : model === 'movement'
-          ? movementSize.length
-          : model === 'painting'
-            ? paintingSize.length
-            : model === 'rack'
-              ? rackSize.length
-              : model === 'stem'
-                ? stemDiameter
-                : model === 'token'
-                  ? tokenFootprint(token).length
-                  : counterSize.length
+        : model === 'painting'
+          ? paintingSize.length
+          : model === 'rack'
+            ? rackSize.length
+            : model === 'stem'
+              ? stemDiameter
+              : model === 'token'
+                ? tokenFootprint(token).length
+                : counterSize.length
   const partHeight =
     model === 'base'
       ? config.height
       : model === 'holder'
         ? holder.height
-        : model === 'movement'
-          ? movementTrayHeight(movementTray)
-          : model === 'painting'
-            ? paintingTrayAssemblyHeight(paintingTray)
-            : model === 'rack'
-              ? rackSize.height
-              : model === 'stem'
-                ? stemOverallHeight(stem)
-                : model === 'token'
-                  ? tokenHeight(token)
-                  : counterSize.height
+        : model === 'painting'
+          ? paintingTrayAssemblyHeight(paintingTray)
+          : model === 'rack'
+            ? rackSize.height
+            : model === 'stem'
+              ? stemOverallHeight(stem)
+              : model === 'token'
+                ? tokenHeight(token)
+                : counterSize.height
   /** What the viewer frames, which takes in the parts' new positions while exploded. */
   const framed = (() => {
     if (model === 'painting' && exploded) {
@@ -333,17 +316,15 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
       ? baseName(config)
       : model === 'holder'
         ? holderName(holder)
-        : model === 'movement'
-          ? movementTrayName(movementTray)
-          : model === 'painting'
-            ? paintingTrayName(paintingTray)
-            : model === 'rack'
-              ? paintRackName(paintRack)
-              : model === 'stem'
-                ? stemName(stem)
-                : model === 'token'
-                  ? tokenName(token)
-                  : counterName(counter)
+        : model === 'painting'
+          ? paintingTrayName(paintingTray)
+          : model === 'rack'
+            ? paintRackName(paintRack)
+            : model === 'stem'
+              ? stemName(stem)
+              : model === 'token'
+                ? tokenName(token)
+                : counterName(counter)
   const batch = useMemo(
     () => workspace.batch.map((entry) => ({ config: batchBaseConfig(workspace, entry), quantity: entry.quantity })),
     [workspace],
@@ -360,7 +341,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     model,
     base: config,
     holder,
-    movementTray,
     paintingTray,
     paintRack,
     stem,
@@ -425,7 +405,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     onReset: () => {
       posthog.capture('settings_reset', { scope: part })
       if (part === 'base') setCustomBaseSize(false)
-      if (part === 'movementTray') setCustomMovementSize(false)
       if (part === 'token') setTokenImageError(undefined)
       setWorkspace((current) => resetGenerator(current, part))
     },
@@ -433,7 +412,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const resetSharedSettings: ResetAction = {
     label: 'shared settings',
     description:
-      'Magnet size and fit, pocket layout, magnet counts, wall thickness, magnet boss wall and the labels toggle return to their defaults on bases, holders, movement trays and spray trays.',
+      'Magnet size and fit, pocket layout, magnet counts, wall thickness, magnet boss wall and the labels toggle return to their defaults on bases, holders and spray trays.',
     onReset: () => {
       posthog.capture('settings_reset', { scope: 'shared' })
       setWorkspace(resetShared)
@@ -472,16 +451,6 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
         setSharedMagnets={setSharedMagnets}
         setSharedLabels={setSharedLabels}
         resets={[resetPart('holder', 'holder', true), resetSharedSettings]}
-      />
-    ) : model === 'movement' ? (
-      <MovementTrayPanel
-        movementTray={movementTray}
-        setMovementTray={setMovementTray}
-        custom={customMovementSize}
-        setCustom={setCustomMovementSize}
-        maxSharedMagnetThickness={maxSharedMagnetThickness}
-        setSharedMagnets={setSharedMagnets}
-        resets={[resetPart('movementTray', 'movement tray', true), resetSharedSettings]}
       />
     ) : model === 'painting' ? (
       <PaintingTrayPanel

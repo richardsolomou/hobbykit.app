@@ -10,13 +10,13 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/richardsolomou/hobbykit.app/ci.yml?branch=main)](https://github.com/richardsolomou/hobbykit.app/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/richardsolomou/hobbykit.app)](LICENSE)
 </div>
 
-HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matching flying stems, Gridfinity holders, movement trays, low-profile spray trays, stepped paint racks, gaming tokens, and dial counters. Pick a standard footprint or enter an exact one, choose the magnets you have, and export a model ready for the slicer. A base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
+HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matching flying stems, Gridfinity holders, low-profile spray trays, stepped paint racks, gaming tokens, and dial counters. Pick a standard footprint or enter an exact one, choose the magnets you have, and export a model ready for the slicer. A base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
 
 Everything runs in the browser. Models are built locally and nothing is uploaded.
 
 ## Who is it for? 👋
 
-HobbyKit is for hobbyists who need replacement, conversion, display, or movement-tray bases without searching for the right STL or redrawing the same part in CAD.
+HobbyKit is for hobbyists who need replacement, conversion, or display bases without searching for the right STL or redrawing the same part in CAD.
 
 Built-in presets cover common Games Workshop, The Old World, Kings of War, and historical sizes. Custom footprints from 15–180mm work too.
 
@@ -33,10 +33,6 @@ The [bases guide](docs/generators/bases.md) covers footprints, labels, magnets, 
 ## Gridfinity holders 📦
 
 Add miniature groups, choose the available rows and columns, and HobbyKit packs matching slots into printable Gridfinity modules. Read the [holders guide](docs/generators/holders.md).
-
-## Movement trays 🛡️
-
-Move a rank-and-file unit for The Old World, Kings of War, or historical games as one. Read the [movement trays guide](docs/generators/movement-trays.md).
 
 ## Spray trays 🎨
 
@@ -62,7 +58,7 @@ Track wounds, victory points, or command points from 00 to 99 on two ten-sided d
 - Round, square, and hex tokens with wrapped text and traced image silhouettes, raised in a second colour or engraved.
 - Stepped honeycomb paint racks for dropper bottles and pots.
 - Two-drum 00–99 dial counters held at each count by printed click detents, joined by a snap-fit hub, with a pointer marking the count and raised digits on press-in tiles in a second colour or engraved for paint.
-- Shared magnet dimensions across bases, holders, movement trays, and spray trays.
+- Shared magnet dimensions across bases, holders, and spray trays.
 - Balanced or five-pocket cross magnet arrangements for bases and holders. Saved cross layouts keep one centre pocket and four outer pockets on both axes, including elongated footprints.
 - Exact size labels, filenames, dimensions, and high-quality exports.
 - Optional textures for the face a model stands on, all without supports: eight paving and plating patterns cut with 45° joints, or seven ground reliefs such as rock, rubble, and snow on a base that prints face up. Every random pattern can be rerolled and made tidier or wilder.

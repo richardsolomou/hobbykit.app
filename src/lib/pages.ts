@@ -21,16 +21,6 @@ export const PAGES = [
       'Pack miniatures into printable Gridfinity holder modules with slots sized to their bases, engraved sizes and matching magnet pockets. Export STL or 3MF.',
   },
   {
-    value: 'movement' as const,
-    part: 'movementTray' as const,
-    label: 'Movement trays',
-    mobileLabel: 'Movement',
-    href: '/movement-trays',
-    title: 'Movement tray generator',
-    description:
-      'Make support-free movement trays for The Old World, Kings of War and historical games, with a recess for every base and magnet pockets that match your bases. Export STL or 3MF.',
-  },
-  {
     value: 'painting' as const,
     part: 'paintingTray' as const,
     label: 'Spray tray',

@@ -1,6 +1,6 @@
 /**
  * Writes a sample STL per preset size so the geometry can be inspected outside the
- * browser. Usage: pnpm samples [outDir] [round|oval|painting|movement|rack|counter]
+ * browser. Usage: pnpm samples [outDir] [round|oval|painting|rack|counter]
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -9,7 +9,6 @@ import type { Font } from 'opentype.js'
 import { buildBase } from '../src/core/geometry/base'
 import { toStl } from '../src/core/geometry/exporters'
 import { loadManifold } from '../src/core/geometry/manifold'
-import { buildMovementTray, defaultMovementTrayConfig, movementTrayName } from '../src/core/geometry/movementTray'
 import { baseName } from '../src/core/geometry/outline'
 import {
   buildPaintingHandle,
@@ -55,18 +54,6 @@ if (family === 'rack') {
   const filename = `${paintRackName(config)}.stl`
   writeFileSync(join(outDir, filename), toStl(mesh, filename))
   console.log(`${filename}  ${stats.triangles} tris  ${stats.volume.toFixed(0)}mm3  ${stats.grams.toFixed(2)}g`)
-  process.exit(0)
-}
-
-if (family === 'movement') {
-  const square = defaultMovementTrayConfig()
-  const configs = [square, { ...square, shape: 'round' as const, width: 25, length: 25 }]
-  for (const config of configs) {
-    const { mesh, stats } = buildMovementTray(wasm, config)
-    const filename = `${movementTrayName(config)}.stl`
-    writeFileSync(join(outDir, filename), toStl(mesh, filename))
-    console.log(`${filename}  ${stats.triangles} tris  ${stats.volume.toFixed(0)}mm3  ${stats.grams.toFixed(2)}g`)
-  }
   process.exit(0)
 }
 

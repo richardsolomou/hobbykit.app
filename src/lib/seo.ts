@@ -120,7 +120,7 @@ ${PAGES.map((page) => `- [${page.title}](${url(markdownPath(page))}): ${page.des
 - Is ${NAME} free, and does it need an account? Every generator is free and needs no account. Settings are saved in the browser.
 - Which file formats does it export? STL and 3MF. Multi-part downloads arrive as one ZIP of STLs or one 3MF with each part on its own build plate.
 - Which base sizes are supported? Presets cover common Games Workshop, The Old World, Kings of War, and historical sizes, and custom round, oval, pill, rectangle, and polygon footprints from 15 to 180mm work too. A base's exact size is embossed inside it, so a 28.5mm base reads 28.5.
-- Which magnets does it fit? Set the diameter and thickness of the round magnets you have. Magnet pockets sit flush with the face that meets a magnetised tray, and bases, holders, movement trays, and spray trays share the same magnet settings.
+- Which magnets does it fit? Set the diameter and thickness of the round magnets you have. Magnet pockets sit flush with the face that meets a magnetised tray, and bases, holders, and spray trays share the same magnet settings.
 - Can I make several base sizes at once? Add sizes to the batch and download them together: one STL per size in a ZIP, or one 3MF with every copy laid out across build plates.
 - How do I share a design? Copy link puts the generator's settings after the \`#\` in the address, which browsers never send to a server.
 

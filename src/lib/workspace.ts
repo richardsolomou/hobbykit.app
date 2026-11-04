@@ -1,5 +1,4 @@
 import { defaultHolderConfig } from '../core/geometry/holder'
-import { defaultMovementTrayConfig, minimumMovementTrayFloor } from '../core/geometry/movementTray'
 import {
   defaultPaintingTrayConfig,
   minimumPaintingTrayEdgeMargin,
@@ -17,7 +16,6 @@ import type {
   BaseConfig,
   FlightStemConfig,
   HolderConfig,
-  MovementTrayConfig,
   PaintRackConfig,
   ShapeKind,
   TokenConfig,
@@ -26,7 +24,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 15
+const WORKSPACE_VERSION = 16
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -38,7 +36,6 @@ interface SettingsStorage {
 export interface WorkspaceState {
   base: BaseConfig
   holder: HolderConfig
-  movementTray: MovementTrayConfig
   paintingTray: PaintingTrayConfig
   paintRack: PaintRackConfig
   stem: FlightStemConfig
@@ -113,13 +110,6 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
           shared.magnets.diameter,
           shared.magnets.thickness,
         ))
-  const movementTray = {
-    ...state.movementTray,
-    baseWallThickness: shared.wallThickness,
-    magnetBossWall: shared.magnetBossWall,
-    magnetCounts: shared.magnetCounts,
-    magnets: { ...state.movementTray.magnets, ...shared.magnets },
-  }
   return {
     ...state,
     base: {
@@ -152,10 +142,6 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
       engraving: { ...state.holder.engraving, enabled: shared.labelsEnabled },
       magnets: { ...state.holder.magnets, ...shared.magnets },
     },
-    movementTray: {
-      ...movementTray,
-      floorThickness: atLeast(movementTray.floorThickness, minimumMovementTrayFloor(movementTray)),
-    },
     paintingTray: {
       ...state.paintingTray,
       height: atLeast(state.paintingTray.height, minimumPaintingTrayHeight({ magnets: shared.magnets })),
@@ -171,7 +157,6 @@ export function defaultWorkspace(): WorkspaceState {
   return synchronizeWorkspace({
     base,
     holder: defaultHolderConfig(),
-    movementTray: defaultMovementTrayConfig(),
     paintingTray: defaultPaintingTrayConfig(),
     paintRack: defaultPaintRackConfig(),
     stem: defaultFlightStemConfig(),
@@ -208,6 +193,7 @@ const MIGRATIONS = [
   migrateWorkspaceV12,
   migrateWorkspaceV13,
   migrateWorkspaceV14,
+  migrateWorkspaceV15,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -234,8 +220,8 @@ export function loadWorkspace(storage: SettingsStorage): WorkspaceState {
   }
 }
 
-const PARTS: readonly GeneratorSettings[] = ['base', 'holder', 'movementTray', 'paintingTray', 'paintRack', 'stem', 'token', 'counter']
-const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'movementTray', 'paintingTray'])
+const PARTS: readonly GeneratorSettings[] = ['base', 'holder', 'paintingTray', 'paintRack', 'stem', 'token', 'counter']
+const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'paintingTray'])
 
 /**
  * One generator's settings and the shared settings that shape it, as a share link carries them.
@@ -251,8 +237,6 @@ export interface WorkspaceSetup {
 function magnetCountKeys(workspace: WorkspaceState, part: GeneratorSettings): string[] {
   if (part === 'base') return [footprintKey(workspace.base.shape, workspace.base.width, workspace.base.length)]
   if (part === 'holder') return workspace.holder.groups.map((group) => footprintKey(group.shape, group.width, group.length))
-  if (part === 'movementTray')
-    return [footprintKey(workspace.movementTray.shape, workspace.movementTray.width, workspace.movementTray.length)]
   return []
 }
 
@@ -290,6 +274,12 @@ export function applyWorkspaceSetup(
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
 }
 
+function migrateWorkspaceV15(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const { movementTray: _movementTray, ...workspace } = value as Record<string, unknown>
+  return workspace
+}
+
 function migrateWorkspaceV14(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) return value
   const workspace = value as Record<string, unknown>
@@ -318,9 +308,9 @@ function migrateWorkspaceV10(value: unknown): unknown {
   return value
 }
 
+/** Version 10 only added the movement tray generator, which version 16 removed again. */
 function migrateWorkspaceV9(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  return { ...(value as Record<string, unknown>), movementTray: defaultMovementTrayConfig() }
+  return value
 }
 
 function isBatchEntry(entry: unknown): entry is BatchEntry {
@@ -451,8 +441,6 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
     ['round', 'square', 'hex'].includes(workspace.token.shape) &&
     ['taper', 'straight', 'bevel', 'round'].includes(workspace.token.profile) &&
     isTokenImage(workspace.token.image) &&
-    workspace.movementTray.kind === 'movement-tray' &&
-    ['round', 'rect'].includes(workspace.movementTray.shape) &&
     workspace.paintingTray.kind === 'painting-tray' &&
     workspace.counter.kind === 'counter' &&
     workspace.paintRack.kind === 'paint-rack' &&
