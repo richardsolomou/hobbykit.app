@@ -30,7 +30,7 @@ const units = (value: number) => String(Math.round(value * 1000) / 1000)
 
 /** Ink bounds of each label character in font units, measured from the outlines the app extrudes. */
 function glyphRows(font: Font): string[] {
-  return [...LABEL_CHARACTERS].map((ch) => {
+  return Array.from(LABEL_CHARACTERS).map((ch) => {
     const advance = units(font.charToGlyph(ch).advanceWidth ?? 0)
     const contours = glyphOutlines(font, ch, font.unitsPerEm)
     if (contours.length === 0) return `[${scadString(ch)}, ${advance}]`
@@ -52,7 +52,7 @@ const fine = (value: number) => String(Math.round(value * 100) / 100)
 function outlineRows(font: Font, table: string): string[] {
   const characters = table.includes(':') ? table.slice(table.indexOf(':') + 1) : LABEL_CHARACTERS
   for (const ch of characters) if (!LABEL_CHARACTERS.includes(ch)) throw new Error(`Unknown outline character: ${ch}`)
-  return [...characters].map((ch) => {
+  return Array.from(characters).map((ch) => {
     const contours = glyphOutlines(font, ch, font.unitsPerEm).map((c) => `[${c.map(([x, y]) => `[${fine(x)},${fine(y)}]`).join(',')}]`)
     return `[${scadString(ch)}, [${contours.join(', ')}]]`
   })

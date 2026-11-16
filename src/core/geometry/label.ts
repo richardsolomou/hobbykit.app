@@ -16,7 +16,7 @@ const accepted = new Set(LABEL_CHARACTERS)
 
 /** Custom label text reduced to what the font can draw, at most `LABEL_MAX_LENGTH` characters. */
 export const labelText = (text: string) =>
-  [...text]
+  Array.from(text)
     .filter((ch) => accepted.has(ch))
     .join('')
     .slice(0, LABEL_MAX_LENGTH)

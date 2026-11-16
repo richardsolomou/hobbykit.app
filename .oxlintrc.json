@@ -1,6 +1,10 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["./.ras/oxlint.json"],
+  "extends": [
+    "./node_modules/ras-stack/config/oxlint/application.json",
+    "./node_modules/ras-stack/config/oxlint/layers.json",
+    "./node_modules/ras-stack/config/oxlint/domain.json"
+  ],
   "overrides": [
     {
       "files": ["src/components/ui/**"],
@@ -14,5 +18,5 @@
       }
     }
   ],
-  "ignorePatterns": ["dist/**", "node_modules/**", ".ras/**"]
+  "ignorePatterns": ["node_modules/**", "dist/**"]
 }

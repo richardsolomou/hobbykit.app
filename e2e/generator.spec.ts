@@ -664,7 +664,7 @@ test('engraves token artwork for stacking and saves its relief', async ({ page }
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
-  const bytes = await readFile((await (await download).path())!)
+  const bytes = await readFile(await (await download).path())
   const heights: number[] = []
   for (let i = 0; i < bytes.readUInt32LE(80); i++) {
     for (let vertex = 0; vertex < 3; vertex++) heights.push(bytes.readFloatLE(84 + i * 50 + 20 + vertex * 12))
@@ -1242,12 +1242,12 @@ test('still builds with the wall and floor wound to their limits', async ({ page
 })
 
 test('caps the edge profile when the recess floor is thinned', async ({ page }) => {
-  const floorBuild = triangles(page)
+  const floorBuild = await triangles(page)
   await page.getByLabel('Top thickness in mm').fill('0.4')
   await page.getByLabel('Top thickness in mm').press('Enter')
   await rebuilt(page, floorBuild)
 
-  const edgeBuild = triangles(page)
+  const edgeBuild = await triangles(page)
   await page.getByLabel('Edge size in mm').fill('3')
   await page.getByLabel('Edge size in mm').blur()
   await rebuilt(page, edgeBuild)
