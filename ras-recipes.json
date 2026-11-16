@@ -1,6 +1,18 @@
 {
   "source": "https://github.com/richardsolomou/ras-stack",
   "recipes": {
+    "ci": {
+      "version": 1,
+      "commit": "82fce4523ec914bd2e70aefd4bff84c10fb278c6",
+      "files": {
+        ".github/dependabot.yml": ".github/dependabot.yml",
+        ".github/workflows/ci.yml": ".github/workflows/ci.yml"
+      },
+      "notes": [
+        "ci.yml adds an end-to-end job through check-browser.yml@v1, because the generators only prove themselves against a production build in a real browser.",
+        "ci.yml adds a release job through release-changesets.yml@v1 after check and end-to-end, because the app versions and tags releases with Changesets while Cloudflare deploys main."
+      ]
+    },
     "tooling": {
       "version": 2,
       "commit": "82fce4523ec914bd2e70aefd4bff84c10fb278c6",
