@@ -7,6 +7,3 @@ allowBuilds:
   '@posthog/cli': true
   core-js: true
   esbuild: true
-configDependencies:
-  ras-stack: 5.5.1
-pnpmfile: node_modules/.pnpm-config/ras-stack/pnpmfile.mjs

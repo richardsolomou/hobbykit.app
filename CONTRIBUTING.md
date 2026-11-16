@@ -13,7 +13,7 @@ just dev
 
 Open `http://localhost:5173`. The app has no backend, database, account, or environment variables.
 
-Shared tool configuration and dependency maintenance are documented in the [RAS documentation](https://github.com/richardsolomou/ras-stack/blob/main/docs/README.md).
+Tool configuration, CI, and dependency policy come from [RAS recipes](https://github.com/richardsolomou/ras-stack/blob/main/recipes/README.md); `ras-recipes.json` records which ones and how this app differs.
 
 ## Checks
 
@@ -81,4 +81,4 @@ Production setup and verification live in the [Cloudflare deployment guide](docs
 
 ## Shared infrastructure checks
 
-Lint rules restrict Node and framework imports in `src/core/geometry`; test files can still load real geometry fixtures. `.oxlintrc.json` is the active lint configuration. The PostHog wiring test imports the real application entrypoint and verifies the provider configuration passed by the app.
+Lint rules restrict Node and framework imports in `src/core/geometry`; test files can still load real geometry fixtures. `.oxlintrc.json` is the active lint configuration. The PostHog wiring test imports the real application entrypoint and verifies that PostHog starts with the configured project only after the shared setup leaves the URL.
