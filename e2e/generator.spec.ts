@@ -1242,15 +1242,15 @@ test('still builds with the wall and floor wound to their limits', async ({ page
 })
 
 test('caps the edge profile when the recess floor is thinned', async ({ page }) => {
-  const floorBuild = await triangles(page)
+  // Neither change alters the triangle count, so there is no rebuild to wait for.
   await page.getByLabel('Top thickness in mm').fill('0.4')
   await page.getByLabel('Top thickness in mm').press('Enter')
-  await rebuilt(page, floorBuild)
+  await expect(page.getByLabel('Top thickness in mm')).toHaveValue('0.4')
+  await settled(page)
 
-  const edgeBuild = await triangles(page)
   await page.getByLabel('Edge size in mm').fill('3')
   await page.getByLabel('Edge size in mm').blur()
-  await rebuilt(page, edgeBuild)
+  await settled(page)
   await expect(page.getByLabel('Edge size in mm')).toHaveValue('1.7')
 })
 
