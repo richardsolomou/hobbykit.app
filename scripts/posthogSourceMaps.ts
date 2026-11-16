@@ -10,14 +10,20 @@ export function postHogSourceMaps(env: Environment) {
   // The Cloudflare build may still set the older POSTHOG_API_KEY, POSTHOG_PROJECT_ID, and POSTHOG_HOST names.
   const personalApiKey = env.POSTHOG_CLI_API_KEY ?? env.POSTHOG_API_KEY
   const projectId = env.POSTHOG_CLI_PROJECT_ID ?? env.POSTHOG_PROJECT_ID
-  const host = env.POSTHOG_CLI_HOST ?? env.POSTHOG_HOST
   const requested = env.POSTHOG_UPLOAD_SOURCEMAPS
   const upload = requested === 'true' || (requested !== 'false' && env.CI === 'true' && Boolean(personalApiKey && projectId))
   if (!upload) return undefined
   if (!personalApiKey || !projectId) throw new Error('Uploading source maps needs POSTHOG_CLI_API_KEY and POSTHOG_CLI_PROJECT_ID')
   // Hidden maps carry no `sourceMappingURL`, and deleting them after upload keeps the original source off the public site.
-  const plugin = () => posthog({ personalApiKey, projectId, host, sourcemaps: { enabled: true, deleteAfterUpload: true } })
+  const plugin = () =>
+    posthog({
+      personalApiKey,
+      projectId,
+      host: env.POSTHOG_CLI_HOST ?? env.POSTHOG_HOST,
+      sourcemaps: { enabled: true, deleteAfterUpload: true },
+    })
   return {
+    // The server bundle is not what browsers run, and Nitro bundles it again, so its maps would describe nothing deployed.
     client: { ...plugin(), applyToEnvironment: (environment: { name: string }) => environment.name === 'client' },
     // Workers build separately, and each build needs its own instance.
     worker: plugin,

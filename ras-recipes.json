@@ -13,6 +13,30 @@
         "ci.yml adds a release job through release-changesets.yml@v1 after check and end-to-end, because the app versions and tags releases with Changesets while Cloudflare deploys main."
       ]
     },
+    "posthog-web": {
+      "version": 4,
+      "commit": "0184a1e1bc4ababa9b89b4455014ba13be436df2",
+      "files": {
+        "scripts/posthogSourceMaps.test.ts": "scripts/posthogSourceMaps.test.ts",
+        "scripts/posthogSourceMaps.ts": "scripts/posthogSourceMaps.ts",
+        "src/client/posthog.test.tsx": "src/client/posthog.test.tsx",
+        "src/client/posthog.tsx": "src/client/posthog.tsx",
+        "src/client/posthogOptions.test.ts": "src/client/posthogOptions.test.ts",
+        "src/client/posthogOptions.ts": "src/client/posthogOptions.ts",
+        "src/contracts/posthog.test.ts": "src/contracts/posthog.test.ts",
+        "src/contracts/posthog.ts": "src/contracts/posthog.ts",
+        "src/routes/t/$.ts": null,
+        "src/server/posthogProxy.test.ts": null,
+        "src/server/posthogProxy.ts": null
+      },
+      "notes": [
+        "The app has no TanStack Start server, so it skips the /t ingest proxy and its route and follows Direct ingestion: postHogOptions sends straight to environment.host, and ingestPath stays unused in the contract.",
+        "initPostHog() starts PostHog from src/main.tsx after takeShareHash() strips the shared setup from the URL, instead of on module load, so a shared setup never reaches a captured URL.",
+        "posthog.tsx drops captureRenderError, because the app has no router whose defaultOnCatch would call it.",
+        "Logs and metrics report as service hobbykit with the package version, not hobbykit-web, keeping the service name production already reports under.",
+        "postHogSourceMaps also reads the older POSTHOG_API_KEY, POSTHOG_PROJECT_ID, and POSTHOG_HOST names, because the Cloudflare Pages build may still set them."
+      ]
+    },
     "tooling": {
       "version": 2,
       "commit": "82fce4523ec914bd2e70aefd4bff84c10fb278c6",

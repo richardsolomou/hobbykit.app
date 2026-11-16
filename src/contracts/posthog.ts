@@ -1,5 +1,8 @@
-/** Names this application's PostHog logs and metrics. */
+/** Names this application's PostHog logs, metrics, and spans; the browser reports as `<name>-web` and the server as `<name>-server`. */
 export const serviceName = 'hobbykit'
+
+/** Where the browser sends PostHog requests on this origin. Ad-blocker lists match the literal `/ingest` segment on any host. */
+export const ingestPath = '/t'
 
 /** The build variables holding the project token and host; the browser bundle and the server read the same names. */
 export const projectTokenVariable = 'VITE_POSTHOG_PROJECT_TOKEN'
@@ -11,8 +14,8 @@ export const defaultHost = 'https://us.i.posthog.com'
 export type PostHogEnvironment = { projectToken: string; host: string; uiHost: string; assetsHost: string }
 
 /**
- * PostHog's project and hosts; undefined with neither set, which keeps PostHog off. A host
- * without a token throws, since it means analytics were meant to be on and a missing token would turn them off silently.
+ * PostHog's project and hosts; undefined with neither set, which keeps PostHog off. A host without a token throws, since it
+ * means analytics were meant to be on and a missing token would turn them off silently.
  */
 export function postHogEnvironment(input: {
   projectToken?: string | undefined
@@ -28,10 +31,13 @@ export function postHogEnvironment(input: {
   return { projectToken, host: host.toString().replace(/\/$/, ''), uiHost: uiHost(host), assetsHost: assetsHost(host) }
 }
 
-/** The project this build's browser bundle reports to, fixed when Vite builds it. */
+/**
+ * The project this build's browser bundle reports to, fixed when Vite builds it; the ingest proxy forwards to the same hosts.
+ * Scripts run by Node or tsx have no `import.meta.env`, and see PostHog off.
+ */
 export const bundledPostHog = postHogEnvironment({
-  projectToken: import.meta.env[projectTokenVariable],
-  host: import.meta.env[hostVariable],
+  projectToken: import.meta.env?.[projectTokenVariable],
+  host: import.meta.env?.[hostVariable],
 })
 
 function httpUrl(value: string) {
