@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
-import { defineViteConfig } from 'ras-stack/vite'
-import type { Plugin } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+import viteReact from '@vitejs/plugin-react'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { postHogSourceMaps } from './scripts/posthogSourceMaps.ts'
 import { PAGES } from './src/lib/pages.ts'
 import { llmsTxt, markdownPath, notFoundHtml, pageHtml, pageMarkdown, robotsTxt, sitemapXml } from './src/lib/seo.ts'
 
@@ -37,7 +39,12 @@ function seo(): Plugin {
   }
 }
 
-export default defineViteConfig({
-  assetsInclude: ['**/*.woff'],
-  plugins: [seo()],
+export default defineConfig(({ mode }) => {
+  const sourceMaps = postHogSourceMaps({ ...loadEnv(mode, process.cwd(), ''), ...process.env })
+  return {
+    assetsInclude: ['**/*.woff'],
+    resolve: { tsconfigPaths: true },
+    plugins: [viteReact(), tailwindcss(), sourceMaps?.client, seo()],
+    ...(sourceMaps ? { worker: { plugins: () => [sourceMaps.worker()] } } : {}),
+  }
 })

@@ -1,0 +1,66 @@
+{
+  "source": "https://github.com/richardsolomou/ras-stack",
+  "recipes": {
+    "ci": {
+      "version": 1,
+      "commit": "82fce4523ec914bd2e70aefd4bff84c10fb278c6",
+      "files": {
+        ".github/dependabot.yml": ".github/dependabot.yml",
+        ".github/workflows/ci.yml": ".github/workflows/ci.yml"
+      },
+      "notes": [
+        "ci.yml adds an end-to-end job through check-browser.yml@v1, because the generators only prove themselves against a production build in a real browser.",
+        "ci.yml adds a release job through release-changesets.yml@v1 after check and end-to-end, because the app versions and tags releases with Changesets while Cloudflare deploys main."
+      ]
+    },
+    "posthog-web": {
+      "version": 4,
+      "commit": "0184a1e1bc4ababa9b89b4455014ba13be436df2",
+      "files": {
+        "scripts/posthogSourceMaps.test.ts": "scripts/posthogSourceMaps.test.ts",
+        "scripts/posthogSourceMaps.ts": "scripts/posthogSourceMaps.ts",
+        "src/client/posthog.test.tsx": "src/client/posthog.test.tsx",
+        "src/client/posthog.tsx": "src/client/posthog.tsx",
+        "src/client/posthogOptions.test.ts": "src/client/posthogOptions.test.ts",
+        "src/client/posthogOptions.ts": "src/client/posthogOptions.ts",
+        "src/contracts/posthog.test.ts": "src/contracts/posthog.test.ts",
+        "src/contracts/posthog.ts": "src/contracts/posthog.ts",
+        "src/routes/t/$.ts": null,
+        "src/server/posthogProxy.test.ts": null,
+        "src/server/posthogProxy.ts": null
+      },
+      "notes": [
+        "The app has no TanStack Start server, so it skips the /t ingest proxy and its route and follows Direct ingestion: postHogOptions sends straight to environment.host, and ingestPath stays unused in the contract.",
+        "initPostHog() starts PostHog from src/main.tsx after takeShareHash() strips the shared setup from the URL, instead of on module load, so a shared setup never reaches a captured URL.",
+        "posthog.tsx drops captureRenderError, because the app has no router whose defaultOnCatch would call it.",
+        "Logs and metrics report as service hobbykit with the package version, not hobbykit-web, keeping the service name production already reports under.",
+        "postHogSourceMaps also reads the older POSTHOG_API_KEY, POSTHOG_PROJECT_ID, and POSTHOG_HOST names, because the Cloudflare Pages build may still set them."
+      ]
+    },
+    "tooling": {
+      "version": 2,
+      "commit": "82fce4523ec914bd2e70aefd4bff84c10fb278c6",
+      "files": {
+        ".gitignore": ".gitignore",
+        ".oxfmtrc.json": ".oxfmtrc.json",
+        ".oxlintrc.json": ".oxlintrc.json",
+        "AGENTS.md": "AGENTS.md",
+        "package.json": "package.json",
+        "pnpm-workspace.yaml": "pnpm-workspace.yaml",
+        "tsconfig.json": "tsconfig.json",
+        "vitest.config.ts": "vitest.config.ts"
+      },
+      "notes": [
+        "tsconfig.json turns noUncheckedIndexedAccess off, enables resolveJsonModule for package.json imports, and maps @/* to src/*, because the geometry code indexes arrays heavily and the app imports through @/.",
+        ".oxlintrc.json also extends the domain preset so src/core stays free of Node, framework, and app-layer imports, and relaxes a few a11y and React rules for the vendored shadcn components in src/components/ui.",
+        ".oxfmtrc.json ignores dist and pnpm-lock.yaml so formatting checks skip build output and the lockfile.",
+        "vitest.config.ts runs in the node environment with a 30s timeout, because export-quality geometry builds take several seconds on CI runners.",
+        "pnpm check also runs pnpm build, because the build runs the SEO prerender and is the whole deploy risk for this static site.",
+        "The app releases with Changesets but has no changeset check in pnpm check, because changeset status demands a changeset on every change and tooling-only changes deliberately have none.",
+        "vitest stays on 5.x and pnpm on 12.x, newer majors than the recipe lists, because the app already ran on them.",
+        "package.json keeps the Playwright, samples, and Changesets scripts, and .gitignore keeps the app outputs (test-results, makerworld/images, printables/files, .wrangler).",
+        "AGENTS.md keeps the app guide and adds the recipe paragraph after its introduction."
+      ]
+    }
+  }
+}

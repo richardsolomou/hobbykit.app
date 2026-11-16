@@ -54,7 +54,7 @@ import { useExport } from '@/lib/useExport'
 import { useGenerator } from '@/lib/useGenerator'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { PAGES } from '@/lib/pages'
-import posthog from '@/lib/posthog'
+import { posthog } from 'posthog-js'
 import { shareLink } from '@/lib/shareLink'
 import {
   applyWorkspaceSetup,

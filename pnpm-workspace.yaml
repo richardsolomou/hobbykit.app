@@ -1,20 +1,9 @@
-# New releases have to sit for a week before they can be installed, so a
-# compromised publish has time to be noticed. It only applies when resolving
-# something new — an install against this lockfile is unaffected. To take a
-# fresher release deliberately: pnpm add --config.minimumReleaseAge=0 <pkg>
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - 'posthog-*'
+  - '@posthog/*'
+  - ras-stack
 allowBuilds:
   '@posthog/cli': true
-  core-js: true
+  core-js: false
   esbuild: true
-
-minimumReleaseAgeExclude:
-  - ras-stack@5.0.0
-  - ras-stack@5.1.0
-  # Reviewed exact versions from the RAS candidate; retain the seven-day gate for other packages.
-  - '@posthog/browser-common@0.9.5'
-  - '@posthog/core@1.59.1'
-  - posthog-js@1.438.12
-configDependencies:
-  ras-stack: 5.5.1
-pnpmfile: node_modules/.pnpm-config/ras-stack/pnpmfile.mjs

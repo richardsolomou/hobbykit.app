@@ -1,5 +1,5 @@
 import wasmUrl from 'manifold-3d/manifold.wasm?url'
-import { parse, type Font } from 'opentype.js'
+import { parse } from 'opentype.js'
 import fontUrl from '@/assets/fonts/oswald-700.woff?url'
 import { buildBase, type BuildResult } from '@/core/geometry/base'
 import { buildHolder } from '@/core/geometry/holder'
@@ -15,7 +15,7 @@ const ready = Promise.all([
   loadManifold(() => wasmUrl),
   fetch(fontUrl)
     .then((r) => r.arrayBuffer())
-    .then(parse) as Promise<Font>,
+    .then(parse),
 ])
 
 /** Copies out of the mesh: its arrays may still view WASM memory, which must not be transferred. */

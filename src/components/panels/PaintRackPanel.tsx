@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { trimNumber } from '@/core/geometry/outline'
 import { defaultPaintRackConfig, paintRackLayout, POCKET_CLEARANCE, type PaintRackPieceKind } from '@/core/geometry/paintRack'
 import type { PaintRackConfig, PaintRackItem } from '@/core/geometry/types'
-import posthog from '@/lib/posthog'
+import { posthog } from 'posthog-js'
 import { PanelFooter, type ResetAction } from './shared'
 
 const RACK_DEFAULTS = defaultPaintRackConfig()

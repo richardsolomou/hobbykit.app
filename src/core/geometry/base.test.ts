@@ -464,7 +464,7 @@ describe('labels', () => {
   })
 
   it('draws every character a label accepts', () => {
-    const missing = [...LABEL_CHARACTERS].filter((ch) => font.charToGlyphIndex(ch) === 0)
+    const missing = Array.from(LABEL_CHARACTERS).filter((ch) => font.charToGlyphIndex(ch) === 0)
     expect(missing).toEqual([])
   })
 
