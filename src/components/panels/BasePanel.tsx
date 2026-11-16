@@ -22,7 +22,7 @@ import {
 } from '@/core/geometry/presets'
 import type { BaseConfig, ShapeKind, TexturePattern } from '@/core/geometry/types'
 import { addToBatch } from '@/lib/batch'
-import posthog from '@/lib/posthog'
+import { posthog } from 'posthog-js'
 import type { ExportFormat } from '@/lib/useExport'
 import type { BatchEntry } from '@/lib/workspace'
 import {

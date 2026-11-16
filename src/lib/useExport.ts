@@ -19,7 +19,7 @@ import type {
   PartConfig,
   CounterConfig,
 } from '@/core/geometry/types'
-import posthog from '@/lib/posthog'
+import { posthog } from 'posthog-js'
 import { batchFileName } from './batch'
 import { buildMesh } from './buildMesh'
 import { counterProject } from './counterProject'

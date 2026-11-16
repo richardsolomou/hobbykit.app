@@ -6,7 +6,7 @@ import { holderGroup } from '@/core/geometry/holder'
 import { isElongated } from '@/core/geometry/outline'
 import { SIZES_BY_SHAPE } from '@/core/geometry/presets'
 import type { HolderGroup, ShapeKind } from '@/core/geometry/types'
-import posthog from '@/lib/posthog'
+import { posthog } from 'posthog-js'
 
 const SHAPES: { value: ShapeKind; label: string }[] = [
   { value: 'round', label: 'Round' },

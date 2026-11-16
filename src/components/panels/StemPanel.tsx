@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { trimNumber } from '@/core/geometry/outline'
 import { CLASSIC_STEM_HEIGHTS, defaultFlightStemConfig, stemNeckDiameter, stemOverallHeight } from '@/core/geometry/stem'
 import type { FlightStemConfig } from '@/core/geometry/types'
-import posthog from '@/lib/posthog'
+import { posthog } from 'posthog-js'
 import { PanelFooter, type ResetAction } from './shared'
 
 const STEM_DEFAULTS = defaultFlightStemConfig()

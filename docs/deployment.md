@@ -15,7 +15,7 @@ Create a Pages project from the `richardsolomou/hobbykit.app` GitHub repository 
 
 Set `NODE_VERSION=24` in the build environment. pnpm reads its version from the `packageManager` field in `package.json`.
 
-Pages creates a preview deployment for pull requests and a production deployment for `main`. No runtime environment variables are required. Configure `VITE_POSTHOG_PROJECT_TOKEN`, `VITE_POSTHOG_HOST`, `POSTHOG_PROJECT_ID`, `POSTHOG_HOST`, and the encrypted `POSTHOG_API_KEY` in the Pages build environment to enable telemetry and upload browser source maps; the personal API key is used only while building and is not included in `dist/`.
+Pages creates a preview deployment for pull requests and a production deployment for `main`. No runtime environment variables are required. Configure `VITE_POSTHOG_PROJECT_TOKEN` and `VITE_POSTHOG_HOST` in the build environment to enable telemetry. Builds with `CI=true`, which Cloudflare sets, upload hidden browser source maps and delete them from `dist/` when `POSTHOG_CLI_PROJECT_ID`, `POSTHOG_CLI_HOST`, and the encrypted `POSTHOG_CLI_API_KEY` are set; the older `POSTHOG_PROJECT_ID`, `POSTHOG_HOST`, and `POSTHOG_API_KEY` names still work. `POSTHOG_UPLOAD_SOURCEMAPS=false` turns uploads off. The personal API key is used only while building and is not included in `dist/`.
 
 ## Custom domain
 
