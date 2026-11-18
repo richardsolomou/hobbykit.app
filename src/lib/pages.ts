@@ -88,3 +88,6 @@ export const GUIDES_PATH = '/guides'
 
 /** Where the generator's guide is served as a page of its own, readable without the app. */
 export const guidePath = (page: Page) => `${GUIDES_PATH}/${slug(page)}`
+
+/** The generator a path opens, the bases at `/` and for any path that is not a generator's. */
+export const generatorForPath = (path: string): Page['value'] => PAGES.find((page) => page.href === path)?.value ?? 'base'

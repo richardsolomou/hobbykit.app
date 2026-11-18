@@ -1,4 +1,5 @@
 import { RotateCcw } from 'lucide-react'
+import { posthog } from 'posthog-js'
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
 import { DEFAULT_FILAMENTS, PLA_BASIC_COLOURS, type FilamentColours } from '@/core/geometry/filaments'
 
@@ -20,6 +21,10 @@ export function FilamentSwatches({
   count: number
   onChange: (filaments: FilamentColours) => void
 }) {
+  const pick = (key: keyof FilamentColours, hex: string, method: 'picked' | 'reset') => {
+    onChange({ ...filaments, [key]: hex })
+    posthog.capture('filament_colour_changed', { filament: key, colour: colourName(hex), method })
+  }
   return (
     // On a phone the swatches overlap in a space kept for three, so the header holds its width whichever page is open.
     <fieldset
@@ -44,7 +49,7 @@ export function FilamentSwatches({
                   <button
                     type="button"
                     aria-label={`Reset ${label} to ${colourName(DEFAULT_FILAMENTS[key])}`}
-                    onClick={() => onChange({ ...filaments, [key]: DEFAULT_FILAMENTS[key] })}
+                    onClick={() => pick(key, DEFAULT_FILAMENTS[key], 'reset')}
                     className="text-modified transition-colors hover:text-modified/80"
                   >
                     <RotateCcw className="size-3.5" />
@@ -60,7 +65,7 @@ export function FilamentSwatches({
                   aria-label={name}
                   aria-pressed={filaments[key] === hex}
                   title={name}
-                  onClick={() => onChange({ ...filaments, [key]: hex })}
+                  onClick={() => pick(key, hex, 'picked')}
                   className="size-7 rounded-full border border-muted-foreground transition-transform outline-none hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring aria-pressed:ring-2 aria-pressed:ring-measure aria-pressed:ring-offset-2 aria-pressed:ring-offset-popover"
                   style={{ backgroundColor: hex }}
                 />

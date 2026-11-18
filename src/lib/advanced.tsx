@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { posthog } from 'posthog-js'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 const ADVANCED_KEY = 'hobbykit.advanced'
 
@@ -10,7 +11,8 @@ interface Advanced {
 
 const AdvancedContext = createContext<Advanced>({ shown: true, setShown: () => undefined })
 
-function stored(): boolean {
+/** Whether advanced settings show in this browser, read before the app renders so the first pageview can say so. */
+export function storedAdvanced(): boolean {
   try {
     return window.localStorage.getItem(ADVANCED_KEY) === 'true'
   } catch {
@@ -23,12 +25,15 @@ function stored(): boolean {
  * likes the panel and not part of what they make.
  */
 export function AdvancedProvider({ children }: { children: ReactNode }) {
-  const [shown, setShownState] = useState(stored)
+  const [shown, setShownState] = useState(storedAdvanced)
+  // Every event says whether advanced settings were showing, so their use can be split from everyone else's.
+  useEffect(() => posthog.register({ advanced_settings_shown: shown }), [shown])
   const value = useMemo(
     () => ({
       shown,
       setShown: (next: boolean) => {
         setShownState(next)
+        posthog.capture('advanced_settings_toggled', { shown: next })
         try {
           window.localStorage.setItem(ADVANCED_KEY, String(next))
         } catch {

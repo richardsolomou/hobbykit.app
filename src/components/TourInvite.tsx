@@ -1,4 +1,5 @@
 import { Signpost, X } from 'lucide-react'
+import { posthog } from 'posthog-js'
 import type { Page } from '@/lib/pages'
 import { declineTours, useTour, useToured, useTourInvited } from '@/lib/tour'
 
@@ -23,7 +24,10 @@ export function TourInvite({ page }: { page: Page }) {
       </button>
       <button
         type="button"
-        onClick={declineTours}
+        onClick={() => {
+          declineTours()
+          posthog.capture('tour_invite_dismissed', { newcomer: !toured })
+        }}
         aria-label="Not now"
         title="Not now"
         className="flex items-center self-stretch px-2 transition-colors hover:text-foreground"
