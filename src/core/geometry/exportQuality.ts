@@ -11,7 +11,9 @@ import type { BuildConfig } from './types'
 function exportSize(config: BuildConfig): number {
   switch (config.kind) {
     case 'holder': {
-      const { width, length } = config.module === undefined ? holderLayout(config) : holderPlan(config).modules[config.module].layout
+      // Planned without `module`, which the plan cache keys on, so a module reuses the whole holder's plan.
+      const { module, ...whole } = config
+      const { width, length } = module === undefined ? holderLayout(whole) : holderPlan(whole).modules[module].layout
       return Math.max(width, length)
     }
     case 'painting-tray': {
