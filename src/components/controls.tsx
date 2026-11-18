@@ -7,17 +7,40 @@ import { RadioGroup } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useHidden } from '@/lib/advanced'
+import { sectionTarget } from '@/lib/tour'
+import { AdvancedToggle } from '@/components/AdvancedToggle'
 
 /** A group of always-visible controls, with an optional figure in the header. */
-export function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
+export function Section({
+  title,
+  children,
+  aside,
+  first,
+}: {
+  title: string
+  children: ReactNode
+  aside?: ReactNode
+  /** The panel's first section, whose heading carries the Advanced switch so it scrolls with the settings. */
+  first?: boolean
+}) {
   return (
     // A section whose every setting is hidden as advanced hides with them.
-    <FieldSet className="min-w-0 gap-3 border-t border-border px-5 py-4 not-has-[[data-slot=field],button]:hidden">
-      <div className="flex items-baseline justify-between gap-2">
-        <FieldLegend variant="label" className="note schedule-index mb-0">
+    <FieldSet
+      data-tour={sectionTarget(title)}
+      className="min-w-0 gap-3 border-t border-border px-5 py-4 not-has-[[data-slot=field],button]:hidden"
+    >
+      <div className={`flex justify-between gap-2 ${first ? 'items-center' : 'items-baseline'}`}>
+        <FieldLegend variant="label" className={`note schedule-index mb-0 ${first ? 'whitespace-nowrap' : ''}`}>
           {title}
         </FieldLegend>
-        {aside}
+        {first ? (
+          <div className="flex shrink-0 items-center gap-3 whitespace-nowrap">
+            {aside}
+            <AdvancedToggle />
+          </div>
+        ) : (
+          aside
+        )}
       </div>
       <FieldGroup className="gap-3">{children}</FieldGroup>
     </FieldSet>

@@ -3,8 +3,21 @@ import tailwindcss from '@tailwindcss/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import { postHogSourceMaps } from './scripts/posthogSourceMaps.ts'
-import { PAGES } from './src/lib/pages.ts'
-import { llmsTxt, markdownPath, notFoundHtml, pageHtml, pageMarkdown, robotsTxt, sitemapXml } from './src/lib/seo.ts'
+import { guidePath, PAGES } from './src/lib/pages.ts'
+import {
+  guidePageHtml,
+  guidesHtml,
+  llmsFullTxt,
+  llmsTxt,
+  markdownPath,
+  notFoundHtml,
+  pageHtml,
+  pageMarkdown,
+  robotsTxt,
+  sitemapXml,
+} from './src/lib/seo.ts'
+
+const guide = (page: (typeof PAGES)[number]) => readFileSync(`docs/generators${markdownPath(page)}`, 'utf8')
 
 /** Prerenders every generator page's head and summary, and writes the files crawlers read. */
 function seo(): Plugin {
@@ -21,18 +34,17 @@ function seo(): Plugin {
       },
     },
     generateBundle() {
+      const guides = new Map(PAGES.map((page) => [page, guide(page)]))
       const files = {
         ...Object.fromEntries(PAGES.slice(1).map((page) => [`${page.href.slice(1)}.html`, pageHtml(template, page)])),
-        ...Object.fromEntries(
-          PAGES.map((page) => [
-            markdownPath(page).slice(1),
-            pageMarkdown(page, readFileSync(`docs/generators${markdownPath(page)}`, 'utf8')),
-          ]),
-        ),
+        ...Object.fromEntries(PAGES.map((page) => [`${guidePath(page).slice(1)}.html`, guidePageHtml(template, page, guides.get(page)!)])),
+        'guides.html': guidesHtml(template),
+        ...Object.fromEntries(PAGES.map((page) => [markdownPath(page).slice(1), pageMarkdown(page, guides.get(page)!)])),
         '404.html': notFoundHtml(template),
         'robots.txt': robotsTxt(),
         'sitemap.xml': sitemapXml(),
         'llms.txt': llmsTxt(),
+        'llms-full.txt': llmsFullTxt(guides),
       }
       for (const [fileName, source] of Object.entries(files)) this.emitFile({ type: 'asset', fileName, source })
     },

@@ -22,7 +22,11 @@ export function FilamentSwatches({
 }) {
   return (
     // On a phone the swatches overlap in a space kept for three, so the header holds its width whichever page is open.
-    <fieldset aria-label="Colours" className="flex shrink-0 items-center justify-end gap-1.5 max-sm:w-15 max-sm:gap-0 max-sm:-space-x-1.5">
+    <fieldset
+      aria-label="Colours"
+      data-tour="colours"
+      className="flex shrink-0 items-center justify-end gap-1.5 max-sm:w-15 max-sm:gap-0 max-sm:-space-x-1.5"
+    >
       {FILAMENTS.slice(0, count).map(([key, label]) => (
         <Popover key={key}>
           <PopoverTrigger

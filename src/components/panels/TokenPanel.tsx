@@ -36,8 +36,8 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
 
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Token settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
-        <Section title="Body" aside={<span className="readout text-xs text-muted-foreground">{trimNumber(token.size)}mm</span>}>
+      <aside aria-label="Token settings" className="relative flex min-h-full flex-col pb-4 [counter-reset:schedule]">
+        <Section title="Body" first aside={<span className="readout text-xs text-muted-foreground">{trimNumber(token.size)}mm</span>}>
           <PictureChoice
             label="Shape"
             value={token.shape}

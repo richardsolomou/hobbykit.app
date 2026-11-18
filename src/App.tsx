@@ -23,7 +23,8 @@ import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Toggle } from '@/components/ui/toggle'
-import { AdvancedToggle } from '@/components/AdvancedToggle'
+import { TourInvite } from '@/components/TourInvite'
+import { runTour, TOUR_DONE, TourContext, touring, useTourProgress, type Drawer } from '@/lib/tour'
 import { TitleBlock } from '@/components/TitleBlock'
 import { Viewer } from '@/components/Viewer'
 import { holderLayout, holderName, holderPlan, maxHolderMagnetThickness } from '@/core/geometry/holder'
@@ -189,6 +190,20 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
                 ? token
                 : { ...counter, exploded }
   const { preview, grams, error } = useGenerator(partConfig)
+  const reached = useTourProgress(model)
+  const unfinished = reached !== undefined && reached !== TOUR_DONE
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  // The tour reads and moves the drawer from outside React, so it goes through a ref and waits for each slide to finish.
+  const drawerState = useRef({ open: false, settled: () => {} })
+  const drawer: Drawer = {
+    isOpen: () => drawerState.current.open,
+    setOpen: (open) =>
+      new Promise((settled) => {
+        drawerState.current = { open, settled }
+        setDrawerOpen(open)
+      }),
+  }
+  const startTour = (mode?: 'first') => void runTour(model, mode ?? (unfinished ? 'resume' : 'replay'), docked ? undefined : drawer)
 
   useEffect(() => {
     const href = PAGES.find((item) => item.value === opened.model)!.href
@@ -491,137 +506,152 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     )
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* One row on a wide screen; narrower than that the generators drop to a full-width row of their own, so none is cut off or slides under the name. */}
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border px-4 max-xl:pt-2 sm:gap-x-3 sm:px-5 xl:flex-nowrap">
-        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-          {/* Same panel, same order; on a narrow screen it slides in from the left
+    <TourContext value={startTour}>
+      <div className="flex h-full flex-col bg-background">
+        {/* One row on a wide screen; narrower than that the generators drop to a full-width row of their own, so none is cut off or slides under the name. */}
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border px-4 max-xl:pt-2 sm:gap-x-3 sm:px-5 xl:flex-nowrap">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+            {/* Same panel, same order; on a narrow screen it slides in from the left
               instead of standing beside the sheet. */}
-          {!docked && (
-            <Sheet>
-              <SheetTrigger render={<Button size="icon-sm" variant="outline" aria-label={`${modelLabel(model)} settings`} />}>
-                <PanelLeft />
-              </SheetTrigger>
-              <SheetContent side="left" className="max-w-[85vw] gap-0 p-0 data-[side=left]:w-81">
-                {/* A header row of its own, so the close button has somewhere to sit
-                    that is not on top of the first section heading. */}
-                <SheetHeader className="flex shrink-0 flex-row items-center gap-3 border-b border-border px-5 py-3.5 pr-12">
-                  <SheetTitle className="note truncate">
-                    <span aria-hidden>{page.mobileLabel}</span>
-                    <span className="sr-only">{modelLabel(model)} settings</span>
-                  </SheetTitle>
-                  {/* Beside the settings it shows, since the canvas is out of sight while the drawer is open. */}
-                  <AdvancedToggle className="ms-auto" />
-                </SheetHeader>
-                <div className="flex min-h-0 flex-1 flex-col">{panel}</div>
-              </SheetContent>
-            </Sheet>
-          )}
-          {/* Names the generator for search engines and screen readers, which read the page after it mounts. */}
-          <h1 className="shrink-0 py-3 text-sm font-medium tracking-[0.18em] uppercase max-sm:py-0 max-sm:text-xs max-sm:tracking-[0.12em] max-[22rem]:sr-only">
-            Hobby<span className="text-measure">Kit</span>
-            <span className="sr-only"> — {page.title}</span>
-          </h1>
-        </div>
-        <nav
-          ref={generators}
-          aria-label="Generators"
-          className="flex min-w-0 self-stretch overflow-x-auto [scrollbar-width:none] max-xl:order-last max-xl:-mx-4 max-xl:mt-2 max-xl:w-[calc(100%+2rem)] max-xl:justify-between max-xl:border-t max-xl:border-border max-xl:px-2 max-xl:py-2.5 sm:max-xl:-mx-5 sm:max-xl:w-[calc(100%+2.5rem)] sm:max-xl:justify-start sm:max-xl:px-2 xl:mr-auto"
-        >
-          {PAGES.map((item) => (
-            <a
-              key={item.value}
-              href={item.href}
-              aria-label={item.label}
-              aria-current={model === item.value ? 'page' : undefined}
-              onClick={(event) => {
-                event.preventDefault()
-                changeModel(item.value)
-              }}
-              className="note relative flex shrink-0 items-center px-1 text-muted-foreground max-sm:text-[0.6875rem] max-sm:tracking-wide transition-colors hover:text-foreground aria-[current=page]:text-measure after:absolute after:inset-x-1 after:-bottom-2.5 xl:after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-measure after:transition-transform aria-[current=page]:after:scale-x-100 sm:px-3 sm:after:inset-x-3"
-            >
-              <span aria-hidden="true" className="sm:hidden">
-                {item.mobileLabel}
-              </span>
-              <span aria-hidden="true" className="max-sm:hidden">
-                {item.label}
-              </span>
-            </a>
-          ))}
-        </nav>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <FilamentSwatches filaments={workspace.filaments} count={preview?.third ? 3 : preview?.inserts ? 2 : 1} onChange={setFilaments} />
-          <ButtonGroup>
-            {/* The labels fold away on a phone; the icons and the names still read out. */}
-            <Button size="sm" onClick={exportStl} disabled={!preview || exporting !== undefined}>
-              <Download />
-              <span className="max-sm:sr-only">
-                {exporting === 'stl' ? 'Building STL' : model === 'holder' && plan.modules.length > 1 ? 'Download STLs' : 'Download STL'}
-              </span>
-            </Button>
-            <Button size="sm" variant="outline" onClick={export3mf} disabled={!preview || exporting !== undefined}>
-              <Box />
-              <span className="max-sm:sr-only">{exporting === '3mf' ? 'Building 3MF' : 'Download 3MF'}</span>
-              <span aria-hidden className="sm:hidden">
-                3MF
-              </span>
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => void copyLink()}>
-              <Link />
-              <span className="max-sm:sr-only">Copy link</span>
-            </Button>
-          </ButtonGroup>
-        </div>
-      </header>
-
-      <div className="flex min-h-0 flex-1">
-        {docked && panel}
-
-        <main className="relative min-w-0 flex-1">
-          <Viewer
-            viewKey={model}
-            filaments={workspace.filaments}
-            mesh={preview}
-            width={framed.width}
-            length={framed.length}
-            height={framed.height}
-            minZ={framed.minZ}
-            orbitTarget={'orbitTarget' in framed ? framed.orbitTarget : undefined}
-            round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
-            fitToPart={model !== 'base'}
-            framingScale={model === 'counter' ? COUNTER_FRAMING_SCALE : undefined}
-            leaders={!(explodable && exploded)}
-            flipped={model === 'base' && config.texture.pattern !== 'none' && !isRelief(config.texture.pattern)}
-          />
-          <div className="absolute bottom-8 left-8 flex gap-2 max-sm:top-4 max-sm:bottom-auto max-sm:left-4">
-            {/* How the panel reads, not part of the design, so it sits on the canvas beside a docked panel; a drawer carries its own. */}
-            {docked && <AdvancedToggle />}
-            {explodable && (
-              <Toggle
-                variant="outline"
-                size="sm"
-                pressed={exploded}
-                onPressedChange={setExploded}
-                className="bg-card/90 backdrop-blur-sm aria-pressed:border-measure/50 aria-pressed:text-measure"
+            {!docked && (
+              <Sheet
+                open={drawerOpen}
+                onOpenChange={(open) => {
+                  // A click on the tour's popover lands outside the drawer; the tour opens and closes it itself.
+                  if (touring()) return
+                  drawerState.current = { ...drawerState.current, open }
+                  setDrawerOpen(open)
+                }}
+                onOpenChangeComplete={() => drawerState.current.settled()}
               >
-                <UnfoldHorizontal />
-                Explode
-              </Toggle>
+                <SheetTrigger
+                  render={<Button size="icon-sm" variant="outline" aria-label={`${modelLabel(model)} settings`} data-tour="settings" />}
+                >
+                  <PanelLeft />
+                </SheetTrigger>
+                <SheetContent side="left" className="max-w-[85vw] gap-0 p-0 data-[side=left]:w-81">
+                  {/* A header row of its own, so the close button has somewhere to sit
+                    that is not on top of the first section heading. */}
+                  <SheetHeader className="flex shrink-0 flex-row items-center gap-3 border-b border-border px-5 py-3.5 pr-12">
+                    <SheetTitle className="note truncate">
+                      <span aria-hidden>{page.mobileLabel}</span>
+                      <span className="sr-only">{modelLabel(model)} settings</span>
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="flex min-h-0 flex-1 flex-col">{panel}</div>
+                </SheetContent>
+              </Sheet>
             )}
+            {/* Names the generator for search engines and screen readers, which read the page after it mounts. */}
+            <h1 className="shrink-0 py-3 text-sm font-medium tracking-[0.18em] uppercase max-sm:py-0 max-sm:text-xs max-sm:tracking-[0.12em] max-[22rem]:sr-only">
+              Hobby<span className="text-measure">Kit</span>
+              <span className="sr-only"> — {page.title}</span>
+            </h1>
           </div>
-          <div className="pointer-events-none absolute inset-x-12 top-5 flex flex-col gap-2">
-            {(error || exportError) && (
-              <div role="alert" className="border border-destructive/50 bg-card/90 px-3 py-2 backdrop-blur-sm text-xs text-destructive">
-                {error ? `${error}. Showing the last model that built.` : `Export failed: ${exportError}`}
-              </div>
-            )}
-            <output className="block empty:hidden border border-measure/50 bg-card/90 px-3 py-2 backdrop-blur-sm text-xs text-measure">
-              {shareNotice?.text}
-            </output>
+          <nav
+            ref={generators}
+            aria-label="Generators"
+            className="flex min-w-0 self-stretch overflow-x-auto [scrollbar-width:none] max-xl:order-last max-xl:-mx-4 max-xl:mt-2 max-xl:w-[calc(100%+2rem)] max-xl:justify-between max-xl:border-t max-xl:border-border max-xl:px-2 max-xl:py-2.5 sm:max-xl:-mx-5 sm:max-xl:w-[calc(100%+2.5rem)] sm:max-xl:justify-start sm:max-xl:px-2 xl:mr-auto"
+          >
+            {PAGES.map((item) => (
+              <a
+                key={item.value}
+                href={item.href}
+                aria-label={item.label}
+                aria-current={model === item.value ? 'page' : undefined}
+                onClick={(event) => {
+                  event.preventDefault()
+                  changeModel(item.value)
+                }}
+                className="note relative flex shrink-0 items-center px-1 text-muted-foreground max-sm:text-[0.6875rem] max-sm:tracking-wide transition-colors hover:text-foreground aria-[current=page]:text-measure after:absolute after:inset-x-1 after:-bottom-2.5 xl:after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-measure after:transition-transform aria-[current=page]:after:scale-x-100 sm:px-3 sm:after:inset-x-3"
+              >
+                <span aria-hidden="true" className="sm:hidden">
+                  {item.mobileLabel}
+                </span>
+                <span aria-hidden="true" className="max-sm:hidden">
+                  {item.label}
+                </span>
+              </a>
+            ))}
+          </nav>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <FilamentSwatches
+              filaments={workspace.filaments}
+              count={preview?.third ? 3 : preview?.inserts ? 2 : 1}
+              onChange={setFilaments}
+            />
+            <ButtonGroup data-tour="downloads">
+              {/* The labels fold away on a phone; the icons and the names still read out. */}
+              <Button size="sm" onClick={exportStl} disabled={!preview || exporting !== undefined}>
+                <Download />
+                <span className="max-sm:sr-only">
+                  {exporting === 'stl' ? 'Building STL' : model === 'holder' && plan.modules.length > 1 ? 'Download STLs' : 'Download STL'}
+                </span>
+              </Button>
+              <Button size="sm" variant="outline" onClick={export3mf} disabled={!preview || exporting !== undefined}>
+                <Box />
+                <span className="max-sm:sr-only">{exporting === '3mf' ? 'Building 3MF' : 'Download 3MF'}</span>
+                <span aria-hidden className="sm:hidden">
+                  3MF
+                </span>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => void copyLink()}>
+                <Link />
+                <span className="max-sm:sr-only">Copy link</span>
+              </Button>
+            </ButtonGroup>
           </div>
-          <TitleBlock config={partConfig} status={error ? 'blocked' : 'ready'} name={partName} grams={grams} />
-        </main>
+        </header>
+
+        <div className="flex min-h-0 flex-1">
+          {docked && panel}
+
+          <main data-tour="viewport" className="relative min-w-0 flex-1">
+            <Viewer
+              viewKey={model}
+              filaments={workspace.filaments}
+              mesh={preview}
+              width={framed.width}
+              length={framed.length}
+              height={framed.height}
+              minZ={framed.minZ}
+              orbitTarget={'orbitTarget' in framed ? framed.orbitTarget : undefined}
+              round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
+              fitToPart={model !== 'base'}
+              framingScale={model === 'counter' ? COUNTER_FRAMING_SCALE : undefined}
+              leaders={!(explodable && exploded)}
+              flipped={model === 'base' && config.texture.pattern !== 'none' && !isRelief(config.texture.pattern)}
+            />
+            <div className="absolute bottom-8 left-8 flex gap-2 max-sm:top-4 max-sm:bottom-auto max-sm:left-4">
+              {explodable && (
+                <Toggle
+                  variant="outline"
+                  size="sm"
+                  pressed={exploded}
+                  onPressedChange={setExploded}
+                  data-tour="explode"
+                  className="bg-card/90 backdrop-blur-sm aria-pressed:border-measure/50 aria-pressed:text-measure"
+                >
+                  <UnfoldHorizontal />
+                  Explode
+                </Toggle>
+              )}
+              {preview && <TourInvite page={page} />}
+            </div>
+            <div className="pointer-events-none absolute inset-x-12 top-5 flex flex-col gap-2">
+              {(error || exportError) && (
+                <div role="alert" className="border border-destructive/50 bg-card/90 px-3 py-2 backdrop-blur-sm text-xs text-destructive">
+                  {error ? `${error}. Showing the last model that built.` : `Export failed: ${exportError}`}
+                </div>
+              )}
+              <output className="block empty:hidden border border-measure/50 bg-card/90 px-3 py-2 backdrop-blur-sm text-xs text-measure">
+                {shareNotice?.text}
+              </output>
+            </div>
+            <TitleBlock config={partConfig} status={error ? 'blocked' : 'ready'} name={partName} grams={grams} />
+          </main>
+        </div>
       </div>
-    </div>
+    </TourContext>
   )
 }

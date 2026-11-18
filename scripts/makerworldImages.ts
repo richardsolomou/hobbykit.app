@@ -12,6 +12,7 @@ import { presetFor, standardSize } from '../src/core/geometry/presets.ts'
 import type { ShapeKind } from '../src/core/geometry/types.ts'
 import { PAGES } from '../src/lib/pages.ts'
 import { shareLink } from '../src/lib/shareLink.ts'
+import { skipTours } from './skipTours.ts'
 import { defaultWorkspace, synchronizeWorkspace, type GeneratorSettings, type WorkspaceState } from '../src/lib/workspace.ts'
 
 const OUT = 'makerworld/images'
@@ -199,6 +200,7 @@ async function capture(browser: Browser, listing: Listing, view: View, width: nu
   const workspace = synchronizeWorkspace((view.edit ?? ((w) => w))(defaultWorkspace()))
   // Below the docked breakpoint the panel becomes a closed drawer, so the viewport takes the whole width.
   const tab = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: scale })
+  await skipTours(tab)
   try {
     await tab.goto(`${origin}${shareLink(page.href, workspace, listing.part).url}`)
     await tab.locator('[data-triangles]').waitFor()

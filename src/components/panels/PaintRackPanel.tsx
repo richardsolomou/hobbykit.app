@@ -31,9 +31,10 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
   const patch = (changes: Partial<PaintRackConfig>) => setPaintRack({ ...paintRack, ...changes })
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Paint rack settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
+      <aside aria-label="Paint rack settings" className="relative flex min-h-full flex-col pb-4 [counter-reset:schedule]">
         <Section
           title="Pieces"
+          first
           aside={
             <span className="readout text-xs text-muted-foreground">
               {layout.bottles} bottles{layout.brushes > 0 ? ` · ${layout.brushes} brushes` : ''}

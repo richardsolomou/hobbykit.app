@@ -9,6 +9,7 @@ import { join } from 'node:path'
 import { chromium, type Browser } from '@playwright/test'
 import { preview } from 'vite'
 import { PAGES } from '../src/lib/pages.ts'
+import { skipTours } from './skipTours.ts'
 import { socialCardPath } from '../src/lib/seo.ts'
 
 /** The counter stays out of the README until its design no longer derives from the model it began as. */
@@ -26,6 +27,7 @@ const browser = await chromium.launch()
 
 async function capture(target: Browser, href: string, path: string, viewport: { width: number; height: number }, scale = 1) {
   const tab = await target.newPage({ viewport, deviceScaleFactor: scale })
+  await skipTours(tab)
   await tab.goto(`${origin}${href}`)
   await tab.locator('[data-triangles]').waitFor()
   // The shadow map and the first damped camera frames settle after the mesh lands.

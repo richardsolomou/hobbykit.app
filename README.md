@@ -37,27 +37,29 @@ Built-in presets cover common Games Workshop, The Old World, Kings of War, and h
 4. **Check both faces** in the live 3D view, where dimensions, the export name, and the part's weight as solid PLA stay visible. Holders and spray trays show the total for every part. A slicer's walls and infill will use less filament than that.
 5. **Save an STL or 3MF** built at a 1µm chord tolerance for circular geometry.
 
-The [bases guide](docs/generators/bases.md) covers footprints, labels, magnets, and batch export, and the [flying stems guide](docs/generators/stems.md) covers stems.
+Each generator offers a short tour of its controls, and **Tour** at the foot of the settings picks it up again or replays it.
+
+The [bases guide](https://hobbykit.app/guides/bases) covers footprints, labels, magnets, and batch export, and the [flying stems guide](https://hobbykit.app/guides/stems) covers stems.
 
 ## Gridfinity holders 📦
 
-Add miniature groups, choose the available rows and columns, and HobbyKit packs matching slots into printable Gridfinity modules. Read the [holders guide](docs/generators/holders.md).
+Add miniature groups, choose the available rows and columns, and HobbyKit packs matching slots into printable Gridfinity modules. Read the [holders guide](https://hobbykit.app/guides/holders).
 
 ## Spray trays 🎨
 
-Build a low-profile magnetic platform for batch priming and spray painting. Read the [spray trays guide](docs/generators/spray-tray.md).
+Build a low-profile magnetic platform for batch priming and spray painting. Read the [spray trays guide](https://hobbykit.app/guides/spray-tray).
 
 ## Paint racks 🖌️
 
-Stand your paints in stepped rows so every label shows. Read the [paint racks guide](docs/generators/paint-racks.md).
+Stand your paints in stepped rows so every label shows. Read the [paint racks guide](https://hobbykit.app/guides/paint-racks).
 
 ## Tokens 🪙
 
-Make a round, square, or hex token for objectives, Oath of Moment, or anything else a game tracks. Read the [tokens guide](docs/generators/tokens.md).
+Make a round, square, or hex token for objectives, Oath of Moment, or anything else a game tracks. Read the [tokens guide](https://hobbykit.app/guides/tokens).
 
 ## Dial counters 🎲
 
-Track wounds, victory points, or command points from 00 to 99 on two dials that click into place, turned by knobs at the sides of a case that shows only the count, with raised digits on press-in tiles in a second colour. Read the [dial counters guide](docs/generators/counters.md).
+Track wounds, victory points, or command points from 00 to 99 on two dials that click into place, turned by knobs at the sides of a case that shows only the count, with raised digits on press-in tiles in a second colour. Read the [dial counters guide](https://hobbykit.app/guides/counters).
 
 ## Designed for one job 🎯
 
