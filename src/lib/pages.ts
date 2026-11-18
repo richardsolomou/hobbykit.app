@@ -75,7 +75,7 @@ export const PAGES = [
     makerworld: 'https://makerworld.com/en/models/3545629-dial-counters',
     title: 'Dial counter generator',
     description:
-      'Print a 00–99 dial counter for wounds, victory points or command points, with ten-sided drums that click into place, a pointer marking the count and raised digits in a second colour. Export STL or 3MF.',
+      'Print a 00–99 dial counter, or wound caddy, for wounds, victory points or command points, with dials that click into place, turned by side knobs in a case that shows only the count, and digits in a second colour. Export STL or 3MF.',
   },
 ]
 

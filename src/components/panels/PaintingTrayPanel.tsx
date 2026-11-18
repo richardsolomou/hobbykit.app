@@ -1,4 +1,5 @@
-import { Choice, Dimension, Section, ToggleSetting } from '@/components/controls'
+import { Dimension, PictureChoice, Section, ToggleSetting } from '@/components/controls'
+import { GRIP_PICTURES } from '@/components/pictures'
 import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { trimNumber } from '@/core/geometry/outline'
@@ -156,11 +157,12 @@ export function PaintingTrayPanel({
           <FieldDescription>Pockets open at the top so installed magnets sit flush in an interleaved grid.</FieldDescription>
         </Section>
         <Section title="Handle" aside={<span className="readout text-xs text-muted-foreground">{paintingTray.handle.length} mm</span>}>
-          <Choice
+          <PictureChoice
             label="Grip shape"
             value={paintingTray.handle.shape}
             defaultValue={PAINTING_DEFAULTS.handle.shape}
-            options={PAINTING_HANDLE_SHAPES}
+            options={PAINTING_HANDLE_SHAPES.map((shape) => ({ ...shape, picture: GRIP_PICTURES[shape.value] }))}
+            columns={4}
             onChange={(shape) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, shape } })}
           />
           <Dimension

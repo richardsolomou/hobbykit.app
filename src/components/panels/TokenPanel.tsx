@@ -1,6 +1,7 @@
 import { ImagePlus, X } from 'lucide-react'
+import { PROFILE_PICTURES, TOKEN_SHAPE_PICTURES } from '@/components/pictures'
 import { useRef } from 'react'
-import { Choice, Dimension, Section, ToggleSetting } from '@/components/controls'
+import { Dimension, PictureChoice, Section, ToggleSetting } from '@/components/controls'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
@@ -140,11 +141,11 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
         </Section>
 
         <Section title="Body" aside={<span className="readout text-xs text-muted-foreground">{trimNumber(token.size)}mm</span>}>
-          <Choice
+          <PictureChoice
             label="Shape"
             value={token.shape}
             defaultValue={TOKEN_DEFAULTS.shape}
-            options={SHAPES}
+            options={SHAPES.map((shape) => ({ ...shape, picture: TOKEN_SHAPE_PICTURES[shape.value] }))}
             onChange={(shape) => patchToken({ shape })}
           />
           <Dimension
@@ -176,11 +177,12 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
             defaultValue={TOKEN_DEFAULTS.thickness}
             onChange={(thickness) => patchToken({ thickness })}
           />
-          <Choice
+          <PictureChoice
             label="Top edge"
             value={token.profile}
             defaultValue={TOKEN_DEFAULTS.profile}
-            options={PROFILES}
+            options={PROFILES.map((profile) => ({ ...profile, picture: PROFILE_PICTURES[profile.value] }))}
+            columns={4}
             onChange={(profile) => patchToken({ profile })}
           />
           {token.profile !== 'straight' && (

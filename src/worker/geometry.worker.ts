@@ -19,11 +19,12 @@ const ready = Promise.all([
 ])
 
 /** Copies out of the mesh: its arrays may still view WASM memory, which must not be transferred. */
-function toMeshData({ mesh, inserts }: Pick<BuildResult, 'mesh' | 'inserts'>): MeshData {
+function toMeshData({ mesh, inserts, third }: Pick<BuildResult, 'mesh' | 'inserts' | 'third'>): MeshData {
   return {
     positions: new Float32Array(mesh.vertProperties),
     indices: new Uint32Array(mesh.triVerts),
     ...(inserts ? { inserts: toMeshData({ mesh: inserts }) } : {}),
+    ...(third ? { third: toMeshData({ mesh: third }) } : {}),
   }
 }
 
@@ -50,7 +51,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
                     ? buildCounter(wasm, config, font)
                     : buildBase(wasm, config, font)
     const mesh = toMeshData(result)
-    const buffers = [mesh, mesh.inserts].flatMap((part) => (part ? [part.positions.buffer, part.indices.buffer] : []))
+    const buffers = [mesh, mesh.inserts, mesh.third].flatMap((part) => (part ? [part.positions.buffer, part.indices.buffer] : []))
     send({ id, kind: 'mesh', mesh, grams: result.stats.grams }, buffers)
   } catch (error) {
     send({ id, kind: 'error', message: error instanceof Error ? error.message : String(error) }, [])

@@ -11,7 +11,8 @@ import { defaultTokenConfig } from '../core/geometry/token'
 import { TEXTURE_PATTERNS } from '../core/geometry/texture'
 import { automaticMagnetCount, DEFAULT_PRESET, footprintKey, presetFor, ribCountFor } from '../core/geometry/presets'
 import { defaultFlightStemConfig } from '../core/geometry/stem'
-import { defaultCounterConfig, minimumCounterDrumDiameter, minimumCounterDrumWidth } from '../core/geometry/counter'
+import { DEFAULT_FILAMENTS, isPlaBasicColour, type FilamentColours } from '../core/geometry/filaments'
+import { defaultCounterConfig, maximumCounterClick, MIN_COUNTER_CLICK, MINIMUM_COUNTER_DRUM_DIAMETER } from '../core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -24,7 +25,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 17
+const WORKSPACE_VERSION = 26
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -41,6 +42,8 @@ export interface WorkspaceState {
   stem: FlightStemConfig
   token: TokenConfig
   counter: CounterConfig
+  /** The colours every generator previews and writes into its 3MF. */
+  filaments: FilamentColours
   /** Values exposed by multiple generators have one canonical owner. */
   shared: SharedSettings
   /** Base footprints exported together, each built with the current base settings. */
@@ -110,15 +113,9 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
           shared.magnets.diameter,
           shared.magnets.thickness,
         ))
-  const { diameter, thickness, clearance, depthClearance } = shared.magnets
-  const counter = { ...state.counter, magnets: { diameter, thickness, clearance, depthClearance } }
   return {
     ...state,
-    counter: {
-      ...counter,
-      drumDiameter: atLeast(counter.drumDiameter, minimumCounterDrumDiameter(counter)),
-      drumWidth: atLeast(counter.drumWidth, minimumCounterDrumWidth(counter)),
-    },
+    counter: fittedCounter(state.counter),
     base: {
       ...state.base,
       wallThickness: shared.wallThickness,
@@ -159,6 +156,12 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
   }
 }
 
+/** A click past what the arms can flex is capped, and the wheel grown to fit its digits and arms. */
+function fittedCounter(counter: CounterConfig): CounterConfig {
+  const click = Math.min(counter.click, Math.max(maximumCounterClick(counter), MIN_COUNTER_CLICK))
+  return { ...counter, click, grip: Math.max(0, counter.grip), drumDiameter: atLeast(counter.drumDiameter, MINIMUM_COUNTER_DRUM_DIAMETER) }
+}
+
 export function defaultWorkspace(): WorkspaceState {
   const base = presetFor(DEFAULT_PRESET)
   return synchronizeWorkspace({
@@ -169,12 +172,13 @@ export function defaultWorkspace(): WorkspaceState {
     stem: defaultFlightStemConfig(),
     token: defaultTokenConfig(),
     counter: defaultCounterConfig(),
+    filaments: DEFAULT_FILAMENTS,
     shared: sharedFromBase(base),
     batch: [],
   })
 }
 
-export type GeneratorSettings = Exclude<keyof WorkspaceState, 'shared' | 'batch'>
+export type GeneratorSettings = Exclude<keyof WorkspaceState, 'shared' | 'batch' | 'filaments'>
 
 /** The batch is a list of base footprints, so it belongs to the base generator and resets with it. */
 export function resetGenerator(state: WorkspaceState, part: GeneratorSettings): WorkspaceState {
@@ -202,6 +206,15 @@ const MIGRATIONS = [
   migrateWorkspaceV14,
   migrateWorkspaceV15,
   migrateWorkspaceV16,
+  migrateWorkspaceV17,
+  migrateWorkspaceV18,
+  migrateWorkspaceV19,
+  migrateWorkspaceV20,
+  migrateWorkspaceV21,
+  migrateWorkspaceV22,
+  migrateWorkspaceV23,
+  migrateWorkspaceV24,
+  migrateWorkspaceV25,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -229,7 +242,7 @@ export function loadWorkspace(storage: SettingsStorage): WorkspaceState {
 }
 
 const PARTS: readonly GeneratorSettings[] = ['base', 'holder', 'paintingTray', 'paintRack', 'stem', 'token', 'counter']
-const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'paintingTray', 'counter'])
+const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'paintingTray'])
 
 /**
  * One generator's settings and the shared settings that shape it, as a share link carries them.
@@ -269,7 +282,6 @@ export function applyWorkspaceSetup(
   const { version, part, config, shared } = setup as Record<string, unknown>
   const key = PARTS.find((candidate) => candidate === part)
   if (!key) return undefined
-  // Counter links made before counters read the shared magnets carry none, so they keep the recipient's.
   const usesShared = PARTS_USING_SHARED.has(key) && shared !== undefined
   const migrated = migrateWorkspace(version, { ...workspace, [key]: config, shared: usesShared ? shared : workspace.shared })
   if (typeof migrated !== 'object' || migrated === null) return undefined
@@ -283,13 +295,73 @@ export function applyWorkspaceSetup(
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
 }
 
-/** Counters saved before magnet detents keep their printed bumps; synchronising fills in the shared magnets. */
-function migrateWorkspaceV16(value: unknown): unknown {
+/** The enclosure became the default counter layout. */
+function migrateWorkspaceV25(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) return value
   const workspace = value as Record<string, unknown>
-  if (typeof workspace.counter !== 'object' || workspace.counter === null) return value
-  const { detent, magnets } = defaultCounterConfig()
-  return { ...workspace, counter: { ...workspace.counter, detent, magnets } }
+  return { ...workspace, counter: { ...(workspace.counter as object), layout: 'enclosure' } }
+}
+
+/** Side pieces went, and the frame layout lost its stand, so its frame is always held at the ends. */
+function migrateWorkspaceV24(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  const { frameHold: _frameHold, ...counter } = workspace.counter as Record<string, unknown>
+  return { ...workspace, counter: { ...counter, layout: counter.layout === 'sides' ? 'knobs' : counter.layout } }
+}
+
+/** Hubs with side knobs became the default counter layout. */
+function migrateWorkspaceV23(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  return { ...workspace, counter: { ...(workspace.counter as object), layout: 'knobs' } }
+}
+
+/** A centre stand's frame could be held at the ends, which became the default. */
+function migrateWorkspaceV22(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  return { ...workspace, counter: { ...(workspace.counter as object), frameHold: 'ends' } }
+}
+
+/** The centre stand became the default counter layout, with no side pieces. */
+function migrateWorkspaceV21(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  return { ...workspace, counter: { ...(workspace.counter as object), layout: 'centre' } }
+}
+
+/** Counters gained a layout and a grip on each dial, and their dials lost their second-colour ribs. */
+function migrateWorkspaceV20(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  return {
+    ...workspace,
+    counter: { ...defaultCounterConfig(), ...(workspace.counter as object), layout: 'sides', grip: defaultCounterConfig().grip },
+  }
+}
+
+/** Counters went back to full-size dials with press-in tiles, which flush far less than digits printed in the dial. */
+function migrateWorkspaceV19(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig() }
+}
+
+/** Version 18 only changed the counter's defaults, which version 19 replaced. */
+function migrateWorkspaceV18(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig() }
+}
+
+/** The slim caddy shares no dimensions with the drums and pointer it replaced, and colours arrived with it. */
+function migrateWorkspaceV17(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig(), filaments: DEFAULT_FILAMENTS }
+}
+
+/** Version 16 only added magnet detents to the counter, which version 17 replaced. */
+function migrateWorkspaceV16(value: unknown): unknown {
+  return value
 }
 
 function migrateWorkspaceV15(value: unknown): unknown {
@@ -307,7 +379,7 @@ function migrateWorkspaceV14(value: unknown): unknown {
 
 function migrateWorkspaceV13(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) return value
-  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig() }
+  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig(), filaments: DEFAULT_FILAMENTS }
 }
 
 function migrateWorkspaceV12(value: unknown): unknown {
@@ -461,7 +533,9 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
     isTokenImage(workspace.token.image) &&
     workspace.paintingTray.kind === 'painting-tray' &&
     workspace.counter.kind === 'counter' &&
-    ['printed', 'magnets'].includes(workspace.counter.detent) &&
+    ['centre', 'hubs', 'knobs', 'enclosure'].includes(workspace.counter.layout) &&
+    ['tiles', 'printed', 'engraved'].includes(workspace.counter.digits) &&
+    Object.values(workspace.filaments).every(isPlaBasicColour) &&
     workspace.paintRack.kind === 'paint-rack' &&
     workspace.paintRack.items.length > 0 &&
     workspace.paintRack.items.every((item) => ['module', 'corner'].includes(item.kind)) &&

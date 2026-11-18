@@ -1,4 +1,5 @@
-import { Choice, Dimension, Section } from '@/components/controls'
+import { Dimension, PictureChoice, Section } from '@/components/controls'
+import { STEM_CONNECTION_PICTURES, stemHeightPicture } from '@/components/pictures'
 import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { trimNumber } from '@/core/geometry/outline'
@@ -8,10 +9,10 @@ import { posthog } from 'posthog-js'
 import { PanelFooter, type ResetAction } from './shared'
 
 const STEM_DEFAULTS = defaultFlightStemConfig()
-const STEM_HEIGHTS = CLASSIC_STEM_HEIGHTS.map((value) => ({ value, label: `${value} mm` }))
+const STEM_HEIGHTS = CLASSIC_STEM_HEIGHTS.map((value) => ({ value, label: `${value} mm`, picture: stemHeightPicture(value) }))
 const STEM_CONNECTIONS = [
-  { value: 'peg' as const, label: 'Peg' },
-  { value: 'ball' as const, label: 'Ball joint' },
+  { value: 'peg' as const, label: 'Peg', picture: STEM_CONNECTION_PICTURES.peg },
+  { value: 'ball' as const, label: 'Ball joint', picture: STEM_CONNECTION_PICTURES.ball },
 ]
 
 interface Props {
@@ -28,11 +29,12 @@ export function StemPanel({ stem, setStem, resets }: Props) {
           title="Stem"
           aside={<span className="readout text-xs text-muted-foreground">{trimNumber(stemOverallHeight(stem))}mm overall</span>}
         >
-          <Choice
+          <PictureChoice
             label="Stem height"
             value={stem.bodyHeight}
             defaultValue={STEM_DEFAULTS.bodyHeight}
             options={STEM_HEIGHTS}
+            columns={4}
             onChange={(bodyHeight) => {
               posthog.capture('flight_stem_height_selected', { body_height: bodyHeight })
               setStem({ ...stem, bodyHeight })
@@ -58,7 +60,7 @@ export function StemPanel({ stem, setStem, resets }: Props) {
             </span>
           }
         >
-          <Choice
+          <PictureChoice
             label="Connection"
             value={stem.connection}
             defaultValue={STEM_DEFAULTS.connection}

@@ -50,7 +50,7 @@ Make a round, square, or hex token for objectives, Oath of Moment, or anything e
 
 ## Dial counters 🎲
 
-Track wounds, victory points, or command points from 00 to 99 on two ten-sided drums that rest on their flats and click into place, with raised digits on press-in tiles in a second colour. Read the [dial counters guide](docs/generators/counters.md).
+Track wounds, victory points, or command points from 00 to 99 on two dials that click into place, turned by knobs at the sides of a case that shows only the count, with raised digits on press-in tiles in a second colour. Read the [dial counters guide](docs/generators/counters.md).
 
 ## Designed for one job 🎯
 
@@ -59,7 +59,7 @@ Track wounds, victory points, or command points from 00 to 99 on two ten-sided d
 - Printable 15, 20, 30, and 35mm flying stems with adjustable peg or ball-joint connections.
 - Round, square, and hex tokens with wrapped text and traced image silhouettes, raised in a second colour or engraved.
 - Stepped honeycomb paint racks for dropper bottles and pots.
-- Two-drum 00–99 dial counters held at each count by printed click detents or magnets, joined by a snap-fit hub, with a pointer marking the count and raised digits on press-in tiles in a second colour or engraved for paint.
+- 00–99 dial counters held at each count by printed spring arms, in an enclosure with side knobs, open hubs, or a frame on a base, with digits on press-in tiles, printed in a second colour or engraved for paint.
 - Shared magnet dimensions across bases, holders, and spray trays.
 - Balanced or five-pocket cross magnet arrangements for bases and holders. Saved cross layouts keep one centre pocket and four outer pockets on both axes, including elongated footprints.
 - Exact size labels, filenames, dimensions, and high-quality exports.

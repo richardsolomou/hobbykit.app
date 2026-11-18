@@ -5,6 +5,8 @@ export interface MeshData {
   indices: Uint32Array
   /** Pieces printed separately in another filament, shown in place. */
   inserts?: MeshData
+  /** Pieces in a third filament, shown in place. */
+  third?: MeshData
 }
 
 /** One config in, one preview out; there is nothing else to ask the worker for. */
