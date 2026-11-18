@@ -6,7 +6,7 @@ import { MAX_SHARE_URL_LENGTH, readShareHash, shareLink } from './shareLink'
 import { applyWorkspaceSetup, defaultWorkspace, workspaceSetup, type GeneratorSettings, type WorkspaceState } from './workspace'
 
 const PAGE = 'https://hobbykit.example/tokens'
-const PARTS = Object.keys(defaultWorkspace()).filter((key) => key !== 'shared' && key !== 'batch') as GeneratorSettings[]
+const PARTS = Object.keys(defaultWorkspace()).filter((key) => !['shared', 'batch', 'filaments'].includes(key)) as GeneratorSettings[]
 
 const hashOf = (url: string) => url.slice(url.indexOf('#'))
 const opened = (from: WorkspaceState, part: GeneratorSettings, into = defaultWorkspace()) =>
@@ -45,26 +45,11 @@ describe('share links', () => {
     expect(opened(sender, 'holder')?.workspace.holder.magnets.diameter).toBe(6)
   })
 
-  it('carries the shared magnets a counter depends on', () => {
-    const sender = defaultWorkspace()
-    sender.counter.detent = 'magnets'
-    sender.shared.magnets.diameter = 6
+  it('replaces a counter from a link made before the slim caddy with the default one', () => {
+    const legacy: Record<string, unknown> = { ...defaultWorkspace().counter, drumDiameter: 34, drumWidth: 12, detent: 'printed' }
+    const setup = readShareHash(hashFor({ v: 1, version: 17, part: 'counter', config: legacy }))
 
-    expect(opened(sender, 'counter')?.workspace.counter.magnets.diameter).toBe(6)
-  })
-
-  it('keeps the recipient shared settings for a counter link made before counters used them', () => {
-    const recipient = defaultWorkspace()
-    recipient.shared.magnets.diameter = 6
-    const legacy: Record<string, unknown> = { ...defaultWorkspace().counter, drumWidth: 16 }
-    delete legacy.detent
-    delete legacy.magnets
-    const setup = readShareHash(hashFor({ v: 1, version: 16, part: 'counter', config: legacy }))
-
-    expect(applyWorkspaceSetup(recipient, setup)?.workspace).toMatchObject({
-      counter: { drumWidth: 16, detent: 'printed', magnets: { diameter: 6 } },
-      shared: { magnets: { diameter: 6 } },
-    })
+    expect(applyWorkspaceSetup(defaultWorkspace(), setup)?.workspace.counter).toEqual(defaultWorkspace().counter)
   })
 
   it('leaves shared settings alone for a generator that does not use them', () => {

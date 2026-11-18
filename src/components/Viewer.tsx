@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { SECOND_FILAMENT_COLOUR } from '@/core/geometry/exporters'
+import type { FilamentColours } from '@/core/geometry/filaments'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { trimNumber } from '@/core/geometry/outline'
 import { cn } from 'cn'
@@ -69,10 +69,14 @@ interface Props {
   orbitTarget?: readonly [number, number, number]
   round: boolean
   fitToPart?: boolean
+  /** How much further back to stand than a fit to the part's largest side. */
+  framingScale?: number
   /** Dimension leaders measure the part as assembled, so an exploded view hides them. */
   leaders?: boolean
   /** Shows a part printed face down the way it is used, turned over within its own height. */
   flipped?: boolean
+  /** Colours of the body and of any parts in other filaments. */
+  filaments: FilamentColours
 }
 
 interface CameraView {
@@ -83,6 +87,7 @@ interface CameraView {
 }
 
 export function Viewer({
+  filaments,
   viewKey,
   mesh,
   width,
@@ -92,6 +97,7 @@ export function Viewer({
   orbitTarget,
   round,
   fitToPart = false,
+  framingScale = 1,
   leaders = true,
   flipped = false,
 }: Props) {
@@ -106,12 +112,13 @@ export function Viewer({
   const held = useRef(false)
   const activeViewKey = useRef(viewKey)
   const cameraViews = useRef(new Map<string, CameraView>())
-  const framingFootprint = useRef(fitToPart ? Math.max(width, length, height) : REFERENCE_FOOTPRINT)
+  const framingSize = fitToPart ? framingScale * Math.max(width, length, height) : REFERENCE_FOOTPRINT
+  const framingFootprint = useRef(framingSize)
   const [targetX, targetY, targetZ] = orbitTarget ?? [0, 0, minZ + height / 2]
 
   useEffect(() => {
-    framingFootprint.current = fitToPart ? Math.max(width, length, height) : REFERENCE_FOOTPRINT
-  }, [fitToPart, width, length, height])
+    framingFootprint.current = framingSize
+  }, [framingSize])
 
   useEffect(() => {
     const container = host.current
@@ -335,7 +342,7 @@ export function Viewer({
     // off the wall and flatten the embossed number. Flat shading keeps them crisp.
     const solid = new THREE.Mesh(
       geometry,
-      new THREE.MeshStandardMaterial({ color: themeColor('--part', '#cbced3'), roughness: 0.85, metalness: 0, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: new THREE.Color(filaments.body), roughness: 0.85, metalness: 0, flatShading: true }),
     )
     // The part is the only thing in the scene, so it shadows itself: the well
     // wall onto the floor, the label and the bosses onto the floor under them.
@@ -343,21 +350,20 @@ export function Viewer({
     solid.receiveShadow = true
     group.add(solid)
 
-    if (mesh.inserts) {
-      const insertGeometry = new THREE.BufferGeometry()
-      insertGeometry.setAttribute('position', new THREE.BufferAttribute(mesh.inserts.positions, 3))
-      insertGeometry.setIndex(new THREE.BufferAttribute(mesh.inserts.indices, 1))
-      const inserts = new THREE.Mesh(
-        insertGeometry,
-        new THREE.MeshStandardMaterial({
-          color: new THREE.Color(SECOND_FILAMENT_COLOUR),
-          roughness: 0.85,
-          metalness: 0,
-          flatShading: true,
-        }),
+    for (const [coloured, colour] of [
+      [mesh.inserts, filaments.second],
+      [mesh.third, filaments.third],
+    ] as const) {
+      if (!coloured) continue
+      const partGeometry = new THREE.BufferGeometry()
+      partGeometry.setAttribute('position', new THREE.BufferAttribute(coloured.positions, 3))
+      partGeometry.setIndex(new THREE.BufferAttribute(coloured.indices, 1))
+      const filamentPart = new THREE.Mesh(
+        partGeometry,
+        new THREE.MeshStandardMaterial({ color: new THREE.Color(colour), roughness: 0.85, metalness: 0, flatShading: true }),
       )
-      inserts.receiveShadow = true
-      group.add(inserts)
+      filamentPart.receiveShadow = true
+      group.add(filamentPart)
     }
 
     // Fit the shadow frustum to the part so a 25mm base gets the same texel
@@ -384,16 +390,18 @@ export function Viewer({
     const controls = controlsRef.current
     if (camera && controls && !held.current) {
       controls.target.set(targetX, targetY, targetZ)
-      const footprint = fitToPart ? Math.max(width, length, height) : REFERENCE_FOOTPRINT
-      camera.position.copy(controls.target).addScaledVector(VIEW_DIRECTION, framingDistance(camera.aspect, footprint))
+      camera.position.copy(controls.target).addScaledVector(VIEW_DIRECTION, framingDistance(camera.aspect, framingSize))
       controls.update()
     }
 
     // The triangle count of what is actually in the scene, which is the only
     // honest signal that a rebuild has landed — the status word reads "ready"
     // from the build before the one being waited on. The e2e suite polls it.
-    if (host.current) host.current.dataset.triangles = String((mesh.indices.length + (mesh.inserts?.indices.length ?? 0)) / 3)
-  }, [mesh, width, length, height, minZ, fitToPart, targetX, targetY, targetZ, flipped])
+    if (host.current)
+      host.current.dataset.triangles = String(
+        (mesh.indices.length + (mesh.inserts?.indices.length ?? 0) + (mesh.third?.indices.length ?? 0)) / 3,
+      )
+  }, [mesh, width, length, height, minZ, framingSize, targetX, targetY, targetZ, flipped, filaments])
 
   useEffect(() => {
     const camera = cameraRef.current
@@ -425,12 +433,11 @@ export function Viewer({
       camera.zoom = 1
       camera.updateProjectionMatrix()
       controls.target.set(targetX, targetY, targetZ)
-      const footprint = fitToPart ? Math.max(width, length, height) : REFERENCE_FOOTPRINT
-      camera.position.copy(controls.target).addScaledVector(VIEW_DIRECTION, framingDistance(camera.aspect, footprint))
+      camera.position.copy(controls.target).addScaledVector(VIEW_DIRECTION, framingDistance(camera.aspect, framingSize))
     }
     controls.update()
     dirty.current = true
-  }, [viewKey, width, length, height, fitToPart, targetX, targetY, targetZ])
+  }, [viewKey, framingSize, targetX, targetY, targetZ])
 
   const across = round ? `Ø${trimNumber(width)}` : `${trimNumber(width)} × ${trimNumber(length)}`
 

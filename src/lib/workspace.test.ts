@@ -1,3 +1,4 @@
+import { maximumCounterClick } from '../core/geometry/counter'
 import { describe, expect, it } from 'vitest'
 import { holderSlotMagnetCenters } from '../core/geometry/holder'
 import { footprintKey } from '../core/geometry/presets'
@@ -219,48 +220,55 @@ describe('workspace state', () => {
     expect(loadWorkspace(storage).base.height).toBe(defaultWorkspace().base.height)
   })
 
-  it('keeps the printed detent on counters saved before magnet detents', () => {
+  it('replaces counters saved before the slim caddy with the default one', () => {
     const storage = memoryStorage()
     const legacy = JSON.parse(JSON.stringify(defaultWorkspace()))
-    legacy.counter.drumWidth = 16
-    delete legacy.counter.detent
-    delete legacy.counter.magnets
-    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 16, workspace: legacy }))
+    legacy.counter = { ...legacy.counter, drumDiameter: 34, drumWidth: 12, detent: 'printed' }
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 17, workspace: legacy }))
 
-    expect(loadWorkspace(storage).counter).toMatchObject({ drumWidth: 16, detent: 'printed' })
+    expect(loadWorkspace(storage).counter).toEqual(defaultWorkspace().counter)
   })
 
-  it('discards a saved counter detent it does not know', () => {
+  it('upgrades a saved small printed-digit counter to the full-size tile default and keeps its colours', () => {
+    const saved = defaultWorkspace()
+    const workspace = {
+      ...saved,
+      counter: { ...saved.counter, drumDiameter: 18, digits: 'printed', digitFilament: 3 },
+      filaments: { ...saved.filaments, body: '#C12E1F' },
+    }
+    const storage = { getItem: () => JSON.stringify({ version: 19, workspace }), setItem: () => undefined }
+
+    expect([loadWorkspace(storage).counter, loadWorkspace(storage).filaments.body]).toEqual([defaultWorkspace().counter, '#C12E1F'])
+  })
+
+  it('gives a counter saved before layouts the side pieces and a grip, keeping its other settings', () => {
+    const saved = defaultWorkspace()
+    const { layout: _layout, grip: _grip, ...counter } = { ...saved.counter, clearance: 0.3 }
+    const storage = { getItem: () => JSON.stringify({ version: 20, workspace: { ...saved, counter } }), setItem: () => undefined }
+
+    expect(loadWorkspace(storage).counter).toEqual({ ...saved.counter, clearance: 0.3 })
+  })
+
+  it('lowers a counter click past what the barb can give', () => {
+    const workspace = defaultWorkspace()
+    const counter = { ...workspace.counter, clearance: 0.6, click: 1.8 }
+
+    expect(synchronizeWorkspace({ ...workspace, counter }).counter.click).toBeCloseTo(maximumCounterClick(counter), 9)
+  })
+
+  it('enlarges counter wheels too small for their digits', () => {
+    const workspace = defaultWorkspace()
+    const counter = { ...workspace.counter, drumDiameter: 8, click: 0.1 }
+
+    expect(synchronizeWorkspace({ ...workspace, counter }).counter.drumDiameter).toBeGreaterThan(8)
+  })
+
+  it('keeps a saved counter wheel diameter', () => {
     const storage = memoryStorage()
     const workspace = defaultWorkspace()
-    saveWorkspace(storage, { ...workspace, counter: { ...workspace.counter, drumWidth: 16, detent: 'springs' as 'printed' } })
+    saveWorkspace(storage, { ...workspace, counter: { ...workspace.counter, drumDiameter: 24 } })
 
-    expect(loadWorkspace(storage).counter.drumWidth).toBe(defaultWorkspace().counter.drumWidth)
-  })
-
-  it('gives counters the shared magnet size', () => {
-    const workspace = defaultWorkspace()
-
-    expect(
-      synchronizeWorkspace({ ...workspace, shared: { ...workspace.shared, magnets: { ...workspace.shared.magnets, diameter: 6 } } }).counter
-        .magnets.diameter,
-    ).toBe(6)
-  })
-
-  it('widens magnet counter drums to fit thicker shared magnets', () => {
-    const workspace = defaultWorkspace()
-    const counter = { ...workspace.counter, detent: 'magnets' as const, drumWidth: 6 }
-    const shared = { ...workspace.shared, magnets: { ...workspace.shared.magnets, thickness: 6 } }
-
-    expect(synchronizeWorkspace({ ...workspace, counter, shared }).counter.drumWidth).toBe(7.1)
-  })
-
-  it('keeps a saved counter drum width', () => {
-    const storage = memoryStorage()
-    const workspace = defaultWorkspace()
-    saveWorkspace(storage, { ...workspace, counter: { ...workspace.counter, drumWidth: 16 } })
-
-    expect(loadWorkspace(storage).counter.drumWidth).toBe(16)
+    expect(loadWorkspace(storage).counter.drumDiameter).toBe(24)
   })
 
   it('drops the removed adapter generator from a version 11 workspace', () => {
@@ -547,7 +555,7 @@ function customizedWorkspace() {
   state.paintRack = { ...state.paintRack, leftEnd: true, rise: 20 }
   state.stem = { ...state.stem, bodyDiameter: 6 }
   state.token = { ...state.token, text: 'A', shape: 'hex', size: 32 }
-  state.counter = { ...state.counter, drumWidth: 16, insertClearance: 0.1 }
+  state.counter = { ...state.counter, drumDiameter: 24, insertClearance: 0.1 }
   state.shared = { ...state.shared, labelsEnabled: false, magnets: { ...state.shared.magnets, diameter: 6 } }
   state.batch = [{ shape: 'round', width: 40, length: 40, quantity: 3 }]
   return synchronizeWorkspace(state)
@@ -563,7 +571,7 @@ describe('resetting settings', () => {
     ['paintRack', (state: WorkspaceState) => state.paintRack],
     ['stem', (state: WorkspaceState) => state.stem],
     ['token', (state: WorkspaceState) => state.token],
-    ['counter', (state: WorkspaceState) => [state.counter.drumWidth, state.counter.insertClearance]],
+    ['counter', (state: WorkspaceState) => [state.counter.drumDiameter, state.counter.insertClearance]],
   ] as const)('restores the %s settings to their defaults', (part, read) => {
     expect(read(resetGenerator(customizedWorkspace(), part))).toEqual(read(defaultWorkspace()))
   })

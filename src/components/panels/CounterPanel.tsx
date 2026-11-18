@@ -1,145 +1,147 @@
-import { Choice, Dimension, Section, ToggleSetting } from '@/components/controls'
+import { Choice, Dimension, Section } from '@/components/controls'
 import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import type { CounterConfig, CounterDetent } from '@/core/geometry/types'
-import { defaultCounterConfig, MAX_COUNTER_CLICK, minimumCounterDrumDiameter, minimumCounterDrumWidth } from '@/core/geometry/counter'
-import { trimNumber } from '@/core/geometry/outline'
+import type { CounterConfig } from '@/core/geometry/types'
+import { defaultCounterConfig, maximumCounterClick, MIN_COUNTER_CLICK, MINIMUM_COUNTER_DRUM_DIAMETER } from '@/core/geometry/counter'
 import { tenthAbove } from '@/lib/workspace'
-import { BASE_DEFAULTS, PanelFooter, type ResetAction, type SharedMagnetChanges } from './shared'
+import { PanelFooter, type ResetAction } from './shared'
 
 const COUNTER_DEFAULTS = defaultCounterConfig()
-const DETENTS: { value: CounterDetent; label: string }[] = [
-  { value: 'printed', label: 'Printed' },
-  { value: 'magnets', label: 'Magnets' },
+/** Each with a click to suit, because a bigger dial's arms are stiffer and its troughs deeper. */
+const SIZES = [
+  { value: 39.6, label: 'Full size', click: 1.5 },
+  { value: 32, label: 'Medium', click: 1.2 },
+  { value: 24, label: 'Small', click: 0.9 },
+  { value: 18, label: 'Smallest', click: 0.7 },
 ]
+
+const LAYOUTS = [
+  { value: 'enclosure' as const, label: 'Enclosure with side knobs' },
+  { value: 'knobs' as const, label: 'Hubs and side knobs' },
+  { value: 'centre' as const, label: 'Frame and base' },
+  { value: 'hubs' as const, label: 'Two hubs on legs' },
+]
+const LAYOUT_NOTES = {
+  enclosure:
+    'The dials sit in a case with a window over the count, and each turns by a knob outside its end. The case prints as two halves that slot together in the middle. A rod through both dials keeps them in line. Press the knobs on last.',
+  knobs:
+    'Each dial clicks in a hub at its end, which the counter stands on and which marks the count, and turns by a knob outside it. A rod through both dials keeps them in line. Press the knobs on last.',
+  hubs: 'A small hub on two legs at each end holds the tube, leaving the outer rim of each dial free to turn from the side.',
+  centre:
+    'A frame over the top row marks the count and stands on a post at each end, which holds the tube and plugs into a base plate under the dials. Turn the dials directly.',
+}
+
+const DIGIT_STYLES = [
+  { value: 'tiles' as const, label: 'Press-in tiles' },
+  { value: 'printed' as const, label: 'Printed in the dial' },
+  { value: 'engraved' as const, label: 'Engraved for paint' },
+]
+const DIGIT_FILAMENTS = [
+  { value: 2 as const, label: 'Second colour' },
+  { value: 3 as const, label: 'Third colour' },
+]
+const DIGIT_NOTES = {
+  tiles: 'Press each tile into its pocket. Raise the clearance if they will not go in.',
+  printed:
+    'Part of each dial, with no tiles to press in, but a filament change on every layer of the dials. A third colour also flushes on each one.',
+  engraved: 'Engraved, ready to paint.',
+}
 
 interface Props {
   resets: ResetAction[]
   counter: CounterConfig
   setCounter: (counter: CounterConfig) => void
-  maxSharedMagnetThickness: number
-  maxSharedDepthClearance: number
-  setSharedMagnets: (changes: SharedMagnetChanges) => void
 }
 
-export function CounterPanel({ counter, setCounter, resets, maxSharedMagnetThickness, maxSharedDepthClearance, setSharedMagnets }: Props) {
+export function CounterPanel({ counter, setCounter, resets }: Props) {
   const patch = (changes: Partial<CounterConfig>) => setCounter({ ...counter, ...changes })
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
       <aside aria-label="Dial counter settings" className="pb-4 [counter-reset:schedule]">
-        <Section title="Drums" aside={<span className="readout text-xs text-muted-foreground">00–99</span>}>
+        <Section title="Layout">
+          <Choice
+            label="Layout"
+            value={counter.layout}
+            defaultValue={COUNTER_DEFAULTS.layout}
+            options={LAYOUTS}
+            onChange={(layout) => patch({ layout })}
+          />
           <Dimension
-            label="Drum diameter"
+            label="Grip"
+            value={counter.grip}
+            min={0}
+            max={15}
+            step={0.5}
+            defaultValue={COUNTER_DEFAULTS.grip}
+            onChange={(grip) => patch({ grip })}
+          />
+          <FieldDescription>{LAYOUT_NOTES[counter.layout]} Grip widens each dial past its digits.</FieldDescription>
+        </Section>
+
+        <Section title="Wheels" aside={<span className="readout text-xs text-muted-foreground">00–99</span>}>
+          <Choice
+            label="Size"
             value={counter.drumDiameter}
-            min={tenthAbove(minimumCounterDrumDiameter(counter))}
-            max={60}
+            defaultValue={COUNTER_DEFAULTS.drumDiameter}
+            options={
+              SIZES.some(({ value }) => value === counter.drumDiameter)
+                ? SIZES
+                : [...SIZES, { value: counter.drumDiameter, label: 'Custom' }]
+            }
+            onChange={(drumDiameter) =>
+              patch({ drumDiameter, click: SIZES.find(({ value }) => value === drumDiameter)?.click ?? counter.click })
+            }
+          />
+          <Dimension
+            label="Wheel diameter"
+            value={counter.drumDiameter}
+            min={tenthAbove(MINIMUM_COUNTER_DRUM_DIAMETER)}
+            max={40}
             step={0.1}
             defaultValue={COUNTER_DEFAULTS.drumDiameter}
             onChange={(drumDiameter) => patch({ drumDiameter })}
           />
           <Dimension
-            label="Drum width"
-            value={counter.drumWidth}
-            min={tenthAbove(minimumCounterDrumWidth(counter))}
-            max={24}
-            step={0.1}
-            defaultValue={COUNTER_DEFAULTS.drumWidth}
-            onChange={(drumWidth) => patch({ drumWidth })}
-          />
-          <Dimension
             label="Fit clearance"
             value={counter.clearance}
             min={0.1}
-            max={0.6}
+            max={0.4}
             step={0.05}
             defaultValue={COUNTER_DEFAULTS.clearance}
             onChange={(clearance) => patch({ clearance })}
           />
-          <Choice
-            label="Detent"
-            value={counter.detent}
-            defaultValue={COUNTER_DEFAULTS.detent}
-            options={DETENTS}
-            onChange={(detent) => patch({ detent })}
+          <Dimension
+            label="Click"
+            value={counter.click}
+            min={MIN_COUNTER_CLICK}
+            max={maximumCounterClick(counter)}
+            step={0.05}
+            defaultValue={COUNTER_DEFAULTS.click}
+            onChange={(click) => patch({ click })}
           />
-          {counter.detent === 'printed' && (
-            <Dimension
-              label="Click"
-              value={counter.click}
-              min={0.1}
-              max={MAX_COUNTER_CLICK}
-              step={0.05}
-              defaultValue={COUNTER_DEFAULTS.click}
-              onChange={(click) => patch({ click })}
-            />
-          )}
           <FieldDescription>
-            {counter.detent === 'printed'
-              ? 'Roll a drum onto its next flat to count. Raise the click if the drums turn too easily.'
-              : "Roll a drum onto its next flat to count. Magnets in the drums snap to the pointer's at every count."}
+            Size scales the whole caddy and keeps the fit the same. Turn a dial to count, and raise the click if the dials turn too easily.
           </FieldDescription>
         </Section>
 
-        {counter.detent === 'magnets' && (
-          <Section
-            title="Magnets"
-            aside={
-              <span className="readout text-xs text-muted-foreground">
-                22 × {trimNumber(counter.magnets.diameter + counter.magnets.clearance)} mm hole
-              </span>
-            }
-          >
-            <Dimension
-              label="Magnet diameter"
-              value={counter.magnets.diameter}
-              min={2}
-              max={8}
-              step={0.5}
-              defaultValue={BASE_DEFAULTS.magnets.diameter}
-              onChange={(diameter) => setSharedMagnets({ diameter })}
-            />
-            <Dimension
-              label="Magnet thickness"
-              value={counter.magnets.thickness}
-              min={0.5}
-              max={maxSharedMagnetThickness}
-              step={0.1}
-              defaultValue={BASE_DEFAULTS.magnets.thickness}
-              onChange={(thickness) => setSharedMagnets({ thickness })}
-            />
-            <Dimension
-              label="Magnet diameter clearance"
-              value={counter.magnets.clearance}
-              min={0}
-              max={0.6}
-              step={0.05}
-              defaultValue={BASE_DEFAULTS.magnets.clearance}
-              onChange={(clearance) => setSharedMagnets({ clearance })}
-            />
-            <Dimension
-              label="Magnet depth clearance"
-              value={counter.magnets.depthClearance}
-              min={0}
-              max={maxSharedDepthClearance}
-              step={0.05}
-              defaultValue={BASE_DEFAULTS.magnets.depthClearance}
-              onChange={(depthClearance) => setSharedMagnets({ depthClearance })}
-            />
-            <FieldDescription>
-              Ten in each drum's inner face and one in each face of the pointer. Check each drum's magnets attract the pointer's before
-              gluing them in.
-            </FieldDescription>
-          </Section>
-        )}
-
-        <Section title="Inserts">
-          <ToggleSetting
-            label="Press-in tiles"
-            checked={counter.inserts}
-            defaultChecked={COUNTER_DEFAULTS.inserts}
-            onChange={(inserts) => patch({ inserts })}
+        <Section title="Digits">
+          <Choice
+            label="Digits"
+            value={counter.digits}
+            defaultValue={COUNTER_DEFAULTS.digits}
+            options={DIGIT_STYLES}
+            onChange={(digits) => patch({ digits })}
           />
-          {counter.inserts && (
+          {counter.digits !== 'engraved' && (
+            <Choice
+              label="Digit filament"
+              value={counter.digitFilament}
+              defaultValue={COUNTER_DEFAULTS.digitFilament}
+              options={DIGIT_FILAMENTS}
+              onChange={(digitFilament) => patch({ digitFilament })}
+            />
+          )}
+          {counter.digits === 'tiles' && (
             <Dimension
               label="Insert clearance"
               value={counter.insertClearance}
@@ -150,9 +152,7 @@ export function CounterPanel({ counter, setCounter, resets, maxSharedMagnetThick
               onChange={(insertClearance) => patch({ insertClearance })}
             />
           )}
-          <FieldDescription>
-            {counter.inserts ? 'Press each tile into its pocket. Raise the clearance if they will not go in.' : 'Engraved, ready to paint.'}
-          </FieldDescription>
+          <FieldDescription>{DIGIT_NOTES[counter.digits]}</FieldDescription>
         </Section>
 
         <PanelFooter page="counter" resets={resets} />

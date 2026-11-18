@@ -521,30 +521,52 @@ test('builds a matching printable flying stem', async ({ page }) => {
 test('builds a dial counter and downloads each part with its tiles', async ({ page }) => {
   await visit(page, 'Counters')
 
-  await expect(tall(page)).toHaveText('32.34')
-  await expect(footer(page)).toContainText('counter-34mm')
+  await expect(tall(page)).toHaveText('43.56')
+  await expect(footer(page)).toContainText('counter-39.6mm')
 
   // Resizing scales every face without adding triangles, so the footer's name shows the rebuild.
-  await setDimension(page, 'Drum diameter in mm', '36')
-  await expect(footer(page)).toContainText('counter-36mm')
+  await setDimension(page, 'Wheel diameter in mm', '24')
+  await expect(footer(page)).toContainText('counter-24mm')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
   const saved = await pending
-  expect(saved.suggestedFilename()).toBe('counter-36mm.zip')
+  expect(saved.suggestedFilename()).toBe('counter-24mm.zip')
   const path = await saved.path()
   if (!path) throw new Error('download has no local path')
   expect(Object.keys(unzipSync(await readFile(path))).sort()).toEqual([
-    'counter-36mm-inserts-marks.stl',
-    'counter-36mm-inserts.stl',
-    'counter-36mm-pointer.stl',
-    'counter-36mm-tens-drum.stl',
-    'counter-36mm-units-drum.stl',
+    'counter-24mm-inserts-marks.stl',
+    'counter-24mm-inserts.stl',
+    'counter-24mm-left-case.stl',
+    'counter-24mm-left-knob.stl',
+    'counter-24mm-right-case.stl',
+    'counter-24mm-right-knob.stl',
+    'counter-24mm-tens-wheel.stl',
+    'counter-24mm-units-wheel.stl',
+  ])
+})
+
+test('downloads a dial counter in a frame on a base', async ({ page }) => {
+  await visit(page, 'Counters')
+  await pickChoice(page, 'Layout', 'Frame and base')
+  await pickChoice(page, 'Digits', 'Engraved for paint')
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download STL' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  expect(Object.keys(unzipSync(await readFile(path))).sort()).toEqual([
+    'counter-39.6mm-base.stl',
+    'counter-39.6mm-frame.stl',
+    'counter-39.6mm-tens-wheel.stl',
+    'counter-39.6mm-tube.stl',
+    'counter-39.6mm-units-wheel.stl',
   ])
 })
 
 test('prints the dial counter tiles on their own plate, changing filament once', async ({ page }) => {
   await visit(page, 'Counters')
+  await expect(tall(page)).toHaveText('43.56')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download 3MF' }).click()
@@ -553,38 +575,106 @@ test('prints the dial counter tiles on their own plate, changing filament once',
   const archive = unzipSync(await readFile(path))
   const text = (file: string) => new TextDecoder().decode(archive[file])
   expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(2)
-  expect(text('Metadata/model_settings.config')).toContain('value="counter-34mm-tile-units-7"')
+  expect(text('Metadata/model_settings.config')).toContain('value="counter-39.6mm-tile-units-7"')
   expect(text('Metadata/model_settings.config')).toMatch(
-    /value="counter-34mm-tile-units-7-mark"\/>.*?<metadata key="extruder" value="2"\/>/,
+    /value="counter-39.6mm-tile-units-7-mark"\/>.*?<metadata key="extruder" value="2"\/>/,
   )
 })
 
-test('engraves the dial counter without inserts', async ({ page }) => {
+test('prints the dial counter brackets with the tiles, changing filament at the same height', async ({ page }) => {
   await visit(page, 'Counters')
-  const inserted = await triangles(page)
-
-  await page.getByRole('switch', { name: 'Press-in tiles' }).click()
-  await rebuilt(page, inserted)
-  await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
-  expect(await triangles(page)).toBeLessThan(inserted)
-})
-
-test('holds the dial counter with magnets instead of printed bumps', async ({ page }) => {
-  await visit(page, 'Counters')
-  await expect(page.getByLabel('Click in mm')).toHaveCount(1)
-  const printed = await triangles(page)
-
-  await pickChoice(page, 'Detent', 'Magnets')
-  await rebuilt(page, printed)
-  await expect(page.getByLabel('Click in mm')).toHaveCount(0)
-  await expect(page.getByLabel('Magnet diameter in mm')).toHaveValue('5.0')
+  await pickChoice(page, 'Layout', 'Hubs and side knobs')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download 3MF' }).click()
   const path = await (await pending).path()
   if (!path) throw new Error('download has no local path')
   const settings = new TextDecoder().decode(unzipSync(await readFile(path))['Metadata/model_settings.config'])
-  expect(settings.match(/<object id="\d+"><metadata key="name" value="counter-34mm-tile-[^"]+"/g)).toHaveLength(2 * 10 + 1)
+  expect(settings).toMatch(/value="counter-39.6mm-left-bracket-marks"\/>.*?<metadata key="extruder" value="2"\/>/)
+  const bracket = settings.match(/<object id="(\d+)"><metadata key="name" value="counter-39.6mm-right-bracket"\/>/)![1]
+  expect(settings.split('<plate>').at(-1)).toContain(`key="object_id" value="${bracket}"`)
+  expect(settings).not.toContain('-hub-marks')
+})
+
+test('prints the dial counter digits into the dials in a third filament', async ({ page }) => {
+  await visit(page, 'Counters')
+  await expect(page.getByRole('combobox', { name: 'Digits' })).toContainText('Press-in tiles')
+  await expect(page.getByRole('button', { name: /^Third colour/ })).toHaveCount(0)
+  await pickChoice(page, 'Digits', 'Printed in the dial')
+  await pickChoice(page, 'Digit filament', 'Third colour')
+  await expect(page.getByRole('button', { name: /^Third colour/ })).toBeVisible()
+  await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download 3MF' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  const archive = unzipSync(await readFile(path))
+  const text = (file: string) => new TextDecoder().decode(archive[file])
+  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(3)
+  expect(text('Metadata/model_settings.config')).toMatch(
+    /value="counter-39.6mm-units-wheel-digits"\/>.*?<metadata key="extruder" value="3"\/>/,
+  )
+  expect(text('Metadata/model_settings.config')).not.toContain('-tile-')
+})
+
+test('saves one set of colours and writes them into every 3MF', async ({ page }) => {
+  await visit(page, 'Tokens')
+  await page.getByRole('button', { name: /^Body colour/ }).click()
+  await page.getByRole('button', { name: 'Bambu Green', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await visit(page, 'Counters')
+  await expect(page.getByRole('button', { name: 'Body colour: Bambu Green' })).toBeVisible()
+
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download 3MF' }).click()
+  const path = await (await pending).path()
+  if (!path) throw new Error('download has no local path')
+  const project = JSON.parse(new TextDecoder().decode(unzipSync(await readFile(path))['Metadata/project_settings.config']))
+  expect([project.printer_model, project.filament_colour[0]]).toEqual(['Bambu Lab X2D', '#00AE42'])
+})
+
+test('keeps every dropdown label clear of its check mark', async ({ page }) => {
+  await visit(page, 'Counters')
+  await page.getByRole('combobox', { name: 'Digits' }).click()
+
+  const overruns = await page
+    .getByRole('option')
+    .evaluateAll((options) =>
+      options
+        .filter((option) => option.firstElementChild!.scrollWidth > option.firstElementChild!.clientWidth)
+        .map((option) => option.textContent),
+    )
+  expect(overruns).toEqual([])
+})
+
+test('engraves the dial counter without inserts', async ({ page }) => {
+  await visit(page, 'Counters')
+  const inserted = await triangles(page)
+
+  await pickChoice(page, 'Digits', 'Engraved for paint')
+  await rebuilt(page, inserted)
+  await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
+  expect(await triangles(page)).toBeLessThan(inserted)
+})
+
+test('scales the whole dial counter from the size choice', async ({ page }) => {
+  await visit(page, 'Counters')
+
+  await pickChoice(page, 'Size', 'Small')
+  await expect(footer(page)).toContainText('counter-24mm')
+  await expect(footer(page)).toContainText('4.6 mm tall')
+  await expect(page.getByLabel('Wheel diameter in mm')).toHaveValue('24.0')
+})
+
+test('caps the dial counter click at what its wheels can lift', async ({ page }) => {
+  await visit(page, 'Counters')
+
+  await expect(page.getByLabel('Click in mm')).toHaveAttribute('max', '1.55')
+  await setDimension(page, 'Wheel diameter in mm', '18')
+  await expect(page.getByLabel('Click in mm')).toHaveAttribute('max', '0.7')
+  await setDimension(page, 'Wheel diameter in mm', '30')
+  await expect(page.getByLabel('Click in mm')).toHaveAttribute('max', '1.15')
 })
 
 const SHIELD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="120" viewBox="0 0 100 120">
@@ -1124,11 +1214,14 @@ test('adds another miniature size to the holder', async ({ page }) => {
   expect(archive['3D/Objects/object_1.model']).toBeDefined()
   expect(archive['3D/Objects/object_2.model']).toBeDefined()
   expect(JSON.parse(project)).toEqual({
-    filament_settings_id: ['Bambu PLA Basic @BBL P2S'],
-    print_settings_id: '0.20mm Standard @BBL P2S',
-    printer_settings_id: 'Bambu Lab P2S 0.4 nozzle',
-    printer_model: 'Bambu Lab P2S',
-    nozzle_diameter: ['0.4'],
+    filament_settings_id: ['Bambu PLA Basic @BBL X2D 0.4 nozzle'],
+    filament_colour: ['#D1D3D5'],
+    filament_map: ['1'],
+    filament_map_mode: 'Auto For Flush',
+    print_settings_id: '0.20mm Standard @BBL X2D',
+    printer_settings_id: 'Bambu Lab X2D 0.4 nozzle',
+    printer_model: 'Bambu Lab X2D',
+    nozzle_diameter: ['0.4', '0.4'],
   })
 })
 

@@ -180,9 +180,9 @@ const LISTINGS: Listing[] = [
     hero: { caption: 'Assembled' },
     variants: [
       { caption: 'Parts', explode: true },
-      { caption: 'Engraved digits', edit: patch('counter', { inserts: false }) },
-      { caption: '48 × 20 drums', edit: patch('counter', { drumDiameter: 48, drumWidth: 20 }) },
-      { caption: '60 × 24 drums, parts', edit: patch('counter', { drumDiameter: 60, drumWidth: 24 }), explode: true },
+      { caption: 'Engraved digits', edit: patch('counter', { digits: 'engraved' }) },
+      { caption: '32mm wheels', edit: patch('counter', { drumDiameter: 32 }) },
+      { caption: '40mm wheels, parts', edit: patch('counter', { drumDiameter: 40 }), explode: true },
     ],
   },
 ]

@@ -210,6 +210,9 @@ interface ChoiceProps<T extends string | number> {
  * Inline choice. Values travel as strings because Select works in strings, and
  * are mapped back through the options so numbers survive the trip.
  */
+/** The popup grows past a narrow trigger to fit its longest option, so no label runs under the check mark. */
+const widestOption = 'w-auto min-w-(--anchor-width)'
+
 export function Choice<T extends string | number>({ label, value, defaultValue, disabled, options, onChange }: ChoiceProps<T>) {
   const id = useId()
   if (options.length <= 1) return null
@@ -240,7 +243,7 @@ export function Choice<T extends string | number>({ label, value, defaultValue, 
               <span className="readout truncate text-xs">{selectedLabel}</span>
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={widestOption}>
             {options.map((option) => (
               <SelectItem key={String(option.value)} value={String(option.value)}>
                 <span className="readout text-xs">{option.label}</span>
@@ -268,7 +271,7 @@ export function CompactChoice<T extends string | number>({ label, value, options
           <span className="readout truncate text-xs">{selectedLabel}</span>
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className={widestOption}>
         {options.map((option) => (
           <SelectItem key={String(option.value)} value={String(option.value)}>
             <span className="readout text-xs">{option.label}</span>

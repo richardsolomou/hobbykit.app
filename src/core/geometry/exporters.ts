@@ -1,4 +1,5 @@
 import { zipSync } from 'fflate'
+import type { FilamentColours } from './filaments'
 
 /** The slice of a Manifold mesh the exporters need, so they also work on worker output. */
 export interface MeshLike {
@@ -51,26 +52,31 @@ const RELS = `<?xml version="1.0" encoding="UTF-8"?>
 <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`
 
-/** One object for the slicer, printed in filament 1, with an optional second part printed in filament 2. */
+/** One object for the slicer, printed in filament 1, with optional further parts printed in filaments 2 and 3. */
 export interface ExportPart {
   mesh: MeshLike
   name: string
+  /** The filament the whole of `mesh` prints in, for a part that is all one colour other than the body's. */
+  filament?: 2 | 3
   secondFilament?: { mesh: MeshLike; name: string }
+  thirdFilament?: { mesh: MeshLike; name: string }
 }
 
-/** The colour of every second-filament part, in the 3MF and the preview; the slicer is where to change it. */
-export const SECOND_FILAMENT_COLOUR = '#1D1D1F'
+/** Each filament takes the nozzle it would in a typical project: the body on one, the colours on the other, so the two rarely need a swap. */
+const NOZZLE_FOR_FILAMENT = ['1', '2', '2']
 
-function projectSettings(twoFilaments: boolean): string {
-  const filament = 'Bambu PLA Basic @BBL P2S'
+function projectSettings(filaments: number, { body, second, third }: FilamentColours): string {
+  const filament = 'Bambu PLA Basic @BBL X2D 0.4 nozzle'
   return JSON.stringify({
-    filament_settings_id: twoFilaments ? [filament, filament] : [filament],
-    ...(twoFilaments ? { filament_colour: ['#CBCED3', SECOND_FILAMENT_COLOUR] } : {}),
-    print_settings_id: '0.20mm Standard @BBL P2S',
-    printer_settings_id: 'Bambu Lab P2S 0.4 nozzle',
+    filament_settings_id: Array.from({ length: filaments }, () => filament),
+    filament_colour: [body, second, third].slice(0, filaments),
+    filament_map: NOZZLE_FOR_FILAMENT.slice(0, filaments),
+    filament_map_mode: 'Auto For Flush',
+    print_settings_id: '0.20mm Standard @BBL X2D',
+    printer_settings_id: 'Bambu Lab X2D 0.4 nozzle',
     // Bambu Studio loads only the geometry of a project whose printer it cannot place or whose extruders it cannot count.
-    printer_model: 'Bambu Lab P2S',
-    nozzle_diameter: ['0.4'],
+    printer_model: 'Bambu Lab X2D',
+    nozzle_diameter: ['0.4', '0.4'],
   })
 }
 const PLATE_SIZE = 256
@@ -140,6 +146,8 @@ function placeItems(meshes: { mesh: MeshLike }[], plates: Plate[]): PlacedItem[]
 }
 
 const PACK_MARGIN = 10
+/** The X2D's second nozzle cannot reach the first 20.5mm of the plate, and a brim needs room inside that limit too. */
+const PACK_LEFT = 28
 const PACK_GAP = 5
 
 /**
@@ -151,20 +159,20 @@ export function packPlates(meshes: MeshLike[], copies: number[]): PlateItem[][] 
   const limit = PLATE_SIZE - PACK_MARGIN
   const order = meshes.map((_, index) => index).sort((a, b) => bounds[b].length - bounds[a].length || bounds[b].width - bounds[a].width)
   const plates: PlateItem[][] = [[]]
-  let x = PACK_MARGIN
+  let x = PACK_LEFT
   let y = PACK_MARGIN
   let shelf = 0
   for (const object of order) {
     const { width, length } = bounds[object]
     for (let copy = 0; copy < copies[object]; copy++) {
-      if (x > PACK_MARGIN && x + width > limit) {
-        x = PACK_MARGIN
+      if (x > PACK_LEFT && x + width > limit) {
+        x = PACK_LEFT
         y += shelf + PACK_GAP
         shelf = 0
       }
       if (y > PACK_MARGIN && y + length > limit) {
         plates.push([])
-        x = PACK_MARGIN
+        x = PACK_LEFT
         y = PACK_MARGIN
         shelf = 0
       }
@@ -176,18 +184,7 @@ export function packPlates(meshes: MeshLike[], copies: number[]): PlateItem[][] 
   return plates.filter((items) => items.length > 0)
 }
 
-function modelXml(meshes: ExportPart[], plates?: Plate[]): string {
-  if (!plates) {
-    const objects = meshes.map(({ mesh, name }, index) => `<object id="${index + 1}" type="model" name="${name}">${meshXml(mesh)}</object>`)
-    const items = meshes.map((_, index) => `<item objectid="${index + 1}"/>`)
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
-<metadata name="Application">HobbyKit</metadata>
-<resources>${objects.join('')}</resources>
-<build>${items.join('')}</build>
-</model>`
-  }
-
+function modelXml(meshes: ExportPart[], plates: Plate[]): string {
   const objects = meshes.map(({ name }, index) => {
     const objectId = (index + 1) * 2
     const uuid = (index + 1).toString(16).padStart(8, '0')
@@ -211,17 +208,30 @@ function modelXml(meshes: ExportPart[], plates?: Plate[]): string {
 </model>`
 }
 
-/** An object's parts: its own mesh, then any second-filament part. */
-function volumesOf({ mesh, name, secondFilament }: ExportPart): { mesh: MeshLike; name: string }[] {
-  return [{ mesh, name }, ...(secondFilament ? [secondFilament] : [])]
+/** An object's parts: its own mesh, then any parts in other filaments. */
+function volumesOf({ mesh, name, filament, secondFilament, thirdFilament }: ExportPart): {
+  mesh: MeshLike
+  name: string
+  filament: number
+}[] {
+  return [
+    { mesh, name, filament: filament ?? 1 },
+    ...(secondFilament ? [{ ...secondFilament, filament: 2 }] : []),
+    ...(thirdFilament ? [{ ...thirdFilament, filament: 3 }] : []),
+  ]
 }
 
 /**
- * Ids of an object's parts in its object file: the first sits just under the object's own id, and a second takes an id
+ * Ids of an object's parts in its object file: the first sits just under the object's own id, and the others take ids
  * past every object's, so none collide.
  */
 function volumeIds(meshes: ExportPart[], index: number): number[] {
-  return meshes[index].secondFilament ? [index * 2 + 1, meshes.length * 2 + index + 1] : [index * 2 + 1]
+  const { secondFilament, thirdFilament } = meshes[index]
+  return [
+    index * 2 + 1,
+    ...(secondFilament ? [meshes.length * 2 + index + 1] : []),
+    ...(thirdFilament ? [meshes.length * 3 + index + 1] : []),
+  ]
 }
 
 function objectModelXml(meshes: ExportPart[], index: number): string {
@@ -248,14 +258,52 @@ function modelRelationshipsXml(count: number): string {
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relationships.join('')}</Relationships>`
 }
 
+/**
+ * How tall a part stands for the size of what touches the plate, which is what lets a nozzle knock it loose. On real
+ * prints a counter's side pieces, at 0.26, held on their own; its dials, at 0.40, and its tube snapped off.
+ */
+const BRIM_SLENDERNESS = 0.33
+const BRIM_WIDTH = 6
+
+export function needsBrim(part: ExportPart): boolean {
+  const meshes = volumesOf(part).map(({ mesh }) => mesh)
+  let bottom = Infinity
+  let top = -Infinity
+  for (const { numProp, vertProperties } of meshes) {
+    for (let i = 2; i < vertProperties.length; i += numProp) {
+      bottom = Math.min(bottom, vertProperties[i])
+      top = Math.max(top, vertProperties[i])
+    }
+  }
+  let contact = 0
+  for (const { numProp, vertProperties: v, triVerts: t } of meshes) {
+    for (let i = 0; i < t.length; i += 3) {
+      const [a, b, c] = [t[i] * numProp, t[i + 1] * numProp, t[i + 2] * numProp]
+      if (Math.max(v[a + 2], v[b + 2], v[c + 2]) > bottom + 0.01) continue
+      contact += Math.abs((v[b] - v[a]) * (v[c + 1] - v[a + 1]) - (v[c] - v[a]) * (v[b + 1] - v[a + 1])) / 2
+    }
+  }
+  return (top - bottom) / Math.sqrt(contact) > BRIM_SLENDERNESS
+}
+
+const brimMetadata = (part: ExportPart) =>
+  needsBrim(part) ? `<metadata key="brim_type" value="outer_only"/><metadata key="brim_width" value="${BRIM_WIDTH}"/>` : ''
+
+const filamentCount = (meshes: ExportPart[]) =>
+  meshes.some(({ thirdFilament, filament }) => thirdFilament || filament === 3)
+    ? 3
+    : meshes.some(({ secondFilament, filament }) => secondFilament || filament === 2)
+      ? 2
+      : 1
+
 function plateSettingsXml(meshes: ExportPart[], plates: Plate[]): string {
   const objects = meshes.map((part, index) => {
     const volumes = volumesOf(part)
     const parts = volumeIds(meshes, index).map((partId, volume) => {
-      const { mesh, name } = volumes[volume]
-      return `<part id="${partId}" subtype="normal_part"><metadata key="name" value="${name}"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="extruder" value="${volume + 1}"/><mesh_stat face_count="${mesh.triVerts.length / 3}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>`
+      const { mesh, name, filament } = volumes[volume]
+      return `<part id="${partId}" subtype="normal_part"><metadata key="name" value="${name}"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="extruder" value="${filament}"/><mesh_stat face_count="${mesh.triVerts.length / 3}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>`
     })
-    return `<object id="${(index + 1) * 2}"><metadata key="name" value="${part.name}"/><metadata key="extruder" value="1"/>${parts.join('')}</object>`
+    return `<object id="${(index + 1) * 2}"><metadata key="name" value="${part.name}"/><metadata key="extruder" value="1"/>${brimMetadata(part)}${parts.join('')}</object>`
   })
   const placed = placeItems(meshes, plates)
   const instances = placed.map(
@@ -270,6 +318,8 @@ function plateSettingsXml(meshes: ExportPart[], plates: Plate[]): string {
 <metadata key="plater_id" value="${plate + 1}"/>
 <metadata key="plater_name" value="${name}"/>
 <metadata key="locked" value="false"/>
+<metadata key="filament_map_mode" value="Auto For Flush"/>
+<metadata key="filament_maps" value="${NOZZLE_FOR_FILAMENT.slice(0, filamentCount(meshes)).join(' ')}"/>
 ${instances.filter((_, index) => placed[index].plate === plate).join('\n')}
 </plate>`,
   )
@@ -285,27 +335,22 @@ ${plateXml.join('\n')}
 </config>`
 }
 
-/** 3MF keeps the mesh topology intact and carries millimetre units explicitly. */
-export function to3mf(meshes: ExportPart[], separateBuildPlates = false): Uint8Array {
-  return separateBuildPlates
-    ? to3mfPlates(
-        meshes,
-        meshes.map(({ name }, object) => ({ name, items: [{ object, x: PLATE_MARGIN, y: PLATE_MARGIN }] })),
-      )
-    : package3mf(meshes)
+/** A Bambu Studio project with each part on a build plate of its own. */
+export function to3mf(meshes: ExportPart[], colours: FilamentColours): Uint8Array {
+  return to3mfPlates(
+    meshes,
+    meshes.map(({ name }, object) => ({ name, items: [{ object, x: PLATE_MARGIN, y: PLATE_MARGIN }] })),
+    colours,
+  )
 }
 
-/**
- * A Bambu Studio project with each plate holding its own copies of the objects. An object's second part prints in
- * filament 2; give it layers of its own and a plate of its own, so the filament changes once.
- */
-export function to3mfPlates(meshes: ExportPart[], plates: Plate[]): Uint8Array {
-  return package3mf(meshes, plates)
+/** A Bambu Studio project for the two-nozzle X2D, with each plate holding its own copies of the objects. An object's further parts print in filaments 2 and 3. */
+export function to3mfPlates(meshes: ExportPart[], plates: Plate[], colours: FilamentColours): Uint8Array {
+  return package3mf(meshes, plates, colours)
 }
 
-function package3mf(meshes: ExportPart[], plates?: Plate[]): Uint8Array {
+function package3mf(meshes: ExportPart[], plates: Plate[], colours: FilamentColours): Uint8Array {
   const enc = new TextEncoder()
-  const twoFilaments = meshes.some(({ secondFilament }) => secondFilament)
   const objectModels = Object.fromEntries(
     meshes.map((_part, index) => [`object_${index + 1}.model`, enc.encode(objectModelXml(meshes, index))]),
   )
@@ -314,16 +359,13 @@ function package3mf(meshes: ExportPart[], plates?: Plate[]): Uint8Array {
     _rels: { '.rels': enc.encode(RELS) },
     '3D': {
       '3dmodel.model': enc.encode(modelXml(meshes, plates)),
-      ...(plates ? { Objects: objectModels, _rels: { '3dmodel.model.rels': enc.encode(modelRelationshipsXml(meshes.length)) } } : {}),
+      Objects: objectModels,
+      _rels: { '3dmodel.model.rels': enc.encode(modelRelationshipsXml(meshes.length)) },
     },
-    ...(plates
-      ? {
-          Metadata: {
-            'model_settings.config': enc.encode(plateSettingsXml(meshes, plates)),
-            'project_settings.config': enc.encode(projectSettings(twoFilaments)),
-          },
-        }
-      : {}),
+    Metadata: {
+      'model_settings.config': enc.encode(plateSettingsXml(meshes, plates)),
+      'project_settings.config': enc.encode(projectSettings(filamentCount(meshes), colours)),
+    },
   }
   return zipSync(files)
 }

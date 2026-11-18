@@ -13,6 +13,8 @@ export interface BuildResult {
   mesh: Mesh
   /** Pieces printed separately in another filament and shown in place, which the preview colours apart. */
   inserts?: Mesh
+  /** Pieces in a third filament, shown in place in its own colour. */
+  third?: Mesh
   stats: BaseStats
 }
 

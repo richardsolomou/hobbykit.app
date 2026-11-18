@@ -1,6 +1,7 @@
 import { unzipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
-import { packPlates, SECOND_FILAMENT_COLOUR, to3mfPlates, type MeshLike } from './exporters'
+import { DEFAULT_FILAMENTS } from './filaments'
+import { needsBrim, packPlates, to3mf, to3mfPlates, type MeshLike } from './exporters'
 
 const PLATE = 256
 
@@ -54,16 +55,20 @@ describe('to3mfPlates', () => {
     { mesh: slab(40, 40), name: 'base-round-40mm' },
   ]
   const archive = unzipSync(
-    to3mfPlates(meshes, [
-      {
-        name: 'plate-1',
-        items: [
-          { object: 0, x: 10, y: 10 },
-          { object: 0, x: 50, y: 10 },
-        ],
-      },
-      { name: 'plate-2', items: [{ object: 1, x: 10, y: 10 }] },
-    ]),
+    to3mfPlates(
+      meshes,
+      [
+        {
+          name: 'plate-1',
+          items: [
+            { object: 0, x: 10, y: 10 },
+            { object: 0, x: 50, y: 10 },
+          ],
+        },
+        { name: 'plate-2', items: [{ object: 1, x: 10, y: 10 }] },
+      ],
+      DEFAULT_FILAMENTS,
+    ),
   )
   const model = new TextDecoder().decode(archive['3D/3dmodel.model'])
   const settings = new TextDecoder().decode(archive['Metadata/model_settings.config'])
@@ -96,10 +101,14 @@ describe('to3mfPlates with a second filament', () => {
     { mesh: slab(10, 10), name: 'counter-inserts', secondFilament: { mesh: slab(4, 4), name: 'counter-inserts-marks' } },
   ]
   const archive = unzipSync(
-    to3mfPlates(meshes, [
-      { name: 'counter', items: [{ object: 0, x: 10, y: 10 }] },
-      { name: 'counter-inserts', items: [{ object: 1, x: 10, y: 10 }] },
-    ]),
+    to3mfPlates(
+      meshes,
+      [
+        { name: 'counter', items: [{ object: 0, x: 10, y: 10 }] },
+        { name: 'counter-inserts', items: [{ object: 1, x: 10, y: 10 }] },
+      ],
+      DEFAULT_FILAMENTS,
+    ),
   )
   const text = (path: string) => new TextDecoder().decode(archive[path])
 
@@ -128,19 +137,63 @@ describe('to3mfPlates with a second filament', () => {
   })
 
   it('gives the second filament its own colour', () => {
-    expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toEqual(['#CBCED3', SECOND_FILAMENT_COLOUR])
+    expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toEqual([DEFAULT_FILAMENTS.body, DEFAULT_FILAMENTS.second])
   })
 
   it('names a Bambu printer, so Bambu Studio loads the project settings', () => {
-    expect(JSON.parse(text('Metadata/project_settings.config')).printer_model).toBe('Bambu Lab P2S')
+    expect(JSON.parse(text('Metadata/project_settings.config')).printer_model).toBe('Bambu Lab X2D')
   })
 
   it('counts the extruders, so Bambu Studio accepts the project settings', () => {
-    expect(JSON.parse(text('Metadata/project_settings.config')).nozzle_diameter).toEqual(['0.4'])
+    expect(JSON.parse(text('Metadata/project_settings.config')).nozzle_diameter).toEqual(['0.4', '0.4'])
   })
 
   it('declares one filament when nothing asks for the second', () => {
-    const plain = unzipSync(to3mfPlates([meshes[0]], [{ name: 'tens-drum', items: [{ object: 0, x: 10, y: 10 }] }]))
+    const plain = unzipSync(to3mfPlates([meshes[0]], [{ name: 'tens-drum', items: [{ object: 0, x: 10, y: 10 }] }], DEFAULT_FILAMENTS))
     expect(JSON.parse(new TextDecoder().decode(plain['Metadata/project_settings.config'])).filament_settings_id).toHaveLength(1)
+  })
+})
+
+describe('needsBrim', () => {
+  /** A box standing on the plate: `side` square and `height` tall, closed underneath. */
+  const box = (side: number, height: number): MeshLike => ({
+    numProp: 3,
+    vertProperties: new Float32Array([0, 0, 0, side, 0, 0, 0, side, 0, side, side, 0, 0, 0, height]),
+    triVerts: new Uint32Array([0, 2, 1, 1, 2, 3, 0, 1, 4]),
+  })
+
+  it('adds one to a part tall for what touches the plate', () => {
+    expect(needsBrim({ mesh: box(10, 5), name: 'dial' })).toBe(true)
+  })
+
+  it('leaves a part that sits broad on the plate alone', () => {
+    expect(needsBrim({ mesh: box(10, 2), name: 'side' })).toBe(false)
+  })
+
+  it('writes the brim into the project', () => {
+    const config = new TextDecoder().decode(
+      unzipSync(to3mf([{ mesh: box(10, 5), name: 'dial' }], DEFAULT_FILAMENTS))['Metadata/model_settings.config'],
+    )
+
+    expect(config).toContain('<metadata key="brim_type" value="outer_only"/><metadata key="brim_width" value="6"/>')
+  })
+})
+
+describe('project settings', () => {
+  const project = (colours = DEFAULT_FILAMENTS) =>
+    JSON.parse(
+      new TextDecoder().decode(unzipSync(to3mf([{ mesh: slab(30, 30), name: 'part' }], colours))['Metadata/project_settings.config']),
+    )
+
+  it('names both of the X2D nozzles', () => {
+    expect(project().nozzle_diameter).toEqual(['0.4', '0.4'])
+  })
+
+  it('writes the chosen body colour', () => {
+    expect(project({ ...DEFAULT_FILAMENTS, body: '#C12E1F' }).filament_colour).toEqual(['#C12E1F'])
+  })
+
+  it('keeps parts out of reach of the second nozzle', () => {
+    expect(packPlates([slab(30, 30)], [1])[0][0].x).toBeGreaterThanOrEqual(20.5 + 6)
   })
 })

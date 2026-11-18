@@ -1,3 +1,5 @@
+import { FilamentSwatches } from '@/components/FilamentSwatches'
+import type { FilamentColours } from '@/core/geometry/filaments'
 import { Box, Download, Link, PanelLeft, UnfoldHorizontal } from 'lucide-react'
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { BasePanel } from '@/components/panels/BasePanel'
@@ -69,6 +71,9 @@ import {
 
 type Generator = (typeof PAGES)[number]['value']
 
+/** A caddy is as deep as it is tall, and its near edges loom past a frame fitted to its largest side. */
+const COUNTER_FRAMING_SCALE = 1.4
+
 const modelForPath = (): Generator => PAGES.find((item) => item.href === window.location.pathname)?.value ?? 'base'
 const modelLabel = (model: Generator) =>
   model === 'base'
@@ -120,6 +125,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const setStem = (next: FlightStemConfig | ((current: FlightStemConfig) => FlightStemConfig)) =>
     setWorkspace((current) => ({ ...current, stem: typeof next === 'function' ? next(current.stem) : next }))
   const setCounter = (next: CounterConfig) => setWorkspace((current) => ({ ...current, counter: next }))
+  const setFilaments = (filaments: FilamentColours) => setWorkspace((current) => ({ ...current, filaments }))
   const patchToken = (changes: Partial<TokenConfig>) =>
     setWorkspace((current) => {
       const next = { ...current.token, ...changes }
@@ -346,6 +352,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     stem,
     token,
     counter,
+    filaments: workspace.filaments,
     width: partWidth,
     length: partLength,
     batch,
@@ -412,7 +419,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
   const resetSharedSettings: ResetAction = {
     label: 'shared settings',
     description:
-      'Magnet size and fit, pocket layout, magnet counts, wall thickness, magnet boss wall and the labels toggle return to their defaults on bases, holders, spray trays and dial counters.',
+      'Magnet size and fit, pocket layout, magnet counts, wall thickness, magnet boss wall and the labels toggle return to their defaults on bases, holders and spray trays.',
     onReset: () => {
       posthog.capture('settings_reset', { scope: 'shared' })
       setWorkspace(resetShared)
@@ -473,14 +480,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     ) : model === 'stem' ? (
       <StemPanel stem={stem} setStem={setStem} resets={[resetPart('stem', 'stem', false)]} />
     ) : model === 'counter' ? (
-      <CounterPanel
-        counter={counter}
-        setCounter={setCounter}
-        maxSharedMagnetThickness={maxSharedMagnetThickness}
-        maxSharedDepthClearance={maxSharedDepthClearance}
-        setSharedMagnets={setSharedMagnets}
-        resets={[resetPart('counter', 'dial counter', true), resetSharedSettings]}
-      />
+      <CounterPanel counter={counter} setCounter={setCounter} resets={[resetPart('counter', 'dial counter', false)]} />
     ) : (
       <TokenPanel
         token={token}
@@ -541,23 +541,26 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
             ))}
           </nav>
         </div>
-        <ButtonGroup>
-          {/* The labels fold away on a phone; the icons and the names still read out. */}
-          <Button size="sm" onClick={exportStl} disabled={!preview || exporting !== undefined}>
-            <Download />
-            <span className="max-sm:sr-only">
-              {exporting === 'stl' ? 'Building STL' : model === 'holder' && plan.modules.length > 1 ? 'Download STLs' : 'Download STL'}
-            </span>
-          </Button>
-          <Button size="sm" variant="outline" onClick={export3mf} disabled={!preview || exporting !== undefined}>
-            <Box />
-            <span className="max-sm:sr-only">{exporting === '3mf' ? 'Building 3MF' : 'Download 3MF'}</span>
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => void copyLink()}>
-            <Link />
-            <span className="max-sm:sr-only">Copy link</span>
-          </Button>
-        </ButtonGroup>
+        <div className="flex shrink-0 items-center gap-3">
+          <FilamentSwatches filaments={workspace.filaments} count={preview?.third ? 3 : preview?.inserts ? 2 : 1} onChange={setFilaments} />
+          <ButtonGroup>
+            {/* The labels fold away on a phone; the icons and the names still read out. */}
+            <Button size="sm" onClick={exportStl} disabled={!preview || exporting !== undefined}>
+              <Download />
+              <span className="max-sm:sr-only">
+                {exporting === 'stl' ? 'Building STL' : model === 'holder' && plan.modules.length > 1 ? 'Download STLs' : 'Download STL'}
+              </span>
+            </Button>
+            <Button size="sm" variant="outline" onClick={export3mf} disabled={!preview || exporting !== undefined}>
+              <Box />
+              <span className="max-sm:sr-only">{exporting === '3mf' ? 'Building 3MF' : 'Download 3MF'}</span>
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => void copyLink()}>
+              <Link />
+              <span className="max-sm:sr-only">Copy link</span>
+            </Button>
+          </ButtonGroup>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -566,6 +569,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
         <main className="relative min-w-0 flex-1">
           <Viewer
             viewKey={model}
+            filaments={workspace.filaments}
             mesh={preview}
             width={framed.width}
             length={framed.length}
@@ -574,6 +578,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
             orbitTarget={'orbitTarget' in framed ? framed.orbitTarget : undefined}
             round={model === 'stem' || (model === 'token' && token.shape === 'round') || (model === 'base' && !elongated)}
             fitToPart={model !== 'base'}
+            framingScale={model === 'counter' ? COUNTER_FRAMING_SCALE : undefined}
             leaders={!(explodable && exploded)}
             flipped={model === 'base' && config.texture.pattern !== 'none' && !isRelief(config.texture.pattern)}
           />

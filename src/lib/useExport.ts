@@ -19,6 +19,7 @@ import type {
   PartConfig,
   CounterConfig,
 } from '@/core/geometry/types'
+import type { FilamentColours } from '@/core/geometry/filaments'
 import { posthog } from 'posthog-js'
 import { batchFileName } from './batch'
 import { buildMesh } from './buildMesh'
@@ -41,6 +42,7 @@ interface ExportOptions {
   stem: FlightStemConfig
   token: TokenConfig
   counter: CounterConfig
+  filaments: FilamentColours
   width: number
   length: number
   batch: BatchPart[]
@@ -56,6 +58,7 @@ export function useExport({
   stem,
   token,
   counter,
+  filaments,
   width,
   length,
   batch,
@@ -147,12 +150,14 @@ export function useExport({
 
   const buildCounterParts = (parts = counterParts(counter)) =>
     Promise.all(
-      parts.map(async ({ part, name: partName }): Promise<ExportPart> => {
+      parts.map(async ({ part, name: partName, filament }): Promise<ExportPart> => {
         const mesh = await buildMesh({ ...counter, part, segments: exportSegmentsFor(counter.drumDiameter) })
         return {
           mesh: asMeshLike(mesh),
           name: `${name}-${partName}`,
+          ...(filament ? { filament } : {}),
           ...(mesh.inserts ? { secondFilament: { mesh: asMeshLike(mesh.inserts), name: `${name}-${partName}-marks` } } : {}),
+          ...(mesh.third ? { thirdFilament: { mesh: asMeshLike(mesh.third), name: `${name}-${partName}-digits` } } : {}),
         }
       }),
     )
@@ -180,9 +185,10 @@ export function useExport({
       }
       if (model === 'counter') {
         const parts = await buildCounterParts()
-        const files = parts.flatMap(({ mesh, name: partName, secondFilament }) => [
+        const files = parts.flatMap(({ mesh, name: partName, secondFilament, thirdFilament }) => [
           { mesh, name: partName },
           ...(secondFilament ? [secondFilament] : []),
+          ...(thirdFilament ? [thirdFilament] : []),
         ])
         download(`${name}.zip`, zipSync(Object.fromEntries(files.map((file) => [`${file.name}.stl`, toStl(file.mesh, file.name)]))))
         return
@@ -223,16 +229,19 @@ export function useExport({
   const export3mf = () =>
     run('3mf', async () => {
       if (rackPieces.length > 1) {
-        download(`${name}.3mf`, to3mf(await buildRackPieces(), true))
+        download(`${name}.3mf`, to3mf(await buildRackPieces(), filaments))
         return
       }
       if (model === 'painting') {
-        download(`${name}.3mf`, to3mf(await buildPaintingParts(), true))
+        download(`${name}.3mf`, to3mf(await buildPaintingParts(), filaments))
         return
       }
       if (model === 'counter') {
-        const bodies = await buildCounterParts(counterParts(counter).filter(({ part }) => part !== 'inserts'))
-        const layout = counter.inserts ? counterTileLayout(counter) : []
+        const pieces = counterParts(counter).filter(({ part }) => part !== 'inserts')
+        const built = await buildCounterParts(pieces)
+        const bodies = built.filter((_part, index) => pieces[index].part !== 'bracket')
+        const brackets = built.filter((_part, index) => pieces[index].part === 'bracket')
+        const layout = counter.digits === 'tiles' ? counterTileLayout(counter) : []
         const unique = [...new Set(layout.map(({ tile }) => tile))]
         const meshes = new Map(
           await Promise.all(
@@ -243,12 +252,12 @@ export function useExport({
                 tile,
                 segments: exportSegmentsFor(counter.drumDiameter),
               })
-              return [tile, { base: asMeshLike(mesh), mark: asMeshLike(mesh.inserts!) }] as const
+              return [tile, { base: asMeshLike(mesh), mark: asMeshLike((mesh.inserts ?? mesh.third)!) }] as const
             }),
           ),
         )
-        const { parts, plates } = counterProject(name, bodies, layout, (tile) => meshes.get(tile)!)
-        download(`${name}.3mf`, to3mfPlates(parts, plates))
+        const { parts, plates } = counterProject(name, bodies, brackets, layout, (tile) => meshes.get(tile)!, counter.digitFilament)
+        download(`${name}.3mf`, to3mfPlates(parts, plates, filaments))
         return
       }
       if (plan && plan.modules.length > 1) {
@@ -257,16 +266,16 @@ export function useExport({
           mesh: asMeshLike(mesh),
           name: `module-${index + 1}-${holderModuleName(plan.modules[index])}`,
         }))
-        download(`${name.replace(/^holder-/, `holders-${modules.length}-`)}.3mf`, to3mf(modules, true))
+        download(`${name.replace(/^holder-/, `holders-${modules.length}-`)}.3mf`, to3mf(modules, filaments))
         return
       }
       const mesh = await build()
       if (mesh.inserts) {
         const part = { mesh: asMeshLike(mesh), name, secondFilament: { mesh: asMeshLike(mesh.inserts), name: `${name}-artwork` } }
-        download(`${name}.3mf`, to3mf([part], true))
+        download(`${name}.3mf`, to3mf([part], filaments))
         return
       }
-      download(`${name}.3mf`, to3mf([{ mesh: asMeshLike(mesh), name }]))
+      download(`${name}.3mf`, to3mf([{ mesh: asMeshLike(mesh), name }], filaments))
     })
 
   const batchProperties = { sizes: batch.length, bases: batch.reduce((total, part) => total + part.quantity, 0) }
@@ -311,6 +320,7 @@ export function useExport({
           to3mfPlates(
             meshes,
             plates.map((items, index) => ({ name: plates.length === 1 ? batchName : `${batchName}-plate-${index + 1}`, items })),
+            filaments,
           ),
         )
       },
