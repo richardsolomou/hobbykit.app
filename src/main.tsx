@@ -9,13 +9,13 @@ const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root')
 
 // Taken before analytics starts, so a shared setup never reaches a captured URL.
-const sharedSetup = takeShareHash()
+const sharedLink = takeShareHash()
 initPostHog()
 
 createRoot(root).render(
   <PostHogIntegration>
     <AdvancedProvider>
-      <App sharedSetup={sharedSetup} />
+      <App sharedLink={sharedLink} />
     </AdvancedProvider>
   </PostHogIntegration>,
 )

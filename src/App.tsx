@@ -59,7 +59,8 @@ import { useGenerator } from '@/lib/useGenerator'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { PAGES } from '@/lib/pages'
 import { posthog } from 'posthog-js'
-import { shareLink } from '@/lib/shareLink'
+import { applyBase } from '@/lib/baseLink'
+import { shareLink, type SharedLink } from '@/lib/shareLink'
 import {
   applyWorkspaceSetup,
   loadWorkspace,
@@ -94,11 +95,16 @@ const modelLabel = (model: Generator) =>
 
 const SHARE_NOTICE_MS = 5000
 
-/** `sharedSetup` is an unvalidated setup decoded from a share link, laid over the saved workspace. */
-export function App({ sharedSetup }: { sharedSetup?: unknown }) {
+/** `sharedLink` is what a share or base link carried, laid over the saved workspace. */
+export function App({ sharedLink }: { sharedLink?: SharedLink }) {
   const [opened] = useState(() => {
     const saved = loadWorkspace(window.localStorage)
-    const shared = sharedSetup === undefined ? undefined : applyWorkspaceSetup(saved, sharedSetup)
+    const shared =
+      sharedLink === undefined
+        ? undefined
+        : 'base' in sharedLink
+          ? { workspace: applyBase(saved, sharedLink.base), part: 'base' as const }
+          : applyWorkspaceSetup(saved, sharedLink.setup)
     return {
       workspace: shared?.workspace ?? saved,
       model: shared ? PAGES.find((item) => item.part === shared.part)!.value : modelForPath(),
@@ -157,6 +163,9 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
       setTokenImageError(failure instanceof Error ? failure.message : String(failure))
     }
   }
+  useEffect(() => {
+    if (sharedLink && 'base' in sharedLink) posthog.capture('base_link_opened', { shape: sharedLink.base.shape })
+  }, [sharedLink])
   const dropTokenImage = useEffectEvent((file: File) => void addTokenImage(file))
   useEffect(() => {
     if (model !== 'token') return
