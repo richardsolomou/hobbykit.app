@@ -55,8 +55,8 @@ export function CounterPanel({ counter, setCounter, filaments, resets }: Props) 
   const automaticClick = automaticCounterClick(counter)
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Dial counter settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
-        <Section title="Layout">
+      <aside aria-label="Dial counter settings" className="relative flex min-h-full flex-col pb-4 [counter-reset:schedule]">
+        <Section title="Layout" first>
           <PictureChoice
             label="Layout"
             value={counter.layout}

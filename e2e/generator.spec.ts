@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { unzipSync } from 'fflate'
+import { skipTours } from '../scripts/skipTours'
 
 /** The drawing's title block carries the filename, the spec and the status. */
 const footer = (page: Page) => page.locator('footer')
@@ -71,10 +72,11 @@ test.beforeEach(async ({ page }) => {
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
   })
-  // Specs reach every setting; the one that tests hiding switches advanced settings off itself.
+  // Specs reach every setting and start past every tour; the ones that test hiding and touring undo that themselves.
   await page.addInitScript(() => {
     if (window.localStorage.getItem('hobbykit.advanced') === null) window.localStorage.setItem('hobbykit.advanced', 'true')
   })
+  await skipTours(page)
   await page.goto('/')
   await settled(page)
   // Surfaced at the end of every test rather than as its own case, so any spec
@@ -216,7 +218,7 @@ test('marks and resets a changed value to its default', { tag: '@ci' }, async ({
 })
 
 test('hides advanced settings until they are changed', async ({ page }) => {
-  const advanced = page.getByRole('button', { name: 'Advanced settings' })
+  const advanced = page.getByRole('switch', { name: 'Advanced settings' })
   const wall = page.getByLabel('Wall thickness in mm')
   await wall.fill('3')
   await wall.blur()
@@ -227,7 +229,7 @@ test('hides advanced settings until they are changed', async ({ page }) => {
   await page.getByRole('button', { name: 'Reset Wall thickness to 2.0 mm' }).click()
   await expect(wall).toHaveCount(0)
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Advanced settings' })).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByRole('switch', { name: 'Advanced settings' })).not.toBeChecked()
 })
 
 test('lets size-driven values follow the size without looking changed', async ({ page }) => {
@@ -1448,6 +1450,14 @@ test('keeps every generator clear of the name on a tablet', async ({ page }) => 
   }
 })
 
+test('never scrolls the page itself, only the panel', async ({ page }) => {
+  for (const link of await page.getByRole('navigation', { name: 'Generators' }).getByRole('link').all()) {
+    await link.click()
+    await settled(page)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(await page.evaluate(() => window.innerHeight))
+  }
+})
+
 test('fits a phone screen with every generator in reach', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360)
@@ -1495,6 +1505,167 @@ test('shows the crawler summary to a browser without JavaScript', async ({ brows
 
   await expect(page.getByRole('heading', { name: 'Gridfinity miniature holder generator' })).toBeVisible()
   await context.close()
+})
+
+/** A browser that has never seen a tour, with the invite on this generator taken up. */
+async function touring(browser: Browser, path: string, viewport = { width: 1280, height: 720 }) {
+  const fresh = await browser.newPage({ viewport })
+  await fresh.goto(path)
+  await fresh.getByRole('button', { name: /quick tour/i }).click()
+  return fresh
+}
+
+const tourTitle = (page: Page) => page.locator('.driver-popover-title')
+
+test('invites a tour rather than starting one over the part', async ({ browser }) => {
+  const fresh = await browser.newPage()
+  await fresh.goto('/paint-racks')
+  await expect(fresh.getByRole('button', { name: /quick tour/i })).toBeVisible()
+
+  await expect(fresh.locator('.driver-popover')).toHaveCount(0)
+  await fresh.close()
+})
+
+test('starts the tour from its invite', async ({ browser }) => {
+  const fresh = await touring(browser, '/paint-racks')
+
+  await expect(tourTitle(fresh)).toHaveText('Pieces')
+  await fresh.close()
+})
+
+test('stops inviting tours for the rest of the visit after Not now', async ({ browser }) => {
+  const fresh = await browser.newPage()
+  await fresh.goto('/paint-racks')
+  await fresh.getByRole('button', { name: 'Not now' }).click()
+  await fresh.getByRole('link', { name: 'Tokens' }).click()
+  await fresh.locator('[data-triangles]').waitFor()
+
+  await expect(fresh.getByRole('button', { name: /quick tour/i })).toHaveCount(0)
+  await fresh.close()
+})
+
+test('invites a tour again on the next visit after Not now', async ({ browser }) => {
+  const fresh = await browser.newPage()
+  await fresh.goto('/paint-racks')
+  await fresh.getByRole('button', { name: 'Not now' }).click()
+  await fresh.reload()
+
+  await expect(fresh.getByRole('button', { name: /quick tour/i })).toBeVisible()
+  await fresh.close()
+})
+
+test('starts a phone tour at the settings button', async ({ browser }) => {
+  const fresh = await touring(browser, '/', { width: 390, height: 844 })
+
+  await expect(tourTitle(fresh)).toHaveText('Settings')
+  await fresh.close()
+})
+
+test('resumes a tour at the step it was closed on', async ({ browser }) => {
+  const fresh = await touring(browser, '/paint-racks')
+  await fresh.locator('.driver-popover-next-btn').click()
+  await expect(tourTitle(fresh)).toHaveText('Cells')
+  await fresh.keyboard.press('Escape')
+  await fresh.getByRole('button', { name: 'Tour', exact: true }).click()
+
+  await expect(tourTitle(fresh)).toHaveText('Cells')
+  await fresh.close()
+})
+
+/** Clicks through the open tour and returns every step title it showed. */
+async function finishTour(page: Page) {
+  const titles: string[] = []
+  const next = page.locator('.driver-popover-next-btn')
+  await next.waitFor()
+  while (await next.count()) {
+    const title = (await tourTitle(page).textContent()) ?? ''
+    titles.push(title)
+    await next.click()
+    // A step on the other side of the drawer waits for it to slide before the popover moves on.
+    await expect.poll(async () => ((await tourTitle(page).count()) ? await tourTitle(page).textContent() : undefined)).not.toBe(title)
+  }
+  return titles
+}
+
+test('stops inviting once a tour has been started, even if closed early', async ({ browser }) => {
+  const fresh = await touring(browser, '/paint-racks')
+  await fresh.keyboard.press('Escape')
+
+  await expect(fresh.getByRole('complementary', { name: 'Tour' })).toHaveCount(0)
+  await fresh.close()
+})
+
+test('invites a returning visitor by the generator, not as a newcomer', async ({ browser }) => {
+  const fresh = await touring(browser, '/paint-racks')
+  await fresh.keyboard.press('Escape')
+  await fresh.goto('/stems')
+
+  await expect(fresh.getByRole('button', { name: 'Quick tour of the stems?' })).toBeVisible()
+  await fresh.close()
+})
+
+test('walks a phone through the settings inside the drawer', async ({ browser }) => {
+  const fresh = await touring(browser, '/', { width: 390, height: 844 })
+  await fresh.locator('.driver-popover-next-btn').click()
+
+  await expect(tourTitle(fresh)).toHaveText('Shape & Size')
+  await fresh.close()
+})
+
+test('closes the drawer again once a phone tour leaves the settings', async ({ browser }) => {
+  const fresh = await touring(browser, '/', { width: 390, height: 844 })
+  const titles = await finishTour(fresh)
+
+  expect(titles.slice(-3)).toEqual(['Preview', 'Colours', 'Download'])
+  await fresh.close()
+})
+
+test('leaves advanced-only sections out of the tour', async ({ browser }) => {
+  const fresh = await touring(browser, '/')
+
+  expect(await finishTour(fresh)).not.toContain('Magnet Fit')
+  await fresh.close()
+})
+
+test('starts a finished tour over', async ({ browser }) => {
+  const fresh = await touring(browser, '/paint-racks')
+  await finishTour(fresh)
+  await fresh.getByRole('button', { name: 'Tour', exact: true }).click()
+
+  await expect(tourTitle(fresh)).toHaveText('Pieces')
+  await fresh.close()
+})
+
+test('shows the steps every page shares in one tour only', async ({ browser }) => {
+  const fresh = await touring(browser, '/paint-racks')
+  await finishTour(fresh)
+  await fresh.goto('/stems')
+  await fresh.getByRole('button', { name: /quick tour/i }).click()
+
+  expect(await finishTour(fresh)).not.toContain('Preview')
+  await fresh.close()
+})
+
+test('replays a finished tour from the panel footer', async ({ page }) => {
+  await visit(page, 'Paint racks')
+  await page.getByRole('button', { name: 'Tour', exact: true }).click()
+
+  await expect(page.locator('.driver-popover-title')).toHaveText('Pieces')
+})
+
+test('closes the drawer before a phone tour starts', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Base settings' }).click()
+  await page.getByRole('button', { name: 'Tour', exact: true }).click()
+
+  await expect(page.locator('.driver-popover-title')).toHaveText('Settings')
+})
+
+test('returns from a guide to its generator', async ({ page }) => {
+  await page.goto('/guides/paint-racks')
+  await page.getByRole('link', { name: 'Open the paint racks generator' }).first().click()
+
+  await expect(page).toHaveURL(/\/paint-racks$/)
 })
 
 test.describe('explodes the parts that print apart', () => {

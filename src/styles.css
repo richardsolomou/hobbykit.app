@@ -6,6 +6,7 @@
 @import '@fontsource/barlow-semi-condensed/600.css';
 @import '@fontsource/azeret-mono/400.css';
 @import '@fontsource/azeret-mono/500.css';
+@import 'driver.js/dist/driver.css';
 
 /*
  * Workshop: a graphite sheet with chalk lettering and a red accent for
@@ -149,4 +150,49 @@
     repeating-linear-gradient(90deg, transparent 0 119px, var(--grid-major) 119px 120px),
     repeating-linear-gradient(0deg, transparent 0 23px, var(--grid-minor) 23px 24px),
     repeating-linear-gradient(90deg, transparent 0 23px, var(--grid-minor) 23px 24px);
+}
+
+/* driver.js draws the tour's popover outside React, so it is themed through its own class names. */
+.driver-popover.hobbykit-tour {
+  @apply max-w-80 rounded-none border-2 border-measure/50 bg-card p-4 font-sans text-card-foreground shadow-xl;
+
+  .driver-popover-title {
+    @apply note text-measure;
+  }
+
+  .driver-popover-description {
+    @apply text-sm leading-relaxed;
+  }
+
+  .driver-popover-progress-text {
+    @apply readout text-xs text-muted-foreground;
+  }
+
+  .driver-popover-close-btn {
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  .driver-popover-footer-btn {
+    @apply rounded-md border border-border bg-transparent px-2.5 py-1 font-sans text-xs text-foreground [text-shadow:none] hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .driver-popover-next-btn {
+    @apply border-primary bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .driver-popover-arrow-side-left {
+    border-left-color: var(--card);
+  }
+
+  .driver-popover-arrow-side-right {
+    border-right-color: var(--card);
+  }
+
+  .driver-popover-arrow-side-top {
+    border-top-color: var(--card);
+  }
+
+  .driver-popover-arrow-side-bottom {
+    border-bottom-color: var(--card);
+  }
 }

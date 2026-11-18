@@ -1,10 +1,23 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { PAGES } from './pages'
-import { llmsTxt, markdownPath, notFoundHtml, pageHtml, pageMarkdown, robotsTxt, sitemapXml, socialCardPath } from './seo'
+import { guidePath, PAGES } from './pages'
+import {
+  guidePageHtml,
+  guidesHtml,
+  llmsFullTxt,
+  llmsTxt,
+  markdownPath,
+  notFoundHtml,
+  pageHtml,
+  pageMarkdown,
+  robotsTxt,
+  sitemapXml,
+  socialCardPath,
+} from './seo'
 
 const TEMPLATE = '<html><head></head><body><div id="root"></div></body></html>'
 const holders = PAGES.find((page) => page.href === '/holders')!
+const GUIDE = '# Heading\n\nSlots sized to **their bases**.\n\n## Magnets\n\nPockets.\n'
 
 const structuredData = (html: string) =>
   JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]) as { '@graph': { '@type': string }[] }
@@ -53,8 +66,64 @@ describe('pageHtml', () => {
     expect(structuredData(pageHtml(TEMPLATE, holders))['@graph'].map((node) => node['@type'])).toContain('BreadcrumbList')
   })
 
+  it('describes the page itself in its structured data', () => {
+    expect(structuredData(pageHtml(TEMPLATE, holders))['@graph']).toContainEqual(
+      expect.objectContaining({ '@type': 'WebPage', url: 'https://hobbykit.app/holders', name: holders.title }),
+    )
+  })
+
+  it('links the generator to its guide', () => {
+    expect(pageHtml(TEMPLATE, holders)).toContain('href="/guides/holders"')
+  })
+
   it('gives the home page no breadcrumbs', () => {
     expect(structuredData(pageHtml(TEMPLATE, PAGES[0]))['@graph'].map((node) => node['@type'])).not.toContain('BreadcrumbList')
+  })
+})
+
+describe('guidePageHtml', () => {
+  const APP = '<html><head><script type="module" crossorigin src="/assets/app.js"></script></head><body><div id="root"></div></body></html>'
+
+  it('titles the guide after its generator', () => {
+    expect(guidePageHtml(APP, holders, GUIDE)).toContain('<title>Gridfinity miniature holder generator guide — HobbyKit</title>')
+  })
+
+  it('points the canonical link at the guide', () => {
+    expect(guidePageHtml(APP, holders, GUIDE)).toContain('<link rel="canonical" href="https://hobbykit.app/guides/holders" />')
+  })
+
+  it('renders the guide as visible content', () => {
+    expect(guidePageHtml(APP, holders, GUIDE)).toContain('<h2>Magnets</h2>')
+  })
+
+  it('leaves out the guide heading, which the page gives as its own', () => {
+    expect(guidePageHtml(APP, holders, GUIDE)).not.toContain('Heading')
+  })
+
+  it('does not start the app over the guide', () => {
+    expect(guidePageHtml(APP, holders, GUIDE)).not.toContain('<script type="module"')
+  })
+
+  it('links the guide to its generator', () => {
+    expect(guidePageHtml(APP, holders, GUIDE)).toContain('href="/holders"')
+  })
+
+  it('places the guide under the guides page in its breadcrumbs', () => {
+    expect(guidePageHtml(APP, holders, GUIDE)).toContain('"item":"https://hobbykit.app/guides"')
+  })
+})
+
+describe('guidesHtml', () => {
+  it('links every guide', () => {
+    expect(PAGES.filter((page) => !guidesHtml(TEMPLATE).includes(`href="${guidePath(page)}"`))).toEqual([])
+  })
+
+  it('answers common questions', () => {
+    expect(guidesHtml(TEMPLATE)).toContain('<h2>Common questions</h2>')
+  })
+
+  it('marks the questions up as an FAQ', () => {
+    expect(structuredData(guidesHtml(TEMPLATE))['@graph'].map((node) => node['@type'])).toContain('FAQPage')
   })
 })
 
@@ -69,8 +138,17 @@ describe('crawler files', () => {
     expect(robotsTxt()).toContain('Sitemap: https://hobbykit.app/sitemap.xml')
   })
 
-  it('lists every generator page in the sitemap', () => {
-    expect(sitemapXml().match(/<loc>/g)).toHaveLength(PAGES.length)
+  it('lists every generator page, every guide and the guides page in the sitemap', () => {
+    expect(sitemapXml().match(/<loc>/g)).toHaveLength(PAGES.length * 2 + 1)
+  })
+
+  it('links llms-full.txt from llms.txt', () => {
+    expect(llmsTxt()).toContain('(https://hobbykit.app/llms-full.txt)')
+  })
+
+  it('puts every generator guide in llms-full.txt', () => {
+    const full = llmsFullTxt(new Map(PAGES.map((page) => [page, `# ${page.title}\n`])))
+    expect(PAGES.filter((page) => !full.includes(`## ${page.title}\n`))).toEqual([])
   })
 
   it('links every generator guide from llms.txt', () => {

@@ -173,8 +173,8 @@ export function BasePanel({
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
       {/* Sections number themselves off this counter, in the order they appear. */}
-      <aside aria-label="Base settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
-        <Section title="Shape & Size">
+      <aside aria-label="Base settings" className="relative flex min-h-full flex-col pb-4 [counter-reset:schedule]">
+        <Section title="Shape & Size" first>
           <PictureChoice
             label="Shape"
             value={config.shape}

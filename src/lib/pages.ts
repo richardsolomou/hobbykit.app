@@ -80,3 +80,11 @@ export const PAGES = [
 ]
 
 export type Page = (typeof PAGES)[number]
+
+/** The page's name in its file paths; the base generator lives at `/` but its files need a name. */
+export const slug = (page: Page) => (page.href === '/' ? 'bases' : page.href.slice(1))
+
+export const GUIDES_PATH = '/guides'
+
+/** Where the generator's guide is served as a page of its own, readable without the app. */
+export const guidePath = (page: Page) => `${GUIDES_PATH}/${slug(page)}`

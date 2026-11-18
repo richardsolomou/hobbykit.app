@@ -1,22 +1,19 @@
 import { SlidersHorizontal } from 'lucide-react'
-import { Toggle } from '@/components/ui/toggle'
+import { useId } from 'react'
+import { Switch } from '@/components/ui/switch'
 import { useAdvanced } from '@/lib/advanced'
 
-/** Shows every setting, or only the main ones and whatever has been changed. */
-export function AdvancedToggle({ className = '' }: { className?: string }) {
+/** Shows every setting, or only the main ones and whatever has been changed. Sits in the panel's first heading, beside its readout. */
+export function AdvancedToggle() {
   const { shown, setShown } = useAdvanced()
+  const id = useId()
   return (
-    <Toggle
-      variant="outline"
-      size="sm"
-      pressed={shown}
-      onPressedChange={setShown}
-      aria-label="Advanced settings"
-      title={shown ? 'Showing every setting' : 'Fine-tuning hides until you change it'}
-      className={`bg-card/90 backdrop-blur-sm aria-pressed:border-measure/50 aria-pressed:text-measure ${className}`}
-    >
-      <SlidersHorizontal />
-      Advanced
-    </Toggle>
+    <span data-tour="advanced" className="flex shrink-0 items-center gap-1.5" title="Advanced settings">
+      <label htmlFor={id} className="cursor-pointer text-muted-foreground">
+        <SlidersHorizontal className="size-3.5" />
+        <span className="sr-only">Advanced settings</span>
+      </label>
+      <Switch id={id} size="sm" checked={shown} onCheckedChange={setShown} />
+    </span>
   )
 }

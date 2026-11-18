@@ -44,9 +44,10 @@ export function PaintingTrayPanel({
 }: Props) {
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Spray tray settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
+      <aside aria-label="Spray tray settings" className="relative flex min-h-full flex-col pb-4 [counter-reset:schedule]">
         <Section
           title="Magnet grid"
+          first
           aside={<span className="readout text-xs text-muted-foreground">{paintingTrayMagnetPocketCount(paintingTray)} holes</span>}
         >
           <Dimension
