@@ -330,8 +330,9 @@ export function Viewer({
       group.remove(child)
       if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) child.geometry.dispose()
     }
-    // A half turn about X maps z to -z, so lifting by the part's span lands it back where it was.
-    group.rotation.set(flipped ? Math.PI : 0, 0, 0)
+    // A half turn about Y maps z to -z, so lifting by the part's span lands it back where it was. Turning about Y
+    // rather than X mirrors x, the way a relief base's underside is built, so switching between them keeps it still.
+    group.rotation.set(0, flipped ? Math.PI : 0, 0)
     group.position.set(0, 0, flipped ? 2 * minZ + height : 0)
 
     const geometry = new THREE.BufferGeometry()
