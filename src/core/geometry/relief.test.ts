@@ -27,6 +27,7 @@ function relief(size: SizePreset, pattern: (typeof PATTERNS)[number] = 'rock', e
   const config = presetFor(size)
   return {
     ...config,
+    solid: true,
     texture: { pattern, seed: 1, ...DEFAULT_TEXTURE[pattern] },
     segments: exported ? exportSegmentsFor(Math.max(config.width, config.length)) : config.segments,
   }
@@ -175,6 +176,42 @@ describe('relief textures', () => {
 
   it('rejects magnet pockets that leave too little base above them', () => {
     const config = relief(ROUND_32)
-    expect(() => build({ ...config, height: 2.5 })).toThrow(/too little above them/)
+    expect(() => build({ ...config, height: 2.5 })).toThrow(/too little behind them/)
+  })
+})
+
+describe('hollow relief bases', () => {
+  const hollow = (size: SizePreset, pattern: (typeof PATTERNS)[number] = 'rock', exported = false): BaseConfig => ({
+    ...relief(size, pattern, exported),
+    solid: false,
+  })
+  const wellDepth = (config: BaseConfig) => config.height - config.floorThickness
+
+  it('opens the well onto the plate face, under the relief', () => {
+    expect(build(hollow(ROUND_32)).stats.volume).toBeLessThan(build(relief(ROUND_32)).stats.volume)
+  })
+
+  it('opens the magnet pocket onto the plate face, so the magnet sits flush with the tray', () => {
+    const config = hollow(ROUND_32)
+    expect(pocketCeiling(build(config).mesh, config)).toBeCloseTo(pocketDepth(config), 4)
+  })
+
+  it.for(SIZES)(
+    'stands its supports on the plate, leaving only the well, label and pocket ceilings overhanging on a $label base',
+    (size) => {
+      const config = hollow(size, 'rock', true)
+      const ceilings = [wellDepth(config), wellDepth(config) + config.label.emboss, pocketDepth(config)]
+      expect(overhangs(build(config).mesh)).toEqual(ceilings.map((z) => `flat at ${z.toFixed(2)}`).sort())
+    },
+  )
+
+  it.for(SIZES)('welds cleanly on a $label base', (size) => {
+    expect(duplicateVertices(build(hollow(size, 'rock', true)).mesh)).toBe(0)
+  })
+
+  it('engraves the size label into the well ceiling', () => {
+    const config = hollow(ROUND_SIZES[4])
+    const plain = build({ ...config, label: { ...config.label, enabled: false } })
+    expect(build(config).stats.volume).toBeLessThan(plain.stats.volume)
   })
 })

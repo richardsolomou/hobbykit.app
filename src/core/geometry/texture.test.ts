@@ -2,9 +2,9 @@ import type { Mesh } from 'manifold-3d'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { buildBase } from './base'
 import { loadManifold } from './manifold'
-import { OVAL_SIZES, POLYGON_SIZES, presetFor, RECT_SIZES, resized, ROUND_SIZES, type SizePreset } from './presets'
+import { fitToSize, OVAL_SIZES, POLYGON_SIZES, presetFor, RECT_SIZES, resized, ROUND_SIZES, type SizePreset } from './presets'
 import { exportSegmentsFor } from './quality'
-import { DEFAULT_TEXTURE, isRegular, maxTextureDepth, textureCells, withPattern } from './texture'
+import { DEFAULT_TEXTURE, isRegular, maxTextureDepth, solidWithPattern, textureCells, withPattern } from './texture'
 import type { BaseConfig, TexturePattern } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
@@ -119,7 +119,29 @@ describe('joint textures', () => {
   it('makes the joints shallower when a resize thins the top', () => {
     const large = presetFor(ROUND_SIZES[6])
     const config = { ...large, texture: { ...textured(ROUND_32).texture, depth: 1 } }
-    expect(resized(config, 32, 32).texture.depth).toBeCloseTo(maxTextureDepth({ floorThickness: 1, texture: config.texture }))
+    expect(resized(config, 32, 32).texture.depth).toBeCloseTo(maxTextureDepth({ ...resized(config, 32, 32), floorThickness: 1 }))
+  })
+
+  it('rejects joints on a solid base that cut too close to the magnet pockets', () => {
+    const config = { ...textured(ROUND_32), solid: true }
+    expect(() => build({ ...config, texture: { ...config.texture, depth: maxTextureDepth(config) + 0.1 } })).toThrow(
+      /too close to the magnet pockets/,
+    )
+  })
+
+  it('cuts joints on a solid base deeper than the floor of a hollow one allows', () => {
+    const config = { ...textured(ROUND_32), solid: true }
+    expect(maxTextureDepth(config)).toBeGreaterThan(config.floorThickness)
+  })
+
+  it('makes the joints on a solid base shallower when thicker magnets deepen the pockets', () => {
+    const config = { ...textured(ROUND_32), solid: true, texture: { ...textured(ROUND_32).texture, depth: 1.4 } }
+    const thicker = { ...config, magnets: { ...config.magnets, thickness: 3 } }
+    expect(fitToSize(thicker).texture.depth).toBeCloseTo(maxTextureDepth(thicker))
+  })
+
+  it.for(CASES)('roofs every joint of a solid $label base at 45° except its narrow apex', ({ pattern, size }) => {
+    expect([...overhangs(build({ ...textured(size, true, pattern), solid: true }).mesh)]).toEqual(['flat at 0.49'])
   })
 
   it.for(IRREGULAR)('lays %s out differently for another variation', (pattern) => {
@@ -147,5 +169,25 @@ describe('joint textures', () => {
 
   it('keeps a size the user set when the pattern changes', () => {
     expect(withPattern({ ...textured(ROUND_32).texture, scale: 12 }, 'plank').scale).toBe(12)
+  })
+
+  it('makes a base solid when a relief is picked', () => {
+    expect(solidWithPattern(false, 'flagstone', 'rock')).toBe(true)
+  })
+
+  it('makes a relief base hollow again when it goes back to joints', () => {
+    expect(solidWithPattern(true, 'rock', 'flagstone')).toBe(false)
+  })
+
+  it('leaves a base hollow when a joint pattern is picked', () => {
+    expect(solidWithPattern(false, 'none', 'flagstone')).toBe(false)
+  })
+
+  it('keeps a relief base hollow when the user chose that', () => {
+    expect(solidWithPattern(false, 'rock', 'snow')).toBe(false)
+  })
+
+  it('keeps a plain base solid when the user chose that', () => {
+    expect(solidWithPattern(true, 'none', 'flagstone')).toBe(true)
   })
 })

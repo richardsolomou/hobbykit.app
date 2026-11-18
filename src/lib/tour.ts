@@ -23,7 +23,7 @@ const SECTIONS: Record<Generator, [title: string, description: string][]> = {
       'The size is embossed inside the base, so a loose print still says what it is. Type your own text instead, like a unit name.',
     ],
     ['Texture', 'Cut paving or plating into the face the model stands on, or raise rocky ground. Every pattern prints without supports.'],
-    ['Body', 'Shape the bottom edge, and set how tall and thick the base is.'],
+    ['Body', 'Shape the bottom edge, set how tall the base is, and choose a solid body or a hollow one with supports.'],
     ['Batch', 'Queue other sizes with these settings and download them all at once.'],
   ],
   holder: [

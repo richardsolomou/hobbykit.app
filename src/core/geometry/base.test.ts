@@ -715,3 +715,69 @@ describe('scaling with the footprint', () => {
     }
   })
 })
+
+describe('solid bases', () => {
+  const solid = (config: BaseConfig): BaseConfig => ({ ...config, solid: true })
+  const bare = (config: BaseConfig): BaseConfig => ({
+    ...config,
+    magnets: { ...config.magnets, count: 0 },
+    label: { ...config.label, enabled: false },
+  })
+  /** Vertices strictly between the plate and the tray face, where a hollow base has its well floor. */
+  const between = (mesh: Mesh, height: number) => {
+    let found = 0
+    for (let i = 0; i < mesh.vertProperties.length; i += mesh.numProp) {
+      const z = mesh.vertProperties[i + 2]
+      if (z > 1e-6 && z < height - 1e-6) found++
+    }
+    return found
+  }
+
+  it('fills the well, leaving no face between the plate and the tray face', () => {
+    const config = solid(bare(preset(ROUND_32)))
+    expect(between(build(config).mesh, config.height)).toBe(0)
+  })
+
+  it('drills each pocket down from the tray face where a hollow base puts it', () => {
+    const config = solid({ ...preset(standardSize('round', '50')), label: { ...preset(ROUND_32).label, enabled: false } })
+    const pocketRadius = (config.magnets.diameter + config.magnets.clearance) / 2
+    const positions = magnetPositions(
+      config.magnets.count,
+      config.width / 2 - config.wallThickness,
+      config.length / 2 - config.wallThickness,
+      pocketRadius + config.magnets.bossWall + LABEL_MARGIN,
+    )
+    const { mesh } = build(config)
+    for (const [i, position] of positions.entries()) {
+      const pocket = pocketAt(mesh, position.x, position.y, pocketRadius)
+      expect([pocket.minZ, pocket.maxZ], `pocket ${i}`).toEqual([
+        expect.closeTo(config.height - config.magnets.thickness - config.magnets.depthClearance, 5),
+        expect.closeTo(config.height, 5),
+      ])
+    }
+  })
+
+  it('engraves the label into the tray face', () => {
+    const config = solid(preset(standardSize('round', '40')))
+    const plain = { ...config, label: { ...config.label, enabled: false } }
+    expect(build(config).stats.volume).toBeLessThan(build(plain).stats.volume)
+  })
+
+  it('keeps the label inside the tray face', () => {
+    const config = solid(preset(standardSize('round', '40')))
+    expect(bounds(build(config).mesh).max[2]).toBeCloseTo(config.height, 5)
+  })
+
+  it('welds cleanly', () => {
+    expect(duplicateVertices(build(solid(preset(ROUND_32))).mesh)).toBe(0)
+  })
+
+  it('takes an edge profile past the wall, since there is no well floor to sever', () => {
+    const config = solid({ ...preset(ROUND_32), wallThickness: 1 })
+    expect(maxProfileSize(config)).toBeCloseTo(3, 5)
+  })
+
+  it('rejects pockets that leave too little behind them', () => {
+    expect(() => build(solid({ ...preset(ROUND_32), height: 2.5 }))).toThrow(/too little behind them/)
+  })
+})

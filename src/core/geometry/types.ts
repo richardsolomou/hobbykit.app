@@ -93,6 +93,8 @@ export interface BaseConfig {
   /** Bevel/taper/round size, measured inwards from the top face. */
   profileSize: number
   wallThickness: number
+  /** Fills the well, leaving only the magnet pockets; relief bases are always solid. */
+  solid: boolean
   /** Material between the well floor and the table. */
   floorThickness: number
   magnets: MagnetSpec
