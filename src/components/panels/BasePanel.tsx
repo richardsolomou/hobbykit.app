@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { useTextSettingChanged } from '@/lib/analytics'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supportsFivePocketCross } from '@/core/geometry/base'
 import { labelText } from '@/core/geometry/label'
@@ -162,10 +163,10 @@ export function BasePanel({
   const setFootprint = (shape: ShapeKind, nextWidth: number, nextLength: number) =>
     setConfig(resized({ ...config, shape, label: { ...config.label } }, nextWidth, nextLength))
 
+  const labelTextReport = useTextSettingChanged('Label', 'Text')
   /** Keeps the size where the new shape is measured the same way, and otherwise starts from the shape's usual footprint. */
   const changeShape = (shape: ShapeKind) => {
     if (shape === config.shape) return
-    posthog.capture('base_shape_selected', { shape })
     if (isElongated(shape) === elongated) return setFootprint(shape, config.width, config.length)
     const target = DEFAULT_SIZE[shape]
     setFootprint(shape, target.width, target.length ?? target.width)
@@ -208,7 +209,6 @@ export function BasePanel({
             onChange={(label) => {
               const size = sizes.find((candidate) => candidate.label === label)
               if (!size) return
-              posthog.capture('base_size_selected', { size: size.label, shape: config.shape })
               setFootprint(config.shape, size.width, size.length ?? size.width)
             }}
           />
@@ -275,10 +275,7 @@ export function BasePanel({
             label="Labels"
             checked={config.label.enabled}
             defaultChecked={BASE_DEFAULTS.label.enabled}
-            onChange={(enabled) => {
-              posthog.capture('base_marking_toggled', { enabled })
-              setSharedLabels(enabled)
-            }}
+            onChange={setSharedLabels}
           />
           {config.label.enabled && (
             <>
@@ -291,6 +288,7 @@ export function BasePanel({
                   value={config.label.text ?? ''}
                   placeholder={defaultLabel(config)}
                   onChange={(e) => patch({ label: { ...config.label, text: labelText(e.currentTarget.value) } })}
+                  {...labelTextReport}
                   className="readout"
                 />
                 <FieldDescription>Leave empty to emboss the exact size.</FieldDescription>
@@ -328,7 +326,6 @@ export function BasePanel({
             options={TEXTURE_OPTIONS}
             columns={4}
             onChange={(pattern) => {
-              posthog.capture('base_texture_selected', { pattern })
               patch({
                 texture: withPattern(config.texture, pattern),
                 solid: solidWithPattern(config.solid, config.texture.pattern, pattern),
@@ -383,10 +380,7 @@ export function BasePanel({
                       action={{
                         label: 'Shuffle variation',
                         icon: <Shuffle />,
-                        onClick: () => {
-                          posthog.capture('base_texture_shuffled', { pattern: config.texture.pattern })
-                          patch({ texture: { ...config.texture, seed: 1 + Math.floor(Math.random() * MAX_SEED) } })
-                        },
+                        onClick: () => patch({ texture: { ...config.texture, seed: 1 + Math.floor(Math.random() * MAX_SEED) } }),
                       }}
                       onChange={(seed) => patch({ texture: { ...config.texture, seed } })}
                     />
@@ -414,15 +408,7 @@ export function BasePanel({
             automatic={follows('height')}
             onChange={(height) => setSized('height', height, { height })}
           />
-          <ToggleSetting
-            label="Solid"
-            checked={config.solid}
-            defaultChecked={faceUp}
-            onChange={(solid) => {
-              posthog.capture('base_solid_toggled', { solid })
-              patch({ solid })
-            }}
-          />
+          <ToggleSetting label="Solid" checked={config.solid} defaultChecked={faceUp} onChange={(solid) => patch({ solid })} />
           {hollow && (
             <Dimension
               label="Top thickness"
@@ -618,7 +604,10 @@ export function BasePanel({
                   size="icon-xs"
                   variant="ghost"
                   aria-label={`Remove ${text} from batch`}
-                  onClick={() => setBatch((current) => current.filter((_, entryIndex) => entryIndex !== index))}
+                  onClick={() => {
+                    posthog.capture('base_batch_size_removed', { sizes: batch.length - 1 })
+                    setBatch((current) => current.filter((_, entryIndex) => entryIndex !== index))
+                  }}
                 >
                   <Trash2 />
                 </Button>

@@ -1,5 +1,5 @@
 import { RotateCcw } from 'lucide-react'
-import { useId, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
 import { Radio } from '@base-ui/react/radio'
@@ -7,6 +7,7 @@ import { RadioGroup } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useHidden } from '@/lib/advanced'
+import { SectionContext, useSettingChanged } from '@/lib/analytics'
 import { sectionTarget } from '@/lib/tour'
 import { AdvancedToggle } from '@/components/AdvancedToggle'
 
@@ -42,7 +43,9 @@ export function Section({
           aside
         )}
       </div>
-      <FieldGroup className="gap-3">{children}</FieldGroup>
+      <FieldGroup className="gap-3">
+        <SectionContext value={title}>{children}</SectionContext>
+      </FieldGroup>
     </FieldSet>
   )
 }
@@ -126,6 +129,9 @@ export function Dimension({
   const formatted = format(value)
   const modified = defaultValue !== undefined && value !== defaultValue
   const hidden = useHidden(advanced, modified)
+  const report = useSettingChanged(label, advanced)
+  /** The value when the input took focus, so typing reports once, when it is left. */
+  const focusedAt = useRef(value)
 
   /**
    * Listeners go on at pointerdown rather than through an effect: setting a ref
@@ -138,10 +144,15 @@ export function Dimension({
     const startX = event.clientX
     const from = value
     const span = (max - min) / 240 // a full sweep in roughly one panel width
-    const move = (moved: PointerEvent) => onChange(clamp(quantise(from + (moved.clientX - startX) * span, step), min, max))
+    let last = from
+    const move = (moved: PointerEvent) => {
+      last = clamp(quantise(from + (moved.clientX - startX) * span, step), min, max)
+      onChange(last)
+    }
     const stop = () => {
       document.removeEventListener('pointermove', move)
       document.body.style.cursor = ''
+      if (last !== from) report({ method: 'scrubbed', value: last, defaultValue })
     }
     document.body.style.cursor = 'ew-resize'
     document.addEventListener('pointermove', move)
@@ -156,7 +167,11 @@ export function Dimension({
 
   const finish = (raw: string) => {
     const parsed = Number.parseFloat(raw)
-    if (Number.isFinite(parsed)) onChange(clamp(quantise(parsed, step), min, max))
+    if (Number.isFinite(parsed)) {
+      const next = clamp(quantise(parsed, step), min, max)
+      onChange(next)
+      if (next !== focusedAt.current) report({ method: 'typed', value: next, defaultValue })
+    }
     setText(undefined)
   }
 
@@ -190,6 +205,7 @@ export function Dimension({
               onReset={() => {
                 setText(undefined)
                 onChange(defaultValue)
+                report({ method: 'reset', value: defaultValue, defaultValue })
               }}
             />
           </ResetSlot>
@@ -206,6 +222,7 @@ export function Dimension({
             step={step}
             disabled={disabled}
             onChange={(event) => change(event.currentTarget.value)}
+            onFocus={() => (focusedAt.current = value)}
             onBlur={(event) => finish(event.currentTarget.value)}
             onKeyDown={(event) => event.key === 'Enter' && event.preventDefault()}
             className="readout text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
@@ -225,6 +242,7 @@ export function Dimension({
                 onClick={() => {
                   setText(undefined)
                   action.onClick()
+                  report({ method: 'action' })
                 }}
               >
                 {action.icon}
@@ -276,6 +294,7 @@ export function PictureChoice<T extends string | number>({
   const id = useId()
   const modified = defaultValue !== undefined && value !== defaultValue
   const hidden = useHidden(advanced, modified)
+  const report = useSettingChanged(label, advanced)
   if (options.length <= 1 || hidden) return null
   const defaultLabel = options.find((option) => option.value === defaultValue)?.label ?? String(defaultValue)
   return (
@@ -284,7 +303,16 @@ export function PictureChoice<T extends string | number>({
         <FieldLabel id={id} className={`font-normal ${modified ? 'text-modified' : ''}`}>
           {label}
         </FieldLabel>
-        {modified && !disabled && <ResetButton label={label} value={defaultLabel} onReset={() => onChange(defaultValue)} />}
+        {modified && !disabled && (
+          <ResetButton
+            label={label}
+            value={defaultLabel}
+            onReset={() => {
+              onChange(defaultValue)
+              report({ method: 'reset', value: defaultValue, defaultValue })
+            }}
+          />
+        )}
       </div>
       <RadioGroup
         aria-labelledby={id}
@@ -292,7 +320,9 @@ export function PictureChoice<T extends string | number>({
         value={String(value)}
         onValueChange={(next) => {
           const picked = options.find((option) => String(option.value) === String(next))
-          if (picked) onChange(picked.value)
+          if (!picked) return
+          onChange(picked.value)
+          report({ method: 'picked', value: picked.value, defaultValue })
         }}
         className={GRID_COLUMNS[columns]}
       >
@@ -320,12 +350,15 @@ export function PictureChoice<T extends string | number>({
 
 export function CompactChoice<T extends string | number>({ label, value, options, onChange }: Omit<ChoiceProps<T>, 'defaultValue'>) {
   const selectedLabel = options.find((option) => option.value === value)?.label ?? String(value)
+  const report = useSettingChanged(label)
   return (
     <Select
       value={String(value)}
       onValueChange={(next) => {
         const picked = options.find((option) => String(option.value) === String(next))
-        if (picked) onChange(picked.value)
+        if (!picked) return
+        onChange(picked.value)
+        report({ method: 'picked', value: picked.value })
       }}
     >
       <SelectTrigger aria-label={label} className="w-full min-w-0">
@@ -360,7 +393,12 @@ export function ToggleSetting({
 }) {
   const id = useId()
   const modified = checked !== defaultChecked
+  const report = useSettingChanged(label, advanced)
   if (useHidden(advanced, modified)) return null
+  const toggle = (next: boolean, method: 'toggled' | 'reset') => {
+    onChange(next)
+    report({ method, value: next, defaultValue: defaultChecked })
+  }
   return (
     <Field orientation="horizontal">
       <div className={settingColumns}>
@@ -369,11 +407,11 @@ export function ToggleSetting({
         </FieldLabel>
         {modified && (
           <ResetSlot>
-            <ResetButton label={label} value={defaultChecked ? 'on' : 'off'} onReset={() => onChange(defaultChecked)} />
+            <ResetButton label={label} value={defaultChecked ? 'on' : 'off'} onReset={() => toggle(defaultChecked, 'reset')} />
           </ResetSlot>
         )}
         <div className="flex w-28 justify-start">
-          <Switch id={id} checked={checked} onCheckedChange={onChange} className="ms-px" />
+          <Switch id={id} checked={checked} onCheckedChange={(next) => toggle(next, 'toggled')} className="ms-px" />
         </div>
       </div>
     </Field>
@@ -402,6 +440,7 @@ export function StandardSizes({
   label?: string
 }) {
   const id = useId()
+  const report = useSettingChanged('Standard size')
   const selected = options.find((option) => option.value === value)
   const wide = options.some((option) => (option.label ?? option.value).length > 5)
   return (
@@ -412,7 +451,10 @@ export function StandardSizes({
       <RadioGroup
         aria-label={label}
         value={value ?? null}
-        onValueChange={(next) => onChange(String(next))}
+        onValueChange={(next) => {
+          onChange(String(next))
+          report({ method: 'picked', value: String(next) })
+        }}
         className={wide ? 'grid-cols-3 gap-1' : 'grid-cols-5 gap-1'}
       >
         {options.map((option) => (
@@ -454,6 +496,7 @@ export function SizeSelect({
   compact?: boolean
 }) {
   const id = useId()
+  const report = useSettingChanged('Size')
   const selected = options.find((option) => option.value === value)
   return (
     <Field orientation={compact ? undefined : 'horizontal'} className={compact ? 'min-w-0' : undefined}>
@@ -463,7 +506,13 @@ export function SizeSelect({
             Size
           </FieldLabel>
         )}
-        <Select value={value} onValueChange={(next) => onChange(String(next))}>
+        <Select
+          value={value}
+          onValueChange={(next) => {
+            onChange(String(next))
+            report({ method: 'picked', value: String(next) })
+          }}
+        >
           <SelectTrigger id={id} aria-label={label} className={compact ? 'w-full min-w-0' : 'w-28'}>
             <SelectValue>
               <span className="readout shrink-0">{selected?.label ?? selected?.value ?? 'Custom'}</span>
