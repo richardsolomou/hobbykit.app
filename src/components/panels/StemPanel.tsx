@@ -24,7 +24,7 @@ interface Props {
 export function StemPanel({ stem, setStem, resets }: Props) {
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Stem settings" className="pb-4 [counter-reset:schedule]">
+      <aside aria-label="Stem settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
         <Section
           title="Stem"
           aside={<span className="readout text-xs text-muted-foreground">{trimNumber(stemOverallHeight(stem))}mm overall</span>}
@@ -42,6 +42,7 @@ export function StemPanel({ stem, setStem, resets }: Props) {
           />
           <Dimension
             label="Body diameter"
+            advanced
             value={stem.bodyDiameter}
             min={stemNeckDiameter(stem)}
             max={8}
@@ -84,6 +85,7 @@ export function StemPanel({ stem, setStem, resets }: Props) {
               />
               <Dimension
                 label="Model peg length"
+                advanced
                 value={stem.modelPegLength}
                 min={1}
                 max={8}

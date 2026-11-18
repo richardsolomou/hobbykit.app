@@ -604,9 +604,22 @@ describe('scaling with the footprint', () => {
     expect(resized(large, 60, 60)).toMatchObject({ height: 4, floorThickness: 1 })
   })
 
-  it('preserves manually changed construction values while resizing', () => {
-    const base = { ...presetFor(standardSize('round', '32')), height: 5, floorThickness: 1.3 }
+  it('keeps construction values set by hand while resizing', () => {
+    const base = {
+      ...presetFor(standardSize('round', '32')),
+      height: 5,
+      floorThickness: 1.3,
+      pinned: ['height' as const, 'floorThickness' as const],
+    }
     expect(resized(base, 65, 65)).toMatchObject({ height: 5, floorThickness: 1.3 })
+  })
+
+  it('refits every size-driven value nobody set by hand while resizing', () => {
+    expect(resized(presetFor(standardSize('round', '32')), 65, 65)).toMatchObject({
+      height: presetFor({ label: '65', shape: 'round', width: 65, use: '' }).height,
+      floorThickness: 1.5,
+      label: { height: 8 },
+    })
   })
 
   it('uses the lower supported row count when transverse demand falls between counts', () => {

@@ -104,6 +104,12 @@
     @apply h-full;
   }
 
+  /* The page never pans sideways: a popup measured off the edge before it is placed made a phone scroll the whole page with it. */
+  html,
+  body {
+    @apply overflow-x-clip;
+  }
+
   body {
     @apply m-0 bg-background font-sans text-foreground antialiased;
   }

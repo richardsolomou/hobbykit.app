@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
+import { AdvancedProvider } from './lib/advanced'
 import { initPostHog, PostHogIntegration } from './client/posthog'
 import { takeShareHash } from './lib/shareLink'
 import './styles.css'
@@ -13,6 +14,8 @@ initPostHog()
 
 createRoot(root).render(
   <PostHogIntegration>
-    <App sharedSetup={sharedSetup} />
+    <AdvancedProvider>
+      <App sharedSetup={sharedSetup} />
+    </AdvancedProvider>
   </PostHogIntegration>,
 )

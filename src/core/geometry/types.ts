@@ -101,7 +101,12 @@ export interface BaseConfig {
   texture: TextureSpec
   /** Segments per full circle, so curves stay smooth at print scale. */
   segments: number
+  /** Size-driven settings someone set by hand; every other one follows the footprint. */
+  pinned: BasePinned[]
 }
+
+/** The settings whose default depends on the footprint. */
+export type BasePinned = 'height' | 'floorThickness' | 'cornerRadius' | 'labelHeight' | 'ribs'
 
 export interface BaseStats {
   triangles: number
@@ -314,6 +319,8 @@ export interface CounterConfig {
   clearance: number
   /** How deep the troughs between the axle's lobes are, which is how far each spring arm flexes as a count passes. */
   click: number
+  /** Settings someone set by hand; the click otherwise follows the wheel's size. */
+  pinned: 'click'[]
   segments: number
   /** Export-only: build one part flat on the plate instead of the assembly. */
   part?: CounterPart

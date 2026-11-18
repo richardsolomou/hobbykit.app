@@ -9,10 +9,16 @@ import { supportsFivePocketCross } from '../core/geometry/base'
 import { defaultPaintRackConfig } from '../core/geometry/paintRack'
 import { defaultTokenConfig } from '../core/geometry/token'
 import { TEXTURE_PATTERNS } from '../core/geometry/texture'
-import { automaticMagnetCount, DEFAULT_PRESET, footprintKey, presetFor, ribCountFor } from '../core/geometry/presets'
+import { automaticMagnetCount, DEFAULT_PRESET, fitToSize, footprintKey, presetFor, sizeDefaults } from '../core/geometry/presets'
 import { defaultFlightStemConfig } from '../core/geometry/stem'
 import { DEFAULT_FILAMENTS, isPlaBasicColour, type FilamentColours } from '../core/geometry/filaments'
-import { defaultCounterConfig, maximumCounterClick, MIN_COUNTER_CLICK, MINIMUM_COUNTER_DRUM_DIAMETER } from '../core/geometry/counter'
+import {
+  automaticCounterClick,
+  defaultCounterConfig,
+  maximumCounterClick,
+  MIN_COUNTER_CLICK,
+  MINIMUM_COUNTER_DRUM_DIAMETER,
+} from '../core/geometry/counter'
 import type {
   BaseConfig,
   FlightStemConfig,
@@ -25,7 +31,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 26
+const WORKSPACE_VERSION = 27
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -113,10 +119,12 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
           shared.magnets.diameter,
           shared.magnets.thickness,
         ))
+  // A five-pocket cross always takes four supports; the legacy pattern kept whatever supports were set.
+  const pins = state.base.pinned.filter((pin) => !(fiveCross && pin === 'ribs'))
   return {
     ...state,
     counter: fittedCounter(state.counter),
-    base: {
+    base: fitToSize({
       ...state.base,
       wallThickness: shared.wallThickness,
       label: { ...state.base.label, enabled: shared.labelsEnabled },
@@ -127,17 +135,8 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
         bossWall: shared.magnetBossWall,
         count: count ?? state.base.magnets.count,
       },
-      ribs: {
-        ...state.base.ribs,
-        count: fiveCross
-          ? 4
-          : legacyPattern
-            ? state.base.ribs.count
-            : count !== state.base.magnets.count
-              ? ribCountFor(state.base.width, state.base.length, count)
-              : state.base.ribs.count,
-      },
-    },
+      pinned: legacyPattern && !fiveCross && !pins.includes('ribs') ? [...pins, 'ribs'] : pins,
+    }),
     holder: {
       ...state.holder,
       baseWallThickness: shared.wallThickness,
@@ -156,10 +155,14 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
   }
 }
 
-/** A click past what the arms can flex is capped, and the wheel grown to fit its digits and arms. */
+/** The wheel grown to fit its digits and arms, and its click following its size unless set by hand, which is capped at what the arms can flex. */
 function fittedCounter(counter: CounterConfig): CounterConfig {
-  const click = Math.min(counter.click, Math.max(maximumCounterClick(counter), MIN_COUNTER_CLICK))
-  return { ...counter, click, grip: Math.max(0, counter.grip), drumDiameter: atLeast(counter.drumDiameter, MINIMUM_COUNTER_DRUM_DIAMETER) }
+  const drumDiameter = atLeast(counter.drumDiameter, MINIMUM_COUNTER_DRUM_DIAMETER)
+  const sized = { ...counter, drumDiameter }
+  const click = counter.pinned.includes('click')
+    ? Math.min(counter.click, Math.max(maximumCounterClick(sized), MIN_COUNTER_CLICK))
+    : automaticCounterClick(sized)
+  return { ...sized, click, grip: Math.max(0, counter.grip) }
 }
 
 export function defaultWorkspace(): WorkspaceState {
@@ -215,6 +218,7 @@ const MIGRATIONS = [
   migrateWorkspaceV23,
   migrateWorkspaceV24,
   migrateWorkspaceV25,
+  migrateWorkspaceV26,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -293,6 +297,31 @@ export function applyWorkspaceSetup(
   const kept = Object.entries(workspace.shared.magnetCounts).filter(([footprint]) => !replaced.includes(footprint))
   const magnetCounts = { ...Object.fromEntries(kept), ...candidate.shared.magnetCounts }
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
+}
+
+/**
+ * Size-driven settings learnt whether they follow the footprint. One saved away from what its size gives was set by
+ * hand, so it stays pinned; the rest follow the size from now on. The counter's click likewise.
+ */
+function migrateWorkspaceV26(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  const base = workspace.base as BaseConfig | undefined
+  const counter = workspace.counter as CounterConfig | undefined
+  if (typeof base !== 'object' || base === null || typeof counter !== 'object' || counter === null) return value
+  const auto = sizeDefaults(base)
+  const saved = {
+    height: base.height,
+    floorThickness: base.floorThickness,
+    cornerRadius: base.cornerRadius,
+    labelHeight: base.label?.height,
+    ribs: base.ribs?.count,
+  }
+  const pinned = (Object.keys(saved) as (keyof typeof saved)[]).filter(
+    (key) => typeof saved[key] === 'number' && Math.abs(saved[key] - auto[key]) > 1e-9,
+  )
+  const clickPinned = typeof counter.click === 'number' && Math.abs(counter.click - automaticCounterClick(counter)) > 1e-9
+  return { ...workspace, base: { ...base, pinned }, counter: { ...counter, pinned: clickPinned ? ['click'] : [] } }
 }
 
 /** The enclosure became the default counter layout. */
@@ -535,6 +564,8 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
     workspace.counter.kind === 'counter' &&
     ['centre', 'hubs', 'knobs', 'enclosure'].includes(workspace.counter.layout) &&
     ['tiles', 'printed', 'engraved'].includes(workspace.counter.digits) &&
+    workspace.base.pinned.every((key) => ['height', 'floorThickness', 'cornerRadius', 'labelHeight', 'ribs'].includes(key)) &&
+    workspace.counter.pinned.every((key) => key === 'click') &&
     Object.values(workspace.filaments).every(isPlaBasicColour) &&
     workspace.paintRack.kind === 'paint-rack' &&
     workspace.paintRack.items.length > 0 &&

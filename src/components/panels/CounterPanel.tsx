@@ -4,17 +4,23 @@ import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { FilamentColours } from '@/core/geometry/filaments'
 import type { CounterConfig } from '@/core/geometry/types'
-import { defaultCounterConfig, maximumCounterClick, MIN_COUNTER_CLICK, MINIMUM_COUNTER_DRUM_DIAMETER } from '@/core/geometry/counter'
+import {
+  automaticCounterClick,
+  defaultCounterConfig,
+  maximumCounterClick,
+  MIN_COUNTER_CLICK,
+  MINIMUM_COUNTER_DRUM_DIAMETER,
+} from '@/core/geometry/counter'
 import { tenthAbove } from '@/lib/workspace'
 import { PanelFooter, type ResetAction } from './shared'
 
 const COUNTER_DEFAULTS = defaultCounterConfig()
-/** Each with a click to suit, because a bigger dial's arms are stiffer and its troughs deeper. */
+/** Shortcuts for the wheel diameter; the click follows the diameter on its own. */
 const SIZES = [
-  { value: 39.6, label: 'Full size', click: 1.5 },
-  { value: 32, label: 'Medium', click: 1.2 },
-  { value: 24, label: 'Small', click: 0.9 },
-  { value: 18, label: 'Smallest', click: 0.7 },
+  { value: 39.6, label: 'Full size' },
+  { value: 32, label: 'Medium' },
+  { value: 24, label: 'Small' },
+  { value: 18, label: 'Smallest' },
 ].map((size) => ({ ...size, picture: counterSizePicture(size.value) }))
 
 const LAYOUTS = [
@@ -45,9 +51,11 @@ interface Props {
 
 export function CounterPanel({ counter, setCounter, filaments, resets }: Props) {
   const patch = (changes: Partial<CounterConfig>) => setCounter({ ...counter, ...changes })
+  /** What the click is at this wheel size until someone sets it by hand. */
+  const automaticClick = automaticCounterClick(counter)
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Dial counter settings" className="pb-4 [counter-reset:schedule]">
+      <aside aria-label="Dial counter settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
         <Section title="Layout">
           <PictureChoice
             label="Layout"
@@ -59,6 +67,7 @@ export function CounterPanel({ counter, setCounter, filaments, resets }: Props) 
           />
           <Dimension
             label="Grip"
+            advanced
             value={counter.grip}
             min={0}
             max={15}
@@ -73,27 +82,22 @@ export function CounterPanel({ counter, setCounter, filaments, resets }: Props) 
             label="Size"
             value={counter.drumDiameter}
             defaultValue={COUNTER_DEFAULTS.drumDiameter}
-            columns={SIZES.some(({ value }) => value === counter.drumDiameter) ? 4 : 5}
-            options={
-              SIZES.some(({ value }) => value === counter.drumDiameter)
-                ? SIZES
-                : [...SIZES, { value: counter.drumDiameter, label: 'Custom', picture: counterSizePicture(counter.drumDiameter) }]
-            }
-            onChange={(drumDiameter) =>
-              patch({ drumDiameter, click: SIZES.find(({ value }) => value === drumDiameter)?.click ?? counter.click })
-            }
+            columns={4}
+            options={SIZES}
+            onChange={(drumDiameter) => patch({ drumDiameter })}
           />
           <Dimension
             label="Wheel diameter"
+            advanced={SIZES.some(({ value }) => value === counter.drumDiameter)}
             value={counter.drumDiameter}
             min={tenthAbove(MINIMUM_COUNTER_DRUM_DIAMETER)}
             max={40}
             step={0.1}
-            defaultValue={COUNTER_DEFAULTS.drumDiameter}
             onChange={(drumDiameter) => patch({ drumDiameter })}
           />
           <Dimension
             label="Fit clearance"
+            advanced
             value={counter.clearance}
             min={0.1}
             max={0.4}
@@ -103,15 +107,18 @@ export function CounterPanel({ counter, setCounter, filaments, resets }: Props) 
           />
           <Dimension
             label="Click"
+            advanced
             value={counter.click}
             min={MIN_COUNTER_CLICK}
             max={maximumCounterClick(counter)}
             step={0.05}
-            defaultValue={COUNTER_DEFAULTS.click}
-            onChange={(click) => patch({ click })}
+            defaultValue={automaticClick}
+            automatic={!counter.pinned.includes('click')}
+            onChange={(click) => patch({ click, pinned: Math.abs(click - automaticClick) < 1e-9 ? [] : ['click'] })}
           />
           <FieldDescription>
-            Size scales the whole caddy and keeps the fit the same. Turn a dial to count, and raise the click if the dials turn too easily.
+            Size scales the whole counter and keeps the fit the same. The click grows with the wheels; raise it if the dials turn too
+            easily.
           </FieldDescription>
         </Section>
 
@@ -126,6 +133,7 @@ export function CounterPanel({ counter, setCounter, filaments, resets }: Props) 
           {counter.digits !== 'engraved' && (
             <PictureChoice
               label="Digit filament"
+              advanced
               value={counter.digitFilament}
               defaultValue={COUNTER_DEFAULTS.digitFilament}
               options={[
@@ -139,6 +147,7 @@ export function CounterPanel({ counter, setCounter, filaments, resets }: Props) 
           {counter.digits === 'tiles' && (
             <Dimension
               label="Insert clearance"
+              advanced
               value={counter.insertClearance}
               min={0}
               max={0.2}

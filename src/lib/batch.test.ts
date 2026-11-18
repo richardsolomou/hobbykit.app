@@ -40,7 +40,7 @@ describe('batch base settings', () => {
   it('changes only the footprint of the current base settings', () => {
     const workspace = synchronizeWorkspace({
       ...defaultWorkspace(),
-      base: { ...defaultWorkspace().base, height: 5, profile: 'bevel', ribs: { count: 4, thickness: 2, height: 1.5 } },
+      base: { ...defaultWorkspace().base, height: 5, profile: 'bevel', ribs: { count: 4, thickness: 2, height: 1.5 }, pinned: ['height'] },
     })
     expect(batchBaseConfig(workspace, { shape: 'oval', width: 75, length: 42, quantity: 1 })).toMatchObject({
       shape: 'oval',

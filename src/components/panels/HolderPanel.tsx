@@ -76,7 +76,7 @@ export function HolderPanel({
 
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Holder settings" className="pb-4 [counter-reset:schedule]">
+      <aside aria-label="Holder settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
         <Section
           title="Miniatures"
           aside={
@@ -103,6 +103,7 @@ export function HolderPanel({
         >
           <Dimension
             label="Maximum columns"
+            advanced
             value={holder.maxColumns}
             min={1}
             max={12}
@@ -113,6 +114,7 @@ export function HolderPanel({
           />
           <Dimension
             label="Maximum rows"
+            advanced
             value={holder.maxRows}
             min={1}
             max={12}
@@ -123,6 +125,7 @@ export function HolderPanel({
           />
           <Dimension
             label="Between miniatures"
+            advanced
             value={holder.spacing}
             min={0}
             max={10}
@@ -138,6 +141,7 @@ export function HolderPanel({
           />
           <Dimension
             label="From holder edge"
+            advanced
             value={holder.edgeSpacing}
             min={MIN_EDGE_SPACING}
             max={10}
@@ -188,6 +192,7 @@ export function HolderPanel({
           />
           <Dimension
             label="Slot clearance"
+            advanced
             value={holder.slotClearance}
             min={0.1}
             max={2}
@@ -204,6 +209,7 @@ export function HolderPanel({
           {holder.engraving.enabled && (
             <PictureChoice
               label="Label location"
+              advanced
               value={holder.engraving.placement}
               defaultValue={HOLDER_DEFAULTS.engraving.placement}
               options={ENGRAVING_PLACEMENTS}
@@ -231,6 +237,7 @@ export function HolderPanel({
             <>
               <PictureChoice
                 label="Pocket layout"
+                advanced
                 value={holderMagnetLayout}
                 defaultValue={HOLDER_DEFAULTS.magnets.layout}
                 options={holderMagnetLayoutOptions.map((layout) => ({ ...layout, picture: MAGNET_LAYOUT_PICTURES[layout.value] }))}
@@ -257,6 +264,7 @@ export function HolderPanel({
               />
               <Dimension
                 label="Magnet diameter clearance"
+                advanced
                 value={holder.magnets.clearance}
                 min={0}
                 max={0.6}
@@ -266,6 +274,7 @@ export function HolderPanel({
               />
               <Dimension
                 label="Magnet depth clearance"
+                advanced
                 value={holder.magnets.depthClearance}
                 min={0}
                 max={0.5}

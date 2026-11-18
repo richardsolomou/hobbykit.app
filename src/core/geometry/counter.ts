@@ -156,8 +156,12 @@ const atBaseSize = <
   }
 }
 export const MIN_COUNTER_CLICK = 0.15
+const BASE_CLICK = 0.7
 /** An arm must keep some of the room behind it when a lobe's crest passes under its nub. */
 export const maximumCounterClick = (config: Pick<CounterConfig, 'drumDiameter'>): number => counterScale(config) * (ARM_TRAVEL - 0.15)
+/** A wheel's click grows with it, since a bigger wheel's arms are stiffer: 0.7mm on the base design, to the nearest 0.05mm. */
+export const automaticCounterClick = (config: Pick<CounterConfig, 'drumDiameter'>): number =>
+  Math.min(Math.round((BASE_CLICK * counterScale(config)) / 0.05) * 0.05, Math.floor(maximumCounterClick(config) / 0.05) * 0.05)
 
 export function counterParts(config: Pick<CounterConfig, 'digits' | 'layout'>): { part: CounterPart; name: string; filament?: 2 }[] {
   return [
@@ -198,7 +202,8 @@ export function defaultCounterConfig(): CounterConfig {
     digitFilament: 2,
     insertClearance: 0.05,
     clearance: 0.2,
-    click: 1.5,
+    click: automaticCounterClick({ drumDiameter: COUNTER_FULL_SIZE }),
+    pinned: [],
     segments: previewSegmentsFor(COUNTER_FULL_SIZE),
   }
 }
