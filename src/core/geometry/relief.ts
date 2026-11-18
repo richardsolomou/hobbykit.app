@@ -1,7 +1,7 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d'
 import { isRelief, seeded, type Hash, type ReliefPattern } from './texture'
 import { EXPORT_CURVE_TOLERANCE } from './quality'
-import type { BaseConfig } from './types'
+import type { BaseConfig, TextureSpec } from './types'
 
 /** Material kept above a magnet pocket's ceiling, the thinnest part of a solid base. */
 export const MIN_POCKET_ROOF = 0.8
@@ -286,4 +286,24 @@ export function reliefBlock(
   const field = own(heightfield(wasm, origin, columns, rows, step, config.height - 1, heights))
   const prism = own(own(footprint.extrude(depth + 4)).translate([0, 0, config.height - 2]))
   return own(field.intersect(prism))
+}
+
+/**
+ * A relief pattern's surface on a `samples`-square grid `half` either side of the middle, softened the way a model's is,
+ * for a picture of the pattern.
+ */
+export function reliefSample(
+  texture: Pick<TextureSpec, 'pattern' | 'scale' | 'seed' | 'irregularity'> & { pattern: ReliefPattern },
+  half: number,
+  samples: number,
+): Float32Array {
+  const surface = SURFACES[texture.pattern]
+  const ctx: Context = { hash: seeded(texture.seed), irregularity: texture.irregularity / 100 }
+  const step = (2 * half) / (samples - 1)
+  const heights = new Float32Array(samples * samples)
+  for (let k = 0; k < heights.length; k++) {
+    heights[k] = surface((-half + (k % samples) * step) / texture.scale, (-half + Math.floor(k / samples) * step) / texture.scale, ctx)
+  }
+  blur(heights, samples, samples, SOFTEN / step)
+  return heights
 }

@@ -1,6 +1,8 @@
-import { Choice, Dimension, Section } from '@/components/controls'
+import { Dimension, PictureChoice, Section } from '@/components/controls'
+import { COUNTER_DIGIT_PICTURES, COUNTER_LAYOUT_PICTURES, counterSizePicture, filamentPicture } from '@/components/pictures'
 import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import type { FilamentColours } from '@/core/geometry/filaments'
 import type { CounterConfig } from '@/core/geometry/types'
 import { defaultCounterConfig, maximumCounterClick, MIN_COUNTER_CLICK, MINIMUM_COUNTER_DRUM_DIAMETER } from '@/core/geometry/counter'
 import { tenthAbove } from '@/lib/workspace'
@@ -13,32 +15,18 @@ const SIZES = [
   { value: 32, label: 'Medium', click: 1.2 },
   { value: 24, label: 'Small', click: 0.9 },
   { value: 18, label: 'Smallest', click: 0.7 },
-]
+].map((size) => ({ ...size, picture: counterSizePicture(size.value) }))
 
 const LAYOUTS = [
-  { value: 'enclosure' as const, label: 'Enclosure with side knobs' },
-  { value: 'knobs' as const, label: 'Hubs and side knobs' },
+  { value: 'enclosure' as const, label: 'Enclosure' },
+  { value: 'knobs' as const, label: 'Hubs and knobs' },
   { value: 'centre' as const, label: 'Frame and base' },
-  { value: 'hubs' as const, label: 'Two hubs on legs' },
+  { value: 'hubs' as const, label: 'Hubs on legs' },
 ]
-const LAYOUT_NOTES = {
-  enclosure:
-    'The dials sit in a case with a window over the count, and each turns by a knob outside its end. The case prints as two halves that slot together in the middle. A rod through both dials keeps them in line. Press the knobs on last.',
-  knobs:
-    'Each dial clicks in a hub at its end, which the counter stands on and which marks the count, and turns by a knob outside it. A rod through both dials keeps them in line. Press the knobs on last.',
-  hubs: 'A small hub on two legs at each end holds the tube, leaving the outer rim of each dial free to turn from the side.',
-  centre:
-    'A frame over the top row marks the count and stands on a post at each end, which holds the tube and plugs into a base plate under the dials. Turn the dials directly.',
-}
-
 const DIGIT_STYLES = [
   { value: 'tiles' as const, label: 'Press-in tiles' },
   { value: 'printed' as const, label: 'Printed in the dial' },
   { value: 'engraved' as const, label: 'Engraved for paint' },
-]
-const DIGIT_FILAMENTS = [
-  { value: 2 as const, label: 'Second colour' },
-  { value: 3 as const, label: 'Third colour' },
 ]
 const DIGIT_NOTES = {
   tiles: 'Press each tile into its pocket. Raise the clearance if they will not go in.',
@@ -51,19 +39,22 @@ interface Props {
   resets: ResetAction[]
   counter: CounterConfig
   setCounter: (counter: CounterConfig) => void
+  /** The colours picked at the top of the page, which the digit filament choice shows. */
+  filaments: FilamentColours
 }
 
-export function CounterPanel({ counter, setCounter, resets }: Props) {
+export function CounterPanel({ counter, setCounter, filaments, resets }: Props) {
   const patch = (changes: Partial<CounterConfig>) => setCounter({ ...counter, ...changes })
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
       <aside aria-label="Dial counter settings" className="pb-4 [counter-reset:schedule]">
         <Section title="Layout">
-          <Choice
+          <PictureChoice
             label="Layout"
             value={counter.layout}
             defaultValue={COUNTER_DEFAULTS.layout}
-            options={LAYOUTS}
+            options={LAYOUTS.map((layout) => ({ ...layout, picture: COUNTER_LAYOUT_PICTURES[layout.value] }))}
+            columns={4}
             onChange={(layout) => patch({ layout })}
           />
           <Dimension
@@ -75,18 +66,18 @@ export function CounterPanel({ counter, setCounter, resets }: Props) {
             defaultValue={COUNTER_DEFAULTS.grip}
             onChange={(grip) => patch({ grip })}
           />
-          <FieldDescription>{LAYOUT_NOTES[counter.layout]} Grip widens each dial past its digits.</FieldDescription>
         </Section>
 
         <Section title="Wheels" aside={<span className="readout text-xs text-muted-foreground">00–99</span>}>
-          <Choice
+          <PictureChoice
             label="Size"
             value={counter.drumDiameter}
             defaultValue={COUNTER_DEFAULTS.drumDiameter}
+            columns={SIZES.some(({ value }) => value === counter.drumDiameter) ? 4 : 5}
             options={
               SIZES.some(({ value }) => value === counter.drumDiameter)
                 ? SIZES
-                : [...SIZES, { value: counter.drumDiameter, label: 'Custom' }]
+                : [...SIZES, { value: counter.drumDiameter, label: 'Custom', picture: counterSizePicture(counter.drumDiameter) }]
             }
             onChange={(drumDiameter) =>
               patch({ drumDiameter, click: SIZES.find(({ value }) => value === drumDiameter)?.click ?? counter.click })
@@ -125,19 +116,23 @@ export function CounterPanel({ counter, setCounter, resets }: Props) {
         </Section>
 
         <Section title="Digits">
-          <Choice
+          <PictureChoice
             label="Digits"
             value={counter.digits}
             defaultValue={COUNTER_DEFAULTS.digits}
-            options={DIGIT_STYLES}
+            options={DIGIT_STYLES.map((style) => ({ ...style, picture: COUNTER_DIGIT_PICTURES[style.value] }))}
             onChange={(digits) => patch({ digits })}
           />
           {counter.digits !== 'engraved' && (
-            <Choice
+            <PictureChoice
               label="Digit filament"
               value={counter.digitFilament}
               defaultValue={COUNTER_DEFAULTS.digitFilament}
-              options={DIGIT_FILAMENTS}
+              options={[
+                { value: 2 as const, label: 'Second colour', picture: filamentPicture(filaments.second) },
+                { value: 3 as const, label: 'Third colour', picture: filamentPicture(filaments.third) },
+              ]}
+              columns={4}
               onChange={(digitFilament) => patch({ digitFilament })}
             />
           )}

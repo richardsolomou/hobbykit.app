@@ -2,6 +2,8 @@ import { RotateCcw } from 'lucide-react'
 import { useId, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
+import { Radio } from '@base-ui/react/radio'
+import { RadioGroup } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 
@@ -206,52 +208,68 @@ interface ChoiceProps<T extends string | number> {
   onChange: (value: T) => void
 }
 
-/**
- * Inline choice. Values travel as strings because Select works in strings, and
- * are mapped back through the options so numbers survive the trip.
- */
 /** The popup grows past a narrow trigger to fit its longest option, so no label runs under the check mark. */
 const widestOption = 'w-auto min-w-(--anchor-width)'
 
-export function Choice<T extends string | number>({ label, value, defaultValue, disabled, options, onChange }: ChoiceProps<T>) {
+const GRID_COLUMNS = { 3: 'grid-cols-3 gap-1.5', 4: 'grid-cols-4 gap-1.5', 5: 'grid-cols-5 gap-1' }
+
+interface PictureChoiceProps<T extends string | number> extends Omit<ChoiceProps<T>, 'options'> {
+  options: readonly { value: T; label: string; picture: ReactNode }[]
+  /** Tiles per row; small pictures read at four or five, detailed ones need three. */
+  columns?: 3 | 4 | 5
+}
+
+/**
+ * A choice made by picture: a grid of tiles, each a small drawing of the option over its name, so what an option
+ * looks like is clear before it is picked. A radio group underneath, so the arrow keys move between tiles.
+ */
+export function PictureChoice<T extends string | number>({
+  label,
+  value,
+  defaultValue,
+  disabled,
+  options,
+  onChange,
+  columns = 3,
+}: PictureChoiceProps<T>) {
   const id = useId()
   if (options.length <= 1) return null
   const modified = defaultValue !== undefined && value !== defaultValue
   const defaultLabel = options.find((option) => option.value === defaultValue)?.label ?? String(defaultValue)
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? String(value)
   return (
-    <Field orientation="horizontal" data-disabled={disabled}>
-      <div className={settingColumns}>
-        <FieldLabel htmlFor={id} className={`${settingLabel} col-span-2 ${modified ? 'text-modified' : ''}`}>
+    <Field data-disabled={disabled} className="gap-2">
+      <div className="flex items-center gap-2">
+        <FieldLabel id={id} className={`font-normal ${modified ? 'text-modified' : ''}`}>
           {label}
         </FieldLabel>
-        {modified && !disabled && (
-          <ResetSlot>
-            <ResetButton label={label} value={defaultLabel} onReset={() => onChange(defaultValue)} />
-          </ResetSlot>
-        )}
-        <Select
-          disabled={disabled}
-          value={String(value)}
-          onValueChange={(next) => {
-            const picked = options.find((option) => String(option.value) === String(next))
-            if (picked) onChange(picked.value)
-          }}
-        >
-          <SelectTrigger id={id} aria-label={label} className="w-28">
-            <SelectValue>
-              <span className="readout truncate text-xs">{selectedLabel}</span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent className={widestOption}>
-            {options.map((option) => (
-              <SelectItem key={String(option.value)} value={String(option.value)}>
-                <span className="readout text-xs">{option.label}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {modified && !disabled && <ResetButton label={label} value={defaultLabel} onReset={() => onChange(defaultValue)} />}
       </div>
+      <RadioGroup
+        aria-labelledby={id}
+        disabled={disabled}
+        value={String(value)}
+        onValueChange={(next) => {
+          const picked = options.find((option) => String(option.value) === String(next))
+          if (picked) onChange(picked.value)
+        }}
+        className={GRID_COLUMNS[columns]}
+      >
+        {options.map((option) => (
+          <Radio.Root
+            key={String(option.value)}
+            value={String(option.value)}
+            aria-label={option.label}
+            className="flex min-w-0 flex-col items-center gap-1 rounded-md border border-border bg-background px-0.5 pt-1.5 pb-1 text-muted-foreground outline-none transition-colors hover:border-muted-foreground hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-checked:border-measure data-checked:text-foreground data-checked:hover:border-measure"
+          >
+            <span aria-hidden className="flex aspect-[4/3] w-full items-center justify-center [&>svg]:size-full">
+              {option.picture}
+            </span>
+            <span className="readout line-clamp-2 flex min-h-[2lh] w-full items-start justify-center text-center text-[0.5625rem] leading-tight tracking-tighter text-balance [overflow-wrap:anywhere]">
+              {option.label}
+            </span>
+          </Radio.Root>
+        ))}
+      </RadioGroup>
     </Field>
   )
 }

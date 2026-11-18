@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Choice, Dimension, Section, ToggleSetting } from '@/components/controls'
+import { LABEL_PLACEMENT_PICTURES, MAGNET_LAYOUT_PICTURES } from '@/components/pictures'
+import { Dimension, PictureChoice, Section, ToggleSetting } from '@/components/controls'
 import { MiniatureGroupsEditor } from '@/components/MiniatureGroupsEditor'
 import { FieldDescription } from '@/components/ui/field'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -22,8 +23,8 @@ const HOLDER_DEFAULTS = defaultHolderConfig()
 const SPARE_ROOM_SETTLE_MS = 200
 const NO_SPARE_ROOM = new Map<string, number>()
 const ENGRAVING_PLACEMENTS = [
-  { value: 'slots' as const, label: 'In slots' },
-  { value: 'module' as const, label: 'On module' },
+  { value: 'slots' as const, label: 'In slots', picture: LABEL_PLACEMENT_PICTURES.slots },
+  { value: 'module' as const, label: 'On module', picture: LABEL_PLACEMENT_PICTURES.module },
 ]
 
 function fittedCounts(modules: { config: { groups: HolderGroup[] } }[]) {
@@ -201,11 +202,12 @@ export function HolderPanel({
             onChange={setSharedLabels}
           />
           {holder.engraving.enabled && (
-            <Choice
+            <PictureChoice
               label="Label location"
               value={holder.engraving.placement}
               defaultValue={HOLDER_DEFAULTS.engraving.placement}
               options={ENGRAVING_PLACEMENTS}
+              columns={4}
               onChange={(placement) => setHolder(fitSlotDepth({ ...holder, engraving: { ...holder.engraving, placement } }))}
             />
           )}
@@ -227,11 +229,12 @@ export function HolderPanel({
           />
           {holder.magnets.enabled && (
             <>
-              <Choice
+              <PictureChoice
                 label="Pocket layout"
                 value={holderMagnetLayout}
                 defaultValue={HOLDER_DEFAULTS.magnets.layout}
-                options={holderMagnetLayoutOptions}
+                options={holderMagnetLayoutOptions.map((layout) => ({ ...layout, picture: MAGNET_LAYOUT_PICTURES[layout.value] }))}
+                columns={4}
                 onChange={(layout) => setSharedMagnets({ layout })}
               />
               <Dimension

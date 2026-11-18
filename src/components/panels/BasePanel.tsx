@@ -1,5 +1,13 @@
 import { Box, Download, Plus, Shuffle, Trash2 } from 'lucide-react'
-import { Choice, Dimension, Section, SizeSelect, ToggleSetting } from '@/components/controls'
+import {
+  BASE_SHAPE_PICTURES,
+  MAGNET_LAYOUT_PICTURES,
+  magnetCountPicture,
+  PROFILE_PICTURES,
+  ribPicture,
+  texturePicture,
+} from '@/components/pictures'
+import { Dimension, PictureChoice, Section, SizeSelect, ToggleSetting } from '@/components/controls'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
@@ -13,10 +21,12 @@ import {
   defaultBaseHeight,
   defaultFloorThickness,
   DEFAULT_SIZE,
+  automaticMagnetCount,
   MAGNET_CHOICES,
   presetFor,
   resized,
   RIB_CHOICES,
+  ribCountFor,
   SIZES_BY_SHAPE,
   type SizePreset,
 } from '@/core/geometry/presets'
@@ -66,11 +76,13 @@ const TEXTURES: { value: TexturePattern; label: string; size: string }[] = [
   { value: 'snow', label: 'Snow', size: 'Drift size' },
   { value: 'roots', label: 'Roots', size: 'Feature size' },
 ]
+const TEXTURE_OPTIONS = TEXTURES.map((texture) => ({ ...texture, picture: texturePicture(texture.value) }))
+const PROFILE_OPTIONS = PROFILES.map((profile) => ({ ...profile, picture: PROFILE_PICTURES[profile.value] }))
 const MIN_TEXTURE_DEPTH = 0.2
 
 const CUSTOM_HOLDER_SIZE = 'custom'
 const counts = (values: number[]) => values.map((value) => ({ value, label: value === 0 ? 'None' : String(value) }))
-const RIB_COUNTS = counts(RIB_CHOICES)
+const RIB_COUNTS = counts(RIB_CHOICES).map((option) => ({ ...option, picture: ribPicture(option.value) }))
 
 const sizeText = (shape: ShapeKind, width: number, length: number) =>
   isElongated(shape) ? `${trimNumber(width)}×${trimNumber(length)}` : trimNumber(width)
@@ -125,10 +137,24 @@ export function BasePanel({
   const standard = sizes.find((size) => size.width === width && (size.length ?? size.width) === length)
   const footprintDefaultHeight = defaultBaseHeight(config.width, config.length)
   const footprintDefaultFloor = defaultFloorThickness(config.width, config.length)
-  const magnetCountOptions: { value: MagnetCountChoice; label: string }[] = [
-    { value: AUTOMATIC_MAGNET_COUNT, label: `Auto · ${config.magnets.count}` },
-    ...counts(MAGNET_CHOICES),
+  /** What automatic gives for this footprint, whatever count is picked now. */
+  const automaticMagnets = automaticMagnetCount(
+    config.width,
+    config.length,
+    config.magnets.maxCount,
+    config.magnets.diameter,
+    config.magnets.thickness,
+  )
+  const magnetCountOptions = [
+    {
+      value: AUTOMATIC_MAGNET_COUNT as MagnetCountChoice,
+      label: `Auto · ${automaticMagnets}`,
+      picture: magnetCountPicture(automaticMagnets),
+    },
+    ...counts(MAGNET_CHOICES).map((option) => ({ ...option, picture: magnetCountPicture(option.value) })),
   ]
+  /** Supports follow the magnets: one under each in a ring, a spoke down a row. */
+  const automaticRibs = ribCountFor(config.width, config.length, config.magnets.count)
   const magnetLayoutOptions =
     config.magnets.patternVersion === 1 || supportsFivePocketCross(config.shape, config.width) ? MAGNET_LAYOUTS : MAGNET_LAYOUTS.slice(0, 1)
 
@@ -162,7 +188,14 @@ export function BasePanel({
       {/* Sections number themselves off this counter, in the order they appear. */}
       <aside aria-label="Base settings" className="pb-4 [counter-reset:schedule]">
         <Section title="Size & Shape">
-          <Choice label="Shape" value={config.shape} defaultValue={BASE_DEFAULTS.shape} options={SHAPES} onChange={changeShape} />
+          <PictureChoice
+            label="Shape"
+            value={config.shape}
+            defaultValue={BASE_DEFAULTS.shape}
+            options={SHAPES.map((shape) => ({ ...shape, picture: BASE_SHAPE_PICTURES[shape.value] }))}
+            columns={4}
+            onChange={changeShape}
+          />
           <SizeSelect
             value={!customBaseSize && standard ? standard.label : CUSTOM_HOLDER_SIZE}
             options={[
@@ -295,19 +328,21 @@ export function BasePanel({
               />
             </>
           )}
-          <Choice
+          <PictureChoice
             label="Pocket layout"
             value={config.magnets.layout}
             defaultValue={BASE_DEFAULTS.magnets.layout}
-            options={magnetLayoutOptions}
+            options={magnetLayoutOptions.map((layout) => ({ ...layout, picture: MAGNET_LAYOUT_PICTURES[layout.value] }))}
+            columns={4}
             onChange={(layout) => setSharedMagnets({ layout })}
           />
           {config.magnets.layout !== 'five-cross' && (
-            <Choice
+            <PictureChoice
               label="Magnets per base"
               value={magnetCountValue}
               defaultValue={AUTOMATIC_MAGNET_COUNT}
               options={magnetCountOptions}
+              columns={5}
               onChange={setMagnetCount}
             />
           )}
@@ -346,11 +381,12 @@ export function BasePanel({
         </Section>
 
         <Section title="Texture">
-          <Choice
+          <PictureChoice
             label="Pattern"
             value={config.texture.pattern}
             defaultValue={BASE_DEFAULTS.texture.pattern}
-            options={TEXTURES}
+            options={TEXTURE_OPTIONS}
+            columns={4}
             onChange={(pattern) => {
               posthog.capture('base_texture_selected', { pattern })
               patch({ texture: withPattern(config.texture, pattern) })
@@ -450,11 +486,12 @@ export function BasePanel({
               onChange={(floorThickness) => patch({ floorThickness })}
             />
           )}
-          <Choice
+          <PictureChoice
             label="Bottom edge"
             value={config.profile}
             defaultValue={BASE_DEFAULTS.profile}
-            options={PROFILES}
+            options={PROFILE_OPTIONS}
+            columns={4}
             onChange={(profile) => patch({ profile })}
           />
           {config.profile !== 'straight' && (
@@ -503,12 +540,20 @@ export function BasePanel({
             }
           >
             {config.magnets.layout !== 'five-cross' && (
-              <Choice
+              <PictureChoice
                 label="Number of supports"
-                value={config.ribs.count}
-                defaultValue={BASE_DEFAULTS.ribs.count}
-                options={RIB_COUNTS}
-                onChange={(count) => patch({ ribs: { ...config.ribs, count } })}
+                value={config.ribs.count === automaticRibs ? AUTOMATIC_MAGNET_COUNT : config.ribs.count}
+                defaultValue={AUTOMATIC_MAGNET_COUNT}
+                options={[
+                  {
+                    value: AUTOMATIC_MAGNET_COUNT,
+                    label: `Auto · ${automaticRibs}`,
+                    picture: ribPicture(automaticRibs),
+                  },
+                  ...RIB_COUNTS,
+                ]}
+                columns={4}
+                onChange={(count) => patch({ ribs: { ...config.ribs, count: count === AUTOMATIC_MAGNET_COUNT ? automaticRibs : count } })}
               />
             )}
             {config.ribs.count > 0 && (

@@ -19,7 +19,18 @@ async function pickSize(page: Page, label: string) {
   await sizeOption(page, label).click()
 }
 
+/** Picks an option from a picture grid or a dropdown, whichever the control is. */
+/** The option picked in a picture grid. */
+function picked(page: Page, label: string, option: string) {
+  return page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: option, exact: true })
+}
+
 async function pickChoice(page: Page, label: string, option: string) {
+  const pictures = page.getByRole('radiogroup', { name: label })
+  if ((await pictures.count()) > 0) {
+    await pictures.getByRole('radio', { name: option, exact: true }).click()
+    return
+  }
   await page.getByRole('combobox', { name: label }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
 }
@@ -156,10 +167,6 @@ test('starts every dimension on a value its own input accepts', async ({ page })
 })
 
 test('opens selects from their visible labels', async ({ page }) => {
-  await page.getByText('Shape', { exact: true }).click()
-  await expect(page.getByRole('option', { name: 'Round', exact: true })).toBeVisible()
-  await page.keyboard.press('Escape')
-
   await page.getByText('Size', { exact: true }).click()
   await expect(sizeOption(page, '32')).toBeVisible()
 })
@@ -226,7 +233,7 @@ test('marks and resets changed toggles and choices', async ({ page }) => {
   const resetShape = page.getByRole('button', { name: 'Reset Shape to Round' })
   await expect(resetShape).toBeVisible()
   await resetShape.click()
-  await expect(page.getByRole('combobox', { name: 'Shape' })).toContainText('Round')
+  await expect(page.getByRole('radiogroup', { name: 'Shape' }).getByRole('radio', { name: 'Round' })).toBeChecked()
 })
 
 test('keeps shape and size independent while sharing matching magnet settings in the session', async ({ page }) => {
@@ -258,30 +265,28 @@ test('keeps shape and size independent while sharing matching magnet settings in
 })
 
 test('shares the selected pocket pattern between bases and holders', async ({ page }) => {
-  const layout = page.getByRole('combobox', { name: 'Pocket layout' })
+  const layout = page.getByRole('radiogroup', { name: 'Pocket layout' })
   await expect(layout).toHaveCount(0)
   await pickSize(page, '60')
-  await layout.click()
-  await expect(page.getByRole('option', { name: 'Five-pocket cross' })).toHaveCount(1)
-  await page.keyboard.press('Escape')
+  await expect(layout.getByRole('radio', { name: 'Five-pocket cross' })).toHaveCount(1)
   await expect(footer(page)).toContainText('3 × 5.2 mm hole')
-  await expect(page.getByRole('combobox', { name: 'Magnets per base' })).toContainText('Auto · 3')
-  await expect(page.getByRole('combobox', { name: 'Number of supports' })).toContainText('3')
-  await expect(page.getByRole('combobox', { name: 'Pocket layout' })).toContainText('Balanced')
+  await expect(picked(page, 'Magnets per base', 'Auto · 3')).toBeChecked()
+  await expect(picked(page, 'Number of supports', 'Auto · 3')).toBeChecked()
+  await expect(picked(page, 'Pocket layout', 'Balanced')).toBeChecked()
   await pickChoice(page, 'Magnets per base', '4')
   await expect(footer(page)).toContainText('4 × 5.2 mm hole')
 
   await page.getByRole('link', { name: 'Holders' }).click()
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
   await page.getByRole('option', { name: /^60\b/ }).click()
-  await expect(page.getByRole('combobox', { name: 'Pocket layout' })).toContainText('Balanced')
+  await expect(picked(page, 'Pocket layout', 'Balanced')).toBeChecked()
   await expect(footer(page)).toContainText('20 × 5.2 mm hole')
   await pickChoice(page, 'Pocket layout', 'Five-pocket cross')
   await expect(footer(page)).toContainText('25 × 5.2 mm hole')
 
   await page.getByRole('link', { name: 'Bases' }).click()
   await expect(footer(page)).toContainText('5 × 5.2 mm hole')
-  await expect(page.getByRole('combobox', { name: 'Magnets per base' })).toHaveCount(0)
+  await expect(page.getByRole('radiogroup', { name: 'Magnets per base' })).toHaveCount(0)
 })
 
 test('remembers workspace settings on reload', async ({ page }) => {
@@ -583,7 +588,7 @@ test('prints the dial counter tiles on their own plate, changing filament once',
 
 test('prints the dial counter brackets with the tiles, changing filament at the same height', async ({ page }) => {
   await visit(page, 'Counters')
-  await pickChoice(page, 'Layout', 'Hubs and side knobs')
+  await pickChoice(page, 'Layout', 'Hubs and knobs')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download 3MF' }).click()
@@ -598,7 +603,7 @@ test('prints the dial counter brackets with the tiles, changing filament at the 
 
 test('prints the dial counter digits into the dials in a third filament', async ({ page }) => {
   await visit(page, 'Counters')
-  await expect(page.getByRole('combobox', { name: 'Digits' })).toContainText('Press-in tiles')
+  await expect(page.getByRole('radiogroup', { name: 'Digits' }).getByRole('radio', { name: 'Press-in tiles' })).toBeChecked()
   await expect(page.getByRole('button', { name: /^Third colour/ })).toHaveCount(0)
   await pickChoice(page, 'Digits', 'Printed in the dial')
   await pickChoice(page, 'Digit filament', 'Third colour')
@@ -635,8 +640,8 @@ test('saves one set of colours and writes them into every 3MF', async ({ page })
 })
 
 test('keeps every dropdown label clear of its check mark', async ({ page }) => {
-  await visit(page, 'Counters')
-  await page.getByRole('combobox', { name: 'Digits' }).click()
+  await visit(page, 'Holders')
+  await page.getByRole('combobox', { name: 'Shape 1' }).click()
 
   const overruns = await page
     .getByRole('option')
@@ -1086,28 +1091,28 @@ test('reports spare holder room for one and several more models', async ({ page 
 test('switches between subtractive holder engraving locations', async ({ page }) => {
   await visit(page, 'Holders')
   await expect(page.getByRole('switch', { name: 'Labels', exact: true })).toBeChecked()
-  await expect(page.getByRole('combobox', { name: 'Label location' })).toContainText('In slots')
+  await expect(picked(page, 'Label location', 'In slots')).toBeChecked()
   const before = await triangles(page)
   await pickChoice(page, 'Label location', 'On module')
   await rebuilt(page, before)
-  await expect(page.getByRole('combobox', { name: 'Label location' })).toContainText('On module')
+  await expect(picked(page, 'Label location', 'On module')).toBeChecked()
   const moduleTriangles = await triangles(page)
   await pickChoice(page, 'Label location', 'In slots')
   await rebuilt(page, moduleTriangles)
-  await expect(page.getByRole('combobox', { name: 'Label location' })).toContainText('In slots')
+  await expect(picked(page, 'Label location', 'In slots')).toBeChecked()
 })
 
 test('keeps slot features above the Gridfinity foot', async ({ page }) => {
   await visit(page, 'Holders')
   const depth = page.getByRole('spinbutton', { name: 'Slot depth in mm' })
   const magnets = page.getByRole('switch', { name: 'Slot magnets' })
-  await expect(page.getByRole('combobox', { name: 'Pocket layout' })).toHaveCount(0)
+  await expect(page.getByRole('radiogroup', { name: 'Pocket layout' })).toHaveCount(0)
   await expect(depth).toHaveAttribute('max', '6.5')
   const withoutMagnets = await triangles(page)
   await magnets.click()
   await rebuilt(page, withoutMagnets)
   await expect(depth).toHaveAttribute('max', '8')
-  await expect(page.getByRole('combobox', { name: 'Pocket layout' })).toHaveCount(0)
+  await expect(page.getByRole('radiogroup', { name: 'Pocket layout' })).toHaveCount(0)
   await expect(page.getByLabel('Magnet diameter in mm')).toHaveCount(0)
   await depth.fill('8')
   await depth.press('Enter')
@@ -1266,7 +1271,7 @@ for (const entry of SHAPES) {
   test(`starts a ${entry.name.toLowerCase()} base on a standard size`, async ({ page }) => {
     await pickChoice(page, 'Shape', entry.name)
     await settled(page)
-    await expect(page.getByRole('combobox', { name: 'Shape' })).toContainText(entry.name)
+    await expect(page.getByRole('radiogroup', { name: 'Shape' }).getByRole('radio', { name: entry.name, exact: true })).toBeChecked()
     // The size list swaps to that family's range.
     await page.getByRole('combobox', { name: 'Standard base size' }).click()
     await expect(sizeOption(page, entry.chip)).toBeVisible()
@@ -1385,6 +1390,8 @@ test('scrubs a dimension from the empty reset space after its label', async ({ p
 test('toggles a setting from the empty reset space after its label', async ({ page }) => {
   const toggle = page.getByRole('switch', { name: 'Labels', exact: true })
   const label = page.getByText('Labels', { exact: true })
+  // Clicks by position, so the label has to be on screen first.
+  await label.scrollIntoViewIfNeeded()
   const box = await label.boundingBox()
   if (!box) throw new Error('no label to click')
   await page.mouse.click(box.x + box.width - 5, box.y + box.height / 2)

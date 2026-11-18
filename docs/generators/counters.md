@@ -4,9 +4,9 @@ Print a dial counter, or wound caddy, that tracks wounds, victory points, comman
 
 Layout picks how the dials are held and turned:
 
-- **Enclosure with side knobs**, the default, puts the dials in a ten-sided case with a window over the top row, so only the count shows. You turn each dial by a ribbed knob outside its end. The case prints as two halves that slot together in the middle. It is six parts plus the tiles: two case halves, two dials and two knobs, one of which carries a rod that runs through both dials.
-- **Hubs and side knobs** is the same, with open hubs the size of the dials instead of a case, and a black bracket inlaid in each hub that frames the top row.
-- **Two hubs on legs** turns the dials directly. They click on a tube that is part of the left hub; the right hub presses on to its free end. A bracket in each hub frames the top row.
+- **Enclosure**, the default, puts the dials in a ten-sided case with a window over the top row, so only the count shows. You turn each dial by a ribbed knob outside its end. The case prints as two halves that slot together in the middle. It is six parts plus the tiles: two case halves, two dials and two knobs, one of which carries a rod that runs through both dials.
+- **Hubs and knobs** is the same, with open hubs the size of the dials instead of a case, and a black bracket inlaid in each hub that frames the top row.
+- **Hubs on legs** turns the dials directly. They click on a tube that is part of the left hub; the right hub presses on to its free end. A bracket in each hub frames the top row.
 - **Frame and base** turns the dials directly too. A black frame boxes the top row and stands on a post past each dial, which holds the tube and plugs into a base plate under the dials.
 
 Every count clicks into place on two spring arms that grip a ridged shaft or tube from both sides. The click setting is how deep the ridges are: raise it if the dials turn too easily, and lower it if they are hard to turn. Grip makes each dial longer, and its tiles with it. Pick a size to scale the whole counter, digits included; Wheel diameter sets an exact size. Full size is the default; the enclosure is then about 48mm wide and 44mm tall, with digits about 7.6mm tall. The fit clearance is the play round each moving part.

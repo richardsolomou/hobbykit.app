@@ -480,7 +480,12 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
     ) : model === 'stem' ? (
       <StemPanel stem={stem} setStem={setStem} resets={[resetPart('stem', 'stem', false)]} />
     ) : model === 'counter' ? (
-      <CounterPanel counter={counter} setCounter={setCounter} resets={[resetPart('counter', 'dial counter', false)]} />
+      <CounterPanel
+        counter={counter}
+        setCounter={setCounter}
+        filaments={workspace.filaments}
+        resets={[resetPart('counter', 'dial counter', false)]}
+      />
     ) : (
       <TokenPanel
         token={token}
