@@ -262,7 +262,7 @@ describe('buildCounter', () => {
   it('cuts ten troughs into the tube to the click depth', () => {
     const config = counter()
     const reach = (contour: [number, number][]) => Math.max(...contour.map(([x]) => x)) - Math.min(...contour.map(([x]) => x))
-    const [outline] = contours(config, 'left', 10).sort((a, b) => reach(b as [number, number][]) - reach(a as [number, number][]))
+    const [outline] = contours(config, 'left', 10).sort((a, b) => reach(b) - reach(a))
     const centre = [outline.reduce((sum, [x]) => sum + x, 0) / outline.length, outline.reduce((sum, [, y]) => sum + y, 0) / outline.length]
     const radii = outline.map(([x, y]) => Math.hypot(x - centre[0], y - centre[1]))
 
