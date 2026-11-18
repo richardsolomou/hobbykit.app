@@ -29,3 +29,7 @@ The underside is hollow by default, with supports that run out to every magnet p
 ## Batch export
 
 Rebasing an army usually means several sizes at once. Add the current size to the batch as often as you need it, adjust each quantity, and download them together: STLs arrive as one archive with one file per size and its quantity in the name, while a 3MF keeps one object per size and lays out every copy across as many build plates as it needs. Every size in a batch shares the current base settings and follows its own magnet count. The batch is saved with your other settings.
+
+## Linking to a base
+
+Other sites can open the generator on the size a model needs: add `#base=` and the size to the address, a single number for a round base or `WxL` for an oval, such as `https://hobbykit.app/#base=32` or `https://hobbykit.app/#base=75x42`. Only the size comes from the link, so your magnets, edge and other settings stay as you left them. A size outside 15–180mm opens the generator as it was.

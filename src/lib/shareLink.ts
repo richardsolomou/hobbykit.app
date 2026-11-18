@@ -1,4 +1,5 @@
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate'
+import { BASE_HASH_PREFIX, readBaseHash, type LinkedBase } from './baseLink'
 import { workspaceSetup, type GeneratorSettings, type WorkspaceState } from './workspace'
 
 const HASH_PREFIX = '#setup='
@@ -40,10 +41,14 @@ export function readShareHash(hash: string): unknown {
   }
 }
 
-/** Removes a share hash from the address so a later reload uses the saved workspace, and returns its setup. */
-export function takeShareHash(): unknown {
+export type SharedLink = { setup: unknown } | { base: LinkedBase }
+
+/** Removes a share or base hash from the address so a later reload uses the saved workspace, and returns what it carried. */
+export function takeShareHash(): SharedLink | undefined {
   const { hash, pathname, search } = window.location
-  if (!hash.startsWith(HASH_PREFIX)) return undefined
+  if (!hash.startsWith(HASH_PREFIX) && !hash.startsWith(BASE_HASH_PREFIX)) return undefined
   window.history.replaceState(null, '', pathname + search)
-  return readShareHash(hash)
+  if (hash.startsWith(HASH_PREFIX)) return { setup: readShareHash(hash) }
+  const base = readBaseHash(hash)
+  return base ? { base } : undefined
 }
