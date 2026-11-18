@@ -1,5 +1,12 @@
 # hobbykit
 
+## 0.24.0
+
+### Minor Changes
+
+- a472058: Pick shapes, textures, edges, magnet and support counts, stem heights, grips, label placement and counter options from small pictures instead of dropdowns. Supports can follow the magnets automatically.
+- 68dea6d: Rebuild the dial counter around dials that click on spring arms, in a choice of layouts: an enclosure with a window over the count and knobs at the sides, open hubs with knobs, hubs on legs, or a frame on a base. Tiles and the lines framing each digit run each dial's full width, every body prints in one colour, and the top-row brackets print with the tiles. Saved counters move to the new defaults.
+
 ## 0.23.1
 
 ### Patch Changes
