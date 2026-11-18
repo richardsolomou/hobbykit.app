@@ -33,7 +33,7 @@ describe('share links', () => {
 
   it('opens the shared generator with its settings', () => {
     const sender = defaultWorkspace()
-    sender.base = { ...sender.base, width: 50, length: 50, height: 5 }
+    sender.base = { ...sender.base, width: 50, length: 50, height: 5, pinned: ['height'] }
 
     expect(opened(sender, 'base')).toMatchObject({ part: 'base', workspace: { base: { width: 50, height: 5 } } })
   })

@@ -87,7 +87,8 @@ const footerLink = buttonVariants({ variant: 'link', size: 'sm', className: 'tex
 
 export function PanelFooter({ page, resets }: { page: Page['value']; resets: ResetAction[] }) {
   return (
-    <div className="flex flex-col items-center gap-1 border-t border-border px-5 pt-4">
+    // Pushed to the foot of the panel, so it sits at the bottom however few settings show.
+    <div className="mt-auto flex flex-col items-center gap-1 border-t border-border px-5 pt-4">
       <div className="flex flex-wrap justify-center gap-1">
         {resets.map((reset) => (
           <ResetButton key={reset.label} {...reset} />

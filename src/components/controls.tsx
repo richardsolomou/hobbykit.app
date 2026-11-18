@@ -6,11 +6,13 @@ import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { useHidden } from '@/lib/advanced'
 
 /** A group of always-visible controls, with an optional figure in the header. */
 export function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
   return (
-    <FieldSet className="min-w-0 gap-3 border-t border-border px-5 py-4">
+    // A section whose every setting is hidden as advanced hides with them.
+    <FieldSet className="min-w-0 gap-3 border-t border-border px-5 py-4 not-has-[[data-slot=field],button]:hidden">
       <div className="flex items-baseline justify-between gap-2">
         <FieldLegend variant="label" className="note schedule-index mb-0">
           {title}
@@ -33,6 +35,10 @@ interface DimensionProps {
   compact?: boolean
   compactLabel?: string
   defaultValue?: number
+  /** Marks a value that follows something else, such as the footprint, until it is set by hand. */
+  automatic?: boolean
+  /** Hidden while at its default unless advanced settings are shown. */
+  advanced?: boolean
   /** A button inside the input, such as one that picks a value at random. */
   action?: { label: string; icon: ReactNode; onClick: () => void }
   onChange: (value: number) => void
@@ -84,6 +90,8 @@ export function Dimension({
   compact,
   compactLabel,
   defaultValue,
+  automatic,
+  advanced,
   action,
   onChange,
 }: DimensionProps) {
@@ -94,6 +102,7 @@ export function Dimension({
   const format = (next: number) => (Number.isInteger(step) ? String(Math.round(next)) : next.toFixed(step < 0.1 ? 2 : 1))
   const formatted = format(value)
   const modified = defaultValue !== undefined && value !== defaultValue
+  const hidden = useHidden(advanced, modified)
 
   /**
    * Listeners go on at pointerdown rather than through an effect: setting a ref
@@ -128,6 +137,7 @@ export function Dimension({
     setText(undefined)
   }
 
+  if (hidden) return null
   return (
     <Field orientation={compactLabel ? undefined : 'horizontal'} data-disabled={disabled} className={compact ? 'min-w-0' : undefined}>
       <div className={compact ? 'contents' : settingColumns}>
@@ -143,6 +153,11 @@ export function Dimension({
           }
         >
           {compactLabel ?? label}
+          {automatic && !modified && (
+            <span aria-hidden className="readout ml-1.5 text-[0.625rem] text-muted-foreground uppercase">
+              auto
+            </span>
+          )}
         </FieldLabel>
         {!compact && modified && (
           <ResetSlot>
@@ -217,6 +232,8 @@ interface PictureChoiceProps<T extends string | number> extends Omit<ChoiceProps
   options: readonly { value: T; label: string; picture: ReactNode }[]
   /** Tiles per row; small pictures read at four or five, detailed ones need three. */
   columns?: 3 | 4 | 5
+  /** Hidden while at its default unless advanced settings are shown. */
+  advanced?: boolean
 }
 
 /**
@@ -231,10 +248,12 @@ export function PictureChoice<T extends string | number>({
   options,
   onChange,
   columns = 3,
+  advanced,
 }: PictureChoiceProps<T>) {
   const id = useId()
-  if (options.length <= 1) return null
   const modified = defaultValue !== undefined && value !== defaultValue
+  const hidden = useHidden(advanced, modified)
+  if (options.length <= 1 || hidden) return null
   const defaultLabel = options.find((option) => option.value === defaultValue)?.label ?? String(defaultValue)
   return (
     <Field data-disabled={disabled} className="gap-2">
@@ -264,7 +283,9 @@ export function PictureChoice<T extends string | number>({
             <span aria-hidden className="flex aspect-[4/3] w-full items-center justify-center [&>svg]:size-full">
               {option.picture}
             </span>
-            <span className="readout line-clamp-2 flex min-h-[2lh] w-full items-start justify-center text-center text-[0.5625rem] leading-tight tracking-tighter text-balance [overflow-wrap:anywhere]">
+            <span
+              className={`readout line-clamp-2 flex min-h-[2lh] w-full items-start justify-center text-center leading-tight tracking-tighter text-balance [overflow-wrap:anywhere] ${columns === 5 ? 'text-[0.5rem]' : 'text-[0.5625rem]'}`}
+            >
               {option.label}
             </span>
           </Radio.Root>
@@ -304,15 +325,19 @@ export function ToggleSetting({
   label,
   checked,
   defaultChecked,
+  advanced,
   onChange,
 }: {
   label: string
   checked: boolean
   defaultChecked: boolean
+  /** Hidden while at its default unless advanced settings are shown. */
+  advanced?: boolean
   onChange: (checked: boolean) => void
 }) {
   const id = useId()
   const modified = checked !== defaultChecked
+  if (useHidden(advanced, modified)) return null
   return (
     <Field orientation="horizontal">
       <div className={settingColumns}>
@@ -336,6 +361,53 @@ export interface SizeOption {
   value: string
   label?: string
   use: string
+}
+
+/**
+ * Standard sizes as a grid of chips, the size typed above them lighting up the one it matches. What the picked size is
+ * for sits in a caption of its own two lines, so moving between sizes never shifts the panel.
+ */
+export function StandardSizes({
+  value,
+  options,
+  onChange,
+  label = 'Standard base size',
+}: {
+  value: string | undefined
+  options: readonly SizeOption[]
+  onChange: (value: string) => void
+  label?: string
+}) {
+  const id = useId()
+  const selected = options.find((option) => option.value === value)
+  const wide = options.some((option) => (option.label ?? option.value).length > 5)
+  return (
+    <Field className="gap-2">
+      <FieldLabel id={id} className="font-normal">
+        Standard sizes
+      </FieldLabel>
+      <RadioGroup
+        aria-label={label}
+        value={value ?? null}
+        onValueChange={(next) => onChange(String(next))}
+        className={wide ? 'grid-cols-3 gap-1' : 'grid-cols-5 gap-1'}
+      >
+        {options.map((option) => (
+          <Radio.Root
+            key={option.value}
+            value={option.value}
+            aria-label={`${option.label ?? option.value} ${option.use}`}
+            className="readout flex items-center justify-center rounded-md border border-border bg-background py-1 text-xs text-muted-foreground outline-none transition-colors hover:border-muted-foreground hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-measure data-checked:text-foreground data-checked:hover:border-measure"
+          >
+            {option.label ?? option.value}
+          </Radio.Root>
+        ))}
+      </RadioGroup>
+      <p aria-live="polite" className="note line-clamp-2 min-h-[2lh] text-xs text-muted-foreground">
+        {selected ? selected.use : 'Off the standard range.'}
+      </p>
+    </Field>
+  )
 }
 
 /**

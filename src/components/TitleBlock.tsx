@@ -133,8 +133,9 @@ function PartRows({ config }: { config: PartConfig }) {
 
 function TitleFrame({ status, name, children }: { status: Props['status']; name: string; children: React.ReactNode }) {
   return (
-    <footer className="pointer-events-none absolute right-3 bottom-3 w-56 border-2 border-measure/50 bg-card/90 text-card-foreground backdrop-blur-sm sm:right-5 sm:bottom-5 sm:w-72">
-      <div className="flex items-center gap-2 border-b-2 border-measure/50 px-3 py-2">
+    // On a phone only the name and status show, in a strip along the foot, so the part keeps most of the screen.
+    <footer className="pointer-events-none absolute inset-x-3 bottom-3 border-2 border-measure/50 bg-card/90 text-card-foreground backdrop-blur-sm sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-72">
+      <div className="flex items-center gap-2 px-3 py-2 sm:border-b-2 sm:border-measure/50">
         <span className="readout truncate text-xs text-measure">{name}</span>
         <Badge variant={status === 'blocked' ? 'destructive' : 'secondary'} className="note ms-auto">
           {status}
@@ -147,7 +148,7 @@ function TitleFrame({ status, name, children }: { status: Props['status']; name:
           the one real topology bug this has had, so that is asserted against a real
           export in the tests. The filament weight is of the solid, which a slicer's
           walls and infill will print lighter than. */}
-      <dl className="grid grid-cols-[5.5rem_1fr] items-baseline text-xs *:py-1 [&>dd]:pl-3 [&>dt]:border-r [&>dt]:border-border [&>dt]:px-3">
+      <dl className="grid grid-cols-[5.5rem_1fr] items-baseline text-xs max-sm:hidden *:py-1 [&>dd]:pl-3 [&>dt]:border-r [&>dt]:border-border [&>dt]:px-3">
         {children}
       </dl>
     </footer>

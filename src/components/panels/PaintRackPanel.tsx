@@ -31,7 +31,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
   const patch = (changes: Partial<PaintRackConfig>) => setPaintRack({ ...paintRack, ...changes })
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Paint rack settings" className="pb-4 [counter-reset:schedule]">
+      <aside aria-label="Paint rack settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
         <Section
           title="Pieces"
           aside={
@@ -140,6 +140,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
         >
           <Dimension
             label="Front deck height"
+            advanced
             value={paintRack.frontHeight}
             min={paintRack.seatDepth + paintRack.wall}
             max={60}
@@ -149,6 +150,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
           />
           <Dimension
             label="Rise per row"
+            advanced
             value={paintRack.rise}
             min={0}
             max={40}
@@ -177,6 +179,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
           />
           <Dimension
             label="Pocket diameter"
+            advanced
             value={paintRack.pocketDiameter}
             min={paintRack.seatDiameter + paintRack.wall * 2 + 1}
             max={Math.floor((paintRack.pitch - paintRack.wall - POCKET_CLEARANCE * 2) * 2) / 2}
@@ -194,6 +197,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
         >
           <Dimension
             label="Seat diameter"
+            advanced
             value={paintRack.seatDiameter}
             min={paintRack.holeDiameter + 1}
             max={Math.min(paintRack.pitch - paintRack.wall * 3 - 1, paintRack.pocketDiameter - paintRack.wall * 2 - 1)}
@@ -203,6 +207,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
           />
           <Dimension
             label="Seat depth"
+            advanced
             value={paintRack.seatDepth}
             min={2}
             max={paintRack.frontHeight - paintRack.wall}
@@ -212,6 +217,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
           />
           <Dimension
             label="Push-out hole"
+            advanced
             value={paintRack.holeDiameter}
             min={8}
             max={paintRack.seatDiameter - 1}
@@ -221,6 +227,7 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
           />
           <Dimension
             label="Wall thickness"
+            advanced
             value={paintRack.wall}
             min={0.8}
             max={2}

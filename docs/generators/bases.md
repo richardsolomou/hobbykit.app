@@ -4,7 +4,7 @@ Make replacement, conversion, and display bases for tabletop miniatures, sized e
 
 ## Footprint
 
-Choose a round, oval, pill, rectangle, or regular polygon base, then pick a standard size or type exact dimensions. Presets follow Games Workshop's current Warhammer 40,000 and Age of Sigmar base size guides, The Old World, and Kings of War, and each names a few units that stand on it. Custom footprints from 15–180mm work too. Hex bases are measured across their corners, so they drop into the space of the matching round.
+Choose a round, oval, pill, rectangle, or regular polygon base, then type its exact dimensions or pick a standard size below them. Settings that depend on the size, its height, top thickness, corner radius, label size, magnets and supports, follow it and are marked auto until you set one yourself; set one and it stays put through any change of size, and its reset button puts it back to what the size gives. Everything else, such as the bottom edge and texture, stays as you left it whatever size you pick. Presets follow Games Workshop's current Warhammer 40,000 and Age of Sigmar base size guides, The Old World, and Kings of War, and each names a few units that stand on it. Custom footprints from 15–180mm work too. Hex bases are measured across their corners, so they drop into the space of the matching round.
 
 ## Size label
 

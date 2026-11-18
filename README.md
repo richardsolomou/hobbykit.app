@@ -10,6 +10,13 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/richardsolomou/hobbykit.app/ci.yml?branch=main)](https://github.com/richardsolomou/hobbykit.app/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/richardsolomou/hobbykit.app)](LICENSE)
 </div>
 
+<div align="center">
+
+<img src="docs/images/readme-bases.png" width="49%" alt="The bases generator with a 32mm round base turned to show its magnet pocket, ribs and embossed size, beside the shape, standard size and magnet settings">
+<img src="docs/images/readme-paint-racks.png" width="49%" alt="The paint racks generator with a five by four rack of hex cells for pots and dropper bottles, beside the piece, cell and pocket settings">
+
+</div>
+
 HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matching flying stems, Gridfinity holders, low-profile spray trays, stepped paint racks, gaming tokens, and dial counters. Pick a standard footprint or enter an exact one, choose the magnets you have, and export a model ready for the slicer. A base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
 
 Everything runs in the browser. Models are built locally and nothing is uploaded.
@@ -26,7 +33,7 @@ Built-in presets cover common Games Workshop, The Old World, Kings of War, and h
 
 1. **Choose the footprint** by picking its shape, then a standard size or exact dimensions.
 2. **Match your magnets** by setting their diameter, thickness, fit and depth clearances, and count.
-3. **Tune the print** with the edge profile, wall thickness, top thickness, and internal supports.
+3. **Tune the print** with the edge profile, wall thickness, top thickness, and internal supports. Height, top thickness, corner radius, label size, and supports follow the size until you set them, and **Advanced** shows the finer settings.
 4. **Check both faces** in the live 3D view, where dimensions, the export name, and the part's weight as solid PLA stay visible. Holders and spray trays show the total for every part. A slicer's walls and infill will use less filament than that.
 5. **Save an STL or 3MF** built at a 1µm chord tolerance for circular geometry.
 

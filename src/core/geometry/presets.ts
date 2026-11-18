@@ -2,7 +2,8 @@ import { magnetsRing } from './base'
 import { isElongated } from './outline'
 import { previewSegmentsFor } from './quality'
 import { DEFAULT_TEXTURE, maxTextureDepth } from './texture'
-import type { BaseConfig, MagnetPatternVersion, ShapeKind } from './types'
+import { maxProfileSize } from './profile'
+import type { BaseConfig, BasePinned, MagnetPatternVersion, ShapeKind } from './types'
 
 export interface SizePreset {
   label: string
@@ -198,7 +199,7 @@ export function ribCountFor(width: number, length: number, magnets: number): num
 }
 
 /** Keeps the number readable on a 25mm base without dominating a 100mm one. */
-function labelHeight(width: number, length: number): number {
+export function labelHeight(width: number, length: number): number {
   return Math.min(8, Math.max(3.5, Math.min(width, length) * 0.2))
 }
 
@@ -209,6 +210,58 @@ export function defaultFloorThickness(width: number, length: number): number {
 
 export function defaultBaseHeight(width: number, length: number): number {
   return 3 + defaultFloorThickness(width, length)
+}
+
+/** Small rectangles round their corners less, so the corner never eats the frontage. */
+export const defaultCornerRadius = (width: number, length: number) => Math.min(2, Math.min(width, length) * 0.06)
+
+/** What each size-driven setting is for this footprint and magnet count, before anyone sets it by hand. */
+export function sizeDefaults(config: Pick<BaseConfig, 'width' | 'length' | 'magnets'>): {
+  height: number
+  floorThickness: number
+  cornerRadius: number
+  labelHeight: number
+  ribs: number
+} {
+  const { width, length } = config
+  return {
+    height: defaultBaseHeight(width, length),
+    floorThickness: defaultFloorThickness(width, length),
+    cornerRadius: defaultCornerRadius(width, length),
+    labelHeight: labelHeight(width, length),
+    ribs: config.magnets.layout === 'five-cross' ? 4 : ribCountFor(width, length, config.magnets.count),
+  }
+}
+
+/**
+ * Brings every size-driven setting nobody has pinned in line with the footprint, and keeps a pinned one only as far
+ * as the footprint allows: a top no thicker than the base leaves room for, a texture no deeper than the top.
+ */
+export function fitToSize(config: BaseConfig): BaseConfig {
+  const auto = sizeDefaults(config)
+  const pick = <K extends BasePinned>(key: K, current: number) => (config.pinned.includes(key) ? current : auto[key])
+  const height = pick('height', config.height)
+  const floorThickness = Math.min(pick('floorThickness', config.floorThickness), Math.max(0.4, height - 0.5))
+  const fitted: BaseConfig = {
+    ...config,
+    height,
+    floorThickness,
+    cornerRadius: pick('cornerRadius', config.cornerRadius),
+    ribs: { ...config.ribs, count: pick('ribs', config.ribs.count) },
+    label: { ...config.label, height: pick('labelHeight', config.label.height) },
+    segments: previewSegmentsFor(Math.max(config.width, config.length)),
+  }
+  return {
+    ...fitted,
+    profileSize: Math.min(fitted.profileSize, maxProfileSize(fitted)),
+    texture: { ...fitted.texture, depth: Math.min(fitted.texture.depth, maxTextureDepth(fitted)) },
+  }
+}
+
+/** Pins a size-driven setting set by hand, or lets it follow the footprint again when it matches what the footprint gives. */
+export function pinned(config: BaseConfig, key: BasePinned, value: number): BasePinned[] {
+  const others = config.pinned.filter((candidate) => candidate !== key)
+  return Math.abs(value - sizeDefaults(config)[key]) < 1e-9 ? others : [...others, key]
 }
 
 /**
@@ -226,7 +279,7 @@ export function presetFor(preset: SizePreset, maxMagnets = 8, patternVersion: Ma
     shape: preset.shape,
     width,
     length,
-    cornerRadius: Math.min(2, Math.min(width, length) * 0.06),
+    cornerRadius: defaultCornerRadius(width, length),
     sides: 6,
     height: defaultBaseHeight(width, length),
     profile: 'taper',
@@ -249,34 +302,21 @@ export function presetFor(preset: SizePreset, maxMagnets = 8, patternVersion: Ma
     label: { enabled: true, height: labelHeight(width, length), emboss: 0.6 },
     texture: { pattern: 'none', seed: 1, ...DEFAULT_TEXTURE.none },
     segments: previewSegmentsFor(Math.max(width, length)),
+    pinned: [],
   }
 }
 
-/** Re-derives the size-driven defaults after the footprint is changed by hand. */
+/**
+ * The same base on another footprint: its own automatic magnet count, and every size-driven setting refitted, so a
+ * standard size, a typed size, a new shape and a batch entry all come out alike.
+ */
 export function resized(config: BaseConfig, width: number, length: number): BaseConfig {
   const effective = isElongated(config.shape) ? length : width
-  const oldFloor = defaultFloorThickness(config.width, config.length)
-  const floor = config.floorThickness === oldFloor ? defaultFloorThickness(width, effective) : config.floorThickness
-  const height = config.height === defaultBaseHeight(config.width, config.length) ? defaultBaseHeight(width, effective) : config.height
   const magnetCount =
     config.magnets.patternVersion === 1
       ? legacyMagnetCount(width, effective, config.magnets.maxCount)
       : automaticMagnetCount(width, effective, config.magnets.maxCount, config.magnets.diameter, config.magnets.thickness)
-  return {
-    ...config,
-    width,
-    length: effective,
-    height,
-    floorThickness: floor,
-    magnets: { ...config.magnets, count: magnetCount },
-    ribs: { ...config.ribs, count: ribCountFor(width, effective, magnetCount) },
-    label: { ...config.label, height: labelHeight(width, effective) },
-    texture: {
-      ...config.texture,
-      depth: Math.min(config.texture.depth, maxTextureDepth({ floorThickness: floor, texture: config.texture })),
-    },
-    segments: previewSegmentsFor(Math.max(width, effective)),
-  }
+  return fitToSize({ ...config, width, length: effective, magnets: { ...config.magnets, count: magnetCount } })
 }
 
 export const DEFAULT_PRESET = DEFAULT_SIZE.round

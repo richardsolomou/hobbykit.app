@@ -1,7 +1,7 @@
-import { maximumCounterClick } from '../core/geometry/counter'
+import { automaticCounterClick, maximumCounterClick } from '../core/geometry/counter'
 import { describe, expect, it } from 'vitest'
 import { holderSlotMagnetCenters } from '../core/geometry/holder'
-import { footprintKey } from '../core/geometry/presets'
+import { footprintKey, pinned, resized, sizeDefaults } from '../core/geometry/presets'
 import {
   defaultWorkspace,
   loadWorkspace,
@@ -249,9 +249,55 @@ describe('workspace state', () => {
     expect(loadWorkspace(storage).counter).toEqual({ ...saved.counter, clearance: 0.3 })
   })
 
+  it('lets the counter click follow the wheel size until it is set by hand', () => {
+    const workspace = defaultWorkspace()
+    const counter = synchronizeWorkspace({ ...workspace, counter: { ...workspace.counter, drumDiameter: 24 } }).counter
+
+    expect(counter.click).toBe(automaticCounterClick({ drumDiameter: 24 }))
+  })
+
+  it('keeps a counter click set by hand when the wheel size changes', () => {
+    const workspace = defaultWorkspace()
+    const counter = { ...workspace.counter, drumDiameter: 24, click: 0.5, pinned: ['click' as const] }
+
+    expect(synchronizeWorkspace({ ...workspace, counter }).counter.click).toBe(0.5)
+  })
+
+  it('refits every size-driven base setting nobody set by hand to a new footprint', () => {
+    const workspace = defaultWorkspace()
+    const base = synchronizeWorkspace({ ...workspace, base: resized(workspace.base, 65, 65) }).base
+    const { height, floorThickness, labelHeight } = sizeDefaults(base)
+
+    expect([base.height, base.floorThickness, base.label.height]).toEqual([height, floorThickness, labelHeight])
+  })
+
+  it('keeps every style choice through a change of footprint', () => {
+    const workspace = defaultWorkspace()
+    const styled = { ...workspace.base, profile: 'bevel' as const, profileSize: 0.5, sides: 8 }
+
+    expect(resized(styled, 50, 50)).toMatchObject({ profile: 'bevel', profileSize: 0.5, sides: 8 })
+  })
+
+  it('lets a size-driven value follow the size again once it is set back to what the size gives', () => {
+    const base = defaultWorkspace().base
+
+    expect([pinned(base, 'height', base.height + 1), pinned(base, 'height', sizeDefaults(base).height)]).toEqual([['height'], []])
+  })
+
+  it('pins the size-driven settings a saved workspace had moved away from its size, and no others', () => {
+    const saved = defaultWorkspace()
+    const { pinned: _pinned, ...base } = { ...saved.base, height: 6 }
+    const { pinned: _counterPinned, ...counter } = { ...saved.counter, click: 1 }
+    const storage = memoryStorage()
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 26, workspace: { ...saved, base, counter } }))
+    const loaded = loadWorkspace(storage)
+
+    expect([loaded.base.pinned, loaded.counter.pinned]).toEqual([['height'], ['click']])
+  })
+
   it('lowers a counter click past what the barb can give', () => {
     const workspace = defaultWorkspace()
-    const counter = { ...workspace.counter, clearance: 0.6, click: 1.8 }
+    const counter = { ...workspace.counter, clearance: 0.6, click: 1.8, pinned: ['click' as const] }
 
     expect(synchronizeWorkspace({ ...workspace, counter }).counter.click).toBeCloseTo(maximumCounterClick(counter), 9)
   })
@@ -281,7 +327,7 @@ describe('workspace state', () => {
   it.each([10, 11, 12])('keeps every other setting of a version %i workspace', (version) => {
     const storage = memoryStorage()
     const saved = defaultWorkspace()
-    saved.base = { ...saved.base, height: 5 }
+    saved.base = { ...saved.base, height: 5, pinned: ['height'] }
     saved.token = { ...saved.token, text: 'Objective' }
     saved.batch = [{ shape: 'round', width: 28.5, length: 28.5, quantity: 3 }]
     storage.setItem(
@@ -507,6 +553,7 @@ describe('workspace state', () => {
     })
 
     overridden.base.ribs.count = 0
+    overridden.base.pinned = ['ribs']
     expect(synchronizeWorkspace(overridden).base.ribs.count).toBe(0)
   })
 

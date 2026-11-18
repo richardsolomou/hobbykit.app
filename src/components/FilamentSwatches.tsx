@@ -21,16 +21,17 @@ export function FilamentSwatches({
   onChange: (filaments: FilamentColours) => void
 }) {
   return (
-    <fieldset aria-label="Colours" className="flex shrink-0 items-center gap-1.5">
+    // On a phone the swatches overlap in a space kept for three, so the header holds its width whichever page is open.
+    <fieldset aria-label="Colours" className="flex shrink-0 items-center justify-end gap-1.5 max-sm:w-15 max-sm:gap-0 max-sm:-space-x-1.5">
       {FILAMENTS.slice(0, count).map(([key, label]) => (
         <Popover key={key}>
           <PopoverTrigger
             aria-label={`${label}: ${colourName(filaments[key])}`}
             title={`${label}: ${colourName(filaments[key])}`}
-            className="size-6 rounded-full border border-muted-foreground transition-transform hover:scale-110"
+            className="size-6 rounded-full border border-muted-foreground transition-transform hover:z-10 hover:scale-110"
             style={{ backgroundColor: filaments[key] }}
           />
-          <PopoverContent align="end" className="w-auto">
+          <PopoverContent align="center" className="w-auto">
             <div className="flex items-center justify-between gap-3">
               <PopoverTitle className="note">{label}</PopoverTitle>
               <span className="flex items-center gap-2">

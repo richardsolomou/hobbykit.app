@@ -44,7 +44,7 @@ export function PaintingTrayPanel({
 }: Props) {
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Spray tray settings" className="pb-4 [counter-reset:schedule]">
+      <aside aria-label="Spray tray settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
         <Section
           title="Magnet grid"
           aside={<span className="readout text-xs text-muted-foreground">{paintingTrayMagnetPocketCount(paintingTray)} holes</span>}
@@ -71,6 +71,7 @@ export function PaintingTrayPanel({
           />
           <Dimension
             label="Centre spacing"
+            advanced
             value={paintingTray.spacing}
             min={minimumPaintingTraySpacing(paintingTray)}
             max={80}
@@ -80,6 +81,7 @@ export function PaintingTrayPanel({
           />
           <Dimension
             label="Edge margin"
+            advanced
             value={paintingTray.edgeMargin}
             min={minimumPaintingTrayEdgeMargin(paintingTray)}
             max={40}
@@ -90,24 +92,60 @@ export function PaintingTrayPanel({
           <FieldDescription>Offset holes between rows give smaller and mixed-size bases more placement options.</FieldDescription>
         </Section>
 
-        <Section
-          title="Construction"
-          aside={
-            <span className="readout text-xs text-muted-foreground">
-              {trimNumber(paintingSize.width)} × {trimNumber(paintingSize.length)}mm
-            </span>
-          }
-        >
-          <Dimension
-            label="Tray thickness"
-            value={paintingTray.height}
-            min={minimumPaintingTrayHeight(paintingTray)}
-            max={8}
-            step={0.1}
-            defaultValue={PAINTING_DEFAULTS.height}
-            onChange={(height) => setPaintingTray({ ...paintingTray, height })}
+        <Section title="Handle" aside={<span className="readout text-xs text-muted-foreground">{paintingTray.handle.length} mm</span>}>
+          <PictureChoice
+            label="Grip shape"
+            value={paintingTray.handle.shape}
+            defaultValue={PAINTING_DEFAULTS.handle.shape}
+            options={PAINTING_HANDLE_SHAPES.map((shape) => ({ ...shape, picture: GRIP_PICTURES[shape.value] }))}
+            columns={4}
+            onChange={(shape) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, shape } })}
           />
-          <FieldDescription>The flat tray has no rim or recess to block spray from the sides.</FieldDescription>
+          <Dimension
+            label="Grip length"
+            value={paintingTray.handle.length}
+            min={60}
+            max={120}
+            step={5}
+            defaultValue={PAINTING_DEFAULTS.handle.length}
+            onChange={(handleLength) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, length: handleLength } })}
+          />
+          <Dimension
+            label="Grip width"
+            value={paintingTray.handle.width}
+            min={20}
+            max={40}
+            step={1}
+            defaultValue={PAINTING_DEFAULTS.handle.width}
+            onChange={(handleWidth) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, width: handleWidth } })}
+          />
+          <Dimension
+            label="Lean angle"
+            advanced
+            value={paintingTray.handle.angle}
+            min={0}
+            max={30}
+            step={1}
+            unit="°"
+            defaultValue={PAINTING_DEFAULTS.handle.angle}
+            onChange={(angle) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, angle } })}
+          />
+          <ToggleSetting
+            label="Rounded end"
+            checked={paintingTray.handle.roundedEnd}
+            defaultChecked={PAINTING_DEFAULTS.handle.roundedEnd}
+            onChange={(roundedEnd) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, roundedEnd } })}
+          />
+          <ToggleSetting
+            label="Grip ribs"
+            checked={paintingTray.handle.ribs}
+            defaultChecked={PAINTING_DEFAULTS.handle.ribs}
+            onChange={(ribs) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, ribs } })}
+          />
+          <FieldDescription>
+            {paintingHandleDescription(paintingTray)}. An engraved + extends past the grip for alignment. The flat end superglues beneath
+            the tray and exports as a separate upright, support-free part.
+          </FieldDescription>
         </Section>
 
         <Section
@@ -138,6 +176,7 @@ export function PaintingTrayPanel({
           />
           <Dimension
             label="Magnet diameter clearance"
+            advanced
             value={paintingTray.magnets.clearance}
             min={0}
             max={0.6}
@@ -147,6 +186,7 @@ export function PaintingTrayPanel({
           />
           <Dimension
             label="Magnet depth clearance"
+            advanced
             value={paintingTray.magnets.depthClearance}
             min={0}
             max={maxSharedDepthClearance}
@@ -156,60 +196,28 @@ export function PaintingTrayPanel({
           />
           <FieldDescription>Pockets open at the top so installed magnets sit flush in an interleaved grid.</FieldDescription>
         </Section>
-        <Section title="Handle" aside={<span className="readout text-xs text-muted-foreground">{paintingTray.handle.length} mm</span>}>
-          <PictureChoice
-            label="Grip shape"
-            value={paintingTray.handle.shape}
-            defaultValue={PAINTING_DEFAULTS.handle.shape}
-            options={PAINTING_HANDLE_SHAPES.map((shape) => ({ ...shape, picture: GRIP_PICTURES[shape.value] }))}
-            columns={4}
-            onChange={(shape) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, shape } })}
-          />
+
+        <Section
+          title="Construction"
+          aside={
+            <span className="readout text-xs text-muted-foreground">
+              {trimNumber(paintingSize.width)} × {trimNumber(paintingSize.length)}mm
+            </span>
+          }
+        >
           <Dimension
-            label="Grip length"
-            value={paintingTray.handle.length}
-            min={60}
-            max={120}
-            step={5}
-            defaultValue={PAINTING_DEFAULTS.handle.length}
-            onChange={(handleLength) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, length: handleLength } })}
+            label="Tray thickness"
+            advanced
+            value={paintingTray.height}
+            min={minimumPaintingTrayHeight(paintingTray)}
+            max={8}
+            step={0.1}
+            defaultValue={PAINTING_DEFAULTS.height}
+            onChange={(height) => setPaintingTray({ ...paintingTray, height })}
           />
-          <Dimension
-            label="Grip width"
-            value={paintingTray.handle.width}
-            min={20}
-            max={40}
-            step={1}
-            defaultValue={PAINTING_DEFAULTS.handle.width}
-            onChange={(handleWidth) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, width: handleWidth } })}
-          />
-          <Dimension
-            label="Lean angle"
-            value={paintingTray.handle.angle}
-            min={0}
-            max={30}
-            step={1}
-            unit="°"
-            defaultValue={PAINTING_DEFAULTS.handle.angle}
-            onChange={(angle) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, angle } })}
-          />
-          <ToggleSetting
-            label="Rounded end"
-            checked={paintingTray.handle.roundedEnd}
-            defaultChecked={PAINTING_DEFAULTS.handle.roundedEnd}
-            onChange={(roundedEnd) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, roundedEnd } })}
-          />
-          <ToggleSetting
-            label="Grip ribs"
-            checked={paintingTray.handle.ribs}
-            defaultChecked={PAINTING_DEFAULTS.handle.ribs}
-            onChange={(ribs) => setPaintingTray({ ...paintingTray, handle: { ...paintingTray.handle, ribs } })}
-          />
-          <FieldDescription>
-            {paintingHandleDescription(paintingTray)}. An engraved + extends past the grip for alignment. The flat end superglues beneath
-            the tray and exports as a separate upright, support-free part.
-          </FieldDescription>
+          <FieldDescription>The flat tray has no rim or recess to block spray from the sides.</FieldDescription>
         </Section>
+
         <PanelFooter page="painting" resets={resets} />
       </aside>
     </ScrollArea>

@@ -12,10 +12,14 @@ const tall = (page: Page) => page.locator('#label-height')
 const sizeLabel = (page: Page) => page.getByLabel('Label text')
 
 /** Options read "<size> <what it is for>", so anchor on the figure. */
-const sizeOption = (page: Page, label: string) => page.getByRole('option', { name: new RegExp(`^${label.replaceAll('.', '\\.')}\\b`) })
+const sizeOption = (page: Page, label: string) =>
+  page
+    .getByRole('radiogroup', { name: 'Standard base size' })
+    .getByRole('radio', { name: new RegExp(`^${label.replaceAll('.', '\\.')}\\b`) })
 
+/** Picks a standard size; the dimensions are always there to type, so a custom size needs nothing picked. */
 async function pickSize(page: Page, label: string) {
-  await page.getByRole('combobox', { name: 'Standard base size' }).click()
+  if (label === 'Custom') return
   await sizeOption(page, label).click()
 }
 
@@ -66,6 +70,10 @@ test.beforeEach(async ({ page }) => {
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
+  })
+  // Specs reach every setting; the one that tests hiding switches advanced settings off itself.
+  await page.addInitScript(() => {
+    if (window.localStorage.getItem('hobbykit.advanced') === null) window.localStorage.setItem('hobbykit.advanced', 'true')
   })
   await page.goto('/')
   await settled(page)
@@ -166,11 +174,6 @@ test('starts every dimension on a value its own input accepts', async ({ page })
   }
 })
 
-test('opens selects from their visible labels', async ({ page }) => {
-  await page.getByText('Size', { exact: true }).click()
-  await expect(sizeOption(page, '32')).toBeVisible()
-})
-
 test('keeps a half millimetre size exact', { tag: '@ci' }, async ({ page }) => {
   await pickSize(page, '28.5')
   await settled(page)
@@ -201,14 +204,52 @@ test('uses an end pair for a medium oval base', async ({ page }) => {
 })
 
 test('marks and resets a changed value to its default', { tag: '@ci' }, async ({ page }) => {
-  await pickSize(page, '28.5')
-  await pickSize(page, 'Custom')
-  const reset = page.getByRole('button', { name: 'Reset Diameter to 32.0 mm' })
+  const wall = page.getByLabel('Wall thickness in mm')
+  await wall.fill('3')
+  await wall.blur()
+  const reset = page.getByRole('button', { name: 'Reset Wall thickness to 2.0 mm' })
   await expect(reset).toBeVisible()
-  await expect(page.getByText('Diameter', { exact: true })).toHaveClass(/text-modified/)
+  await expect(page.getByText('Wall thickness', { exact: true })).toHaveClass(/text-modified/)
   await reset.click()
-  await expect(page.getByLabel('Diameter in mm', { exact: true })).toHaveValue('32.0')
+  await expect(wall).toHaveValue('2.0')
   await expect(reset).not.toBeVisible()
+})
+
+test('hides advanced settings until they are changed', async ({ page }) => {
+  const advanced = page.getByRole('button', { name: 'Advanced settings' })
+  const wall = page.getByLabel('Wall thickness in mm')
+  await wall.fill('3')
+  await wall.blur()
+  await advanced.click()
+  await expect(page.getByLabel('Top thickness in mm')).toHaveCount(0)
+  await expect(wall).toHaveValue('3.0')
+
+  await page.getByRole('button', { name: 'Reset Wall thickness to 2.0 mm' }).click()
+  await expect(wall).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Advanced settings' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('lets size-driven values follow the size without looking changed', async ({ page }) => {
+  const labelSize = page.getByLabel('Label size in mm')
+  await pickSize(page, '28.5')
+  await expect(labelSize).toHaveValue('5.7')
+  await expect(page.getByRole('button', { name: /^Reset Label size/ })).toHaveCount(0)
+
+  await labelSize.fill('4')
+  await labelSize.blur()
+  await pickSize(page, '60')
+  await expect(labelSize).toHaveValue('4.0')
+  await page.getByRole('button', { name: 'Reset Label size to 8.0 mm' }).click()
+  await expect(labelSize).toHaveValue('8.0')
+  await pickSize(page, '28.5')
+  await expect(labelSize).toHaveValue('5.7')
+})
+
+test('keeps style choices when a standard size is picked', async ({ page }) => {
+  await pickChoice(page, 'Bottom edge', 'Bevel')
+  await pickSize(page, '60')
+  await expect(picked(page, 'Bottom edge', 'Bevel')).toBeChecked()
 })
 
 test('resets construction values to the current footprint defaults', async ({ page }) => {
@@ -290,8 +331,6 @@ test('shares the selected pocket pattern between bases and holders', async ({ pa
 })
 
 test('remembers workspace settings on reload', async ({ page }) => {
-  await page.getByRole('combobox', { name: 'Standard base size' }).click()
-  await page.getByRole('option', { name: /^Custom\b/ }).click()
   await page.getByLabel('Diameter in mm', { exact: true }).fill('37')
   await page.getByLabel('Diameter in mm', { exact: true }).press('Enter')
   const height = page.getByLabel('Base height in mm')
@@ -791,7 +830,9 @@ test('keeps a long image name from widening the token panel', async ({ page }) =
   await page.getByLabel('Token image').setInputFiles({ name, mimeType: 'image/svg+xml', buffer: Buffer.from(SHIELD_SVG) })
   await rebuilt(page, named)
 
-  await expect(page.getByRole('button', { name: 'Remove' })).toBeInViewport({ ratio: 1 })
+  const remove = page.getByRole('button', { name: 'Remove' })
+  await remove.scrollIntoViewIfNeeded()
+  await expect(remove).toBeInViewport({ ratio: 1 })
 })
 
 test('edits engraved token relief in the phone drawer', async ({ page }) => {
@@ -802,6 +843,7 @@ test('edits engraved token relief in the phone drawer', async ({ page }) => {
   await relief.fill('-0.5')
   await relief.blur()
   await expect(tall(page)).toHaveText('3')
+  await relief.evaluate((element) => element.scrollIntoView({ block: 'center' }))
   await expect(relief).toBeInViewport({ ratio: 1 })
   await expect(page.locator('[data-slot="sheet-content"]')).toHaveCSS('opacity', '1')
   await page.screenshot({ path: test.info().outputPath('engraved-token-phone.png') })
@@ -1273,9 +1315,7 @@ for (const entry of SHAPES) {
     await settled(page)
     await expect(page.getByRole('radiogroup', { name: 'Shape' }).getByRole('radio', { name: entry.name, exact: true })).toBeChecked()
     // The size list swaps to that family's range.
-    await page.getByRole('combobox', { name: 'Standard base size' }).click()
     await expect(sizeOption(page, entry.chip)).toBeVisible()
-    await page.keyboard.press('Escape')
     await expect(across(page)).toHaveText(entry.footprint)
     await expect(sizeLabel(page)).toHaveAttribute('placeholder', entry.mark)
   })
@@ -1396,6 +1436,34 @@ test('toggles a setting from the empty reset space after its label', async ({ pa
   if (!box) throw new Error('no label to click')
   await page.mouse.click(box.x + box.width - 5, box.y + box.height / 2)
   await expect(toggle).not.toBeChecked()
+})
+
+test('keeps every generator clear of the name on a tablet', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 800 })
+  const nav = page.getByRole('navigation', { name: 'Generators' })
+  const name = (await page.locator('header h1').boundingBox())!
+  expect((await nav.boundingBox())!.y).toBeGreaterThanOrEqual(name.y + name.height)
+  for (const link of await nav.getByRole('link').all()) {
+    await expect(link).toBeInViewport({ ratio: 1 })
+  }
+})
+
+test('fits a phone screen with every generator in reach', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360)
+  for (const link of await page.getByRole('navigation', { name: 'Generators' }).getByRole('link').all()) {
+    await expect(link).toBeInViewport({ ratio: 1 })
+  }
+  await expect(page.getByRole('button', { name: 'Download 3MF' })).toBeInViewport({ ratio: 1 })
+
+  // A page with three colours keeps the header the height of one with a single colour.
+  const header = async () => (await page.locator('header').boundingBox())?.height
+  const single = await header()
+  await visit(page, 'Counters')
+  await page.getByRole('button', { name: 'Dial counter settings' }).click()
+  await pickChoice(page, 'Digit filament', 'Third colour')
+  await page.keyboard.press('Escape')
+  expect(await header()).toBe(single)
 })
 
 test('moves the controls into a drawer on a phone', { tag: '@ci' }, async ({ page }) => {

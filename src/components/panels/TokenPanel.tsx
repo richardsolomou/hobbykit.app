@@ -36,7 +36,68 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
 
   return (
     <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      <aside aria-label="Token settings" className="pb-4 [counter-reset:schedule]">
+      <aside aria-label="Token settings" className="flex min-h-full flex-col pb-4 [counter-reset:schedule]">
+        <Section title="Body" aside={<span className="readout text-xs text-muted-foreground">{trimNumber(token.size)}mm</span>}>
+          <PictureChoice
+            label="Shape"
+            value={token.shape}
+            defaultValue={TOKEN_DEFAULTS.shape}
+            options={SHAPES.map((shape) => ({ ...shape, picture: TOKEN_SHAPE_PICTURES[shape.value] }))}
+            onChange={(shape) => patchToken({ shape })}
+          />
+          <Dimension
+            label={SIZE_LABELS[token.shape]}
+            value={token.size}
+            min={15}
+            max={120}
+            step={0.1}
+            defaultValue={TOKEN_DEFAULTS.size}
+            onChange={(size) => patchToken({ size })}
+          />
+          {token.shape === 'square' && (
+            <Dimension
+              label="Corner radius"
+              advanced
+              value={token.cornerRadius}
+              min={0}
+              max={token.size / 2}
+              step={0.5}
+              defaultValue={TOKEN_DEFAULTS.cornerRadius}
+              onChange={(cornerRadius) => patchToken({ cornerRadius })}
+            />
+          )}
+          <Dimension
+            label="Thickness"
+            value={token.thickness}
+            min={1}
+            max={10}
+            step={0.1}
+            defaultValue={TOKEN_DEFAULTS.thickness}
+            onChange={(thickness) => patchToken({ thickness })}
+          />
+          <PictureChoice
+            label="Top edge"
+            value={token.profile}
+            defaultValue={TOKEN_DEFAULTS.profile}
+            options={PROFILES.map((profile) => ({ ...profile, picture: PROFILE_PICTURES[profile.value] }))}
+            columns={4}
+            onChange={(profile) => patchToken({ profile })}
+          />
+          {token.profile !== 'straight' && (
+            <Dimension
+              label="Edge size"
+              advanced
+              value={token.profileSize}
+              min={0}
+              max={maxTokenEdgeSize(token)}
+              step={0.1}
+              defaultValue={TOKEN_DEFAULTS.profileSize}
+              onChange={(profileSize) => patchToken({ profileSize })}
+            />
+          )}
+          <FieldDescription>Print flat on the table face with the artwork facing up.</FieldDescription>
+        </Section>
+
         <Section title="Text">
           <Field>
             <FieldLabel htmlFor="token-text" className="sr-only">
@@ -53,6 +114,7 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
           </Field>
           <Dimension
             label="Text height"
+            advanced
             value={token.textHeight}
             min={MIN_TOKEN_TEXT_HEIGHT}
             max={60}
@@ -103,6 +165,7 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
             <>
               <Dimension
                 label="Threshold"
+                advanced
                 value={Math.round(token.threshold * 100)}
                 min={1}
                 max={99}
@@ -113,6 +176,7 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
               />
               <ToggleSetting
                 label="Use light areas"
+                advanced
                 checked={token.invert}
                 defaultChecked={TOKEN_DEFAULTS.invert}
                 onChange={(invert) => patchToken({ invert })}
@@ -138,65 +202,6 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
           <FieldDescription>
             Positive raises the artwork; negative engraves it for stacking. At least 1mm remains beneath it.
           </FieldDescription>
-        </Section>
-
-        <Section title="Body" aside={<span className="readout text-xs text-muted-foreground">{trimNumber(token.size)}mm</span>}>
-          <PictureChoice
-            label="Shape"
-            value={token.shape}
-            defaultValue={TOKEN_DEFAULTS.shape}
-            options={SHAPES.map((shape) => ({ ...shape, picture: TOKEN_SHAPE_PICTURES[shape.value] }))}
-            onChange={(shape) => patchToken({ shape })}
-          />
-          <Dimension
-            label={SIZE_LABELS[token.shape]}
-            value={token.size}
-            min={15}
-            max={120}
-            step={0.1}
-            defaultValue={TOKEN_DEFAULTS.size}
-            onChange={(size) => patchToken({ size })}
-          />
-          {token.shape === 'square' && (
-            <Dimension
-              label="Corner radius"
-              value={token.cornerRadius}
-              min={0}
-              max={token.size / 2}
-              step={0.5}
-              defaultValue={TOKEN_DEFAULTS.cornerRadius}
-              onChange={(cornerRadius) => patchToken({ cornerRadius })}
-            />
-          )}
-          <Dimension
-            label="Thickness"
-            value={token.thickness}
-            min={1}
-            max={10}
-            step={0.1}
-            defaultValue={TOKEN_DEFAULTS.thickness}
-            onChange={(thickness) => patchToken({ thickness })}
-          />
-          <PictureChoice
-            label="Top edge"
-            value={token.profile}
-            defaultValue={TOKEN_DEFAULTS.profile}
-            options={PROFILES.map((profile) => ({ ...profile, picture: PROFILE_PICTURES[profile.value] }))}
-            columns={4}
-            onChange={(profile) => patchToken({ profile })}
-          />
-          {token.profile !== 'straight' && (
-            <Dimension
-              label="Edge size"
-              value={token.profileSize}
-              min={0}
-              max={maxTokenEdgeSize(token)}
-              step={0.1}
-              defaultValue={TOKEN_DEFAULTS.profileSize}
-              onChange={(profileSize) => patchToken({ profileSize })}
-            />
-          )}
-          <FieldDescription>Print flat on the table face with the artwork facing up.</FieldDescription>
         </Section>
 
         <PanelFooter page="token" resets={resets} />
