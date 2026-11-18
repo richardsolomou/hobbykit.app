@@ -1,14 +1,14 @@
 import { buildBase } from '../../src/core/geometry/base'
 import { isElongated } from '../../src/core/geometry/outline'
 import { presetFor, resized, SIZES_BY_SHAPE, standardSize } from '../../src/core/geometry/presets'
-import { exportSegmentsFor } from '../../src/core/geometry/quality'
+import { forExport } from '../../src/core/geometry/exportQuality'
 import type { BaseConfig } from '../../src/core/geometry/types'
 import { type Case, font } from './shared'
 
 const key = (c: BaseConfig) => `${c.shape}-${isElongated(c.shape) ? `${c.width}x${c.length}` : c.width}`
 const custom = (name: string, config: BaseConfig, defines: Case['defines']): Case => ({
   name,
-  build: (wasm) => buildBase(wasm, { ...config, segments: exportSegmentsFor(Math.max(config.width, config.length)) }, font).mesh,
+  build: (wasm) => buildBase(wasm, forExport(config), font).mesh,
   defines,
 })
 

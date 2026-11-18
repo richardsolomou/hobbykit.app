@@ -2,6 +2,7 @@
 export const PAGES = [
   {
     value: 'base' as const,
+    name: 'Base',
     part: 'base' as const,
     label: 'Bases',
     mobileLabel: 'Bases',
@@ -13,6 +14,7 @@ export const PAGES = [
   },
   {
     value: 'holder' as const,
+    name: 'Holder',
     part: 'holder' as const,
     label: 'Holders',
     mobileLabel: 'Holders',
@@ -24,6 +26,7 @@ export const PAGES = [
   },
   {
     value: 'painting' as const,
+    name: 'Spray tray',
     part: 'paintingTray' as const,
     label: 'Spray tray',
     mobileLabel: 'Spray',
@@ -35,6 +38,7 @@ export const PAGES = [
   },
   {
     value: 'rack' as const,
+    name: 'Paint rack',
     part: 'paintRack' as const,
     label: 'Paint racks',
     mobileLabel: 'Paints',
@@ -46,6 +50,7 @@ export const PAGES = [
   },
   {
     value: 'stem' as const,
+    name: 'Stem',
     part: 'stem' as const,
     label: 'Stems',
     mobileLabel: 'Stems',
@@ -57,6 +62,7 @@ export const PAGES = [
   },
   {
     value: 'token' as const,
+    name: 'Token',
     part: 'token' as const,
     label: 'Tokens',
     mobileLabel: 'Tokens',
@@ -68,6 +74,7 @@ export const PAGES = [
   },
   {
     value: 'counter' as const,
+    name: 'Dial counter',
     part: 'counter' as const,
     label: 'Counters',
     mobileLabel: 'Counters',

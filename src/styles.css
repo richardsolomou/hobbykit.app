@@ -83,8 +83,6 @@
   --color-measure: var(--measure);
   --color-magnet: var(--magnet);
   --color-modified: var(--modified);
-  --color-grid-minor: var(--grid-minor);
-  --color-grid-major: var(--grid-major);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

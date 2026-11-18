@@ -1,5 +1,6 @@
 import type { Mesh } from 'manifold-3d'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { duplicateVertices, vertices } from './geometry.test.utils'
 import { loadManifold } from './manifold'
 import { buildPaintRack, defaultPaintRackConfig, paintRackCells, paintRackLayout, paintRackName, paintRackPieceName } from './paintRack'
 import type { PaintRackConfig } from './types'
@@ -42,19 +43,8 @@ const CONFIGS: [string, PaintRackConfig][] = [
   ['flat rows', rack({ rise: 0 })],
 ]
 
-function vertices(mesh: Mesh) {
-  return Array.from({ length: mesh.vertProperties.length / mesh.numProp }, (_value, index) =>
-    [0, 1, 2].map((axis) => mesh.vertProperties[index * mesh.numProp + axis]),
-  )
-}
-
 function maxZ(mesh: Mesh) {
   return Math.max(...vertices(mesh).map(([, , z]) => z))
-}
-
-function duplicatePositions(mesh: Mesh) {
-  const keys = vertices(mesh).map((vertex) => vertex.join(','))
-  return keys.length - new Set(keys).size
 }
 
 /**
@@ -211,7 +201,7 @@ describe('paint rack geometry', () => {
   })
 
   it.each(CONFIGS)('never shares a vertex position in %s, which a slicer would weld into a non-manifold edge', (_name, config) => {
-    expect(duplicatePositions(buildPaintRack(wasm, config).mesh)).toBe(0)
+    expect(duplicateVertices(buildPaintRack(wasm, config).mesh)).toBe(0)
   })
 
   it('stands as tall as the back row plus its lip', () => {

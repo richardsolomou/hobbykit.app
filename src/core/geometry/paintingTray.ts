@@ -1,13 +1,13 @@
 import type { CrossSection, Manifold, ManifoldToplevel } from 'manifold-3d'
-import { defaultHolderConfig, type HolderBuildResult } from './holder'
+import { buildResult, withOwner, type BuildResult, type Owner } from './build'
+import { defaultHolderConfig } from './holder'
 import { trimNumber } from './outline'
-import { curveTolerance, segmentsForTolerance } from './quality'
+import { partSegments } from './quality'
 import type { PaintingHandleConfig, PaintingHandleShape, PaintingTrayConfig } from './types'
 
 const CORNER_RADIUS = 6
 const MIN_FLOOR_THICKNESS = 0.6
 const MIN_POCKET_WEB = 0.8
-const PLA_DENSITY = 1.24e-3
 const HANDLE_PREVIEW_OVERLAP = 0.1
 /** Space between the tray's edge and the grip in an exploded preview. */
 const EXPLODED_HANDLE_GAP = 15
@@ -172,47 +172,44 @@ export function paintingHandleName(config: PaintingTrayConfig): string {
   return `${paintingTrayName(config)}-handle-${handle.shape}-${trimNumber(handle.width)}x${trimNumber(handle.length)}mm-${trimNumber(handle.angle)}deg${options ? `-${options}` : ''}`
 }
 
-type Owner = <T extends { delete: () => void }>(value: T) => T
-
 function roundedRectangle(
   CrossSection: ManifoldToplevel['CrossSection'],
   width: number,
   length: number,
   radius: number,
   segments: number,
-  section: Owner,
+  own: Owner,
 ): CrossSection {
-  const core = section(CrossSection.square([width - radius * 2, length - radius * 2], true))
-  return section(core.offset(radius, 'Round', 2, segments))
+  const core = own(CrossSection.square([width - radius * 2, length - radius * 2], true))
+  return own(core.offset(radius, 'Round', 2, segments))
 }
 
 function paintingHandleSolid(
   wasm: ManifoldToplevel,
   config: PaintingHandleConfig,
-  section: Owner,
-  solidOf: Owner,
+  own: Owner,
   segmentsFor: (diameter: number, previewMinimum: number) => number,
 ): Manifold {
   const { CrossSection } = wasm
   const { handle } = config
   const depth = handleDepth(config)
-  const circle = section(CrossSection.circle(handle.width / 2, segmentsFor(handle.width, 32)))
-  const base = depth === handle.width ? circle : section(circle.scale([1, depth / handle.width]))
+  const circle = own(CrossSection.circle(handle.width / 2, segmentsFor(handle.width, 32)))
+  const base = depth === handle.width ? circle : own(circle.scale([1, depth / handle.width]))
   let profile = base
   if (handle.ribs) {
     const ribRadius = Math.min(1.2, handle.width * 0.04)
     const ribSegments = segmentsFor(ribRadius * 2, 12)
     const ribs = Array.from({ length: HANDLE_RIB_COUNT }, (_, index) => {
       const angle = (index * 2 * Math.PI) / HANDLE_RIB_COUNT
-      const rib = section(CrossSection.circle(ribRadius, ribSegments))
-      return section(rib.translate([(handle.width / 2) * Math.cos(angle), (depth / 2) * Math.sin(angle)]))
+      const rib = own(CrossSection.circle(ribRadius, ribSegments))
+      return own(rib.translate([(handle.width / 2) * Math.cos(angle), (depth / 2) * Math.sin(angle)]))
     })
-    profile = section(CrossSection.union([base, ...ribs]))
+    profile = own(CrossSection.union([base, ...ribs]))
   }
   const needsShaping = handle.shape !== 'round' || handle.roundedEnd
-  const grip = solidOf(profile.extrude(handle.length, needsShaping ? 20 : 0))
+  const grip = own(profile.extrude(handle.length, needsShaping ? 20 : 0))
   const lean = Math.tan((handle.angle * Math.PI) / 180)
-  const leaning = solidOf(
+  const leaning = own(
     grip.warp((vertex) => {
       const position = vertex[2] / handle.length
       const swell =
@@ -230,43 +227,24 @@ function paintingHandleSolid(
       if (handle.shape === 'pistol') vertex[0] -= handle.width * 0.22 * Math.sin(Math.PI * position)
     }),
   )
-  return solidOf(leaning.translate([-handle.length * lean, 0, -handle.length]))
+  return own(leaning.translate([-handle.length * lean, 0, -handle.length]))
 }
 
-export function buildPaintingHandle(wasm: ManifoldToplevel, config: PaintingHandleConfig): HolderBuildResult {
-  const trash: { delete: () => void }[] = []
-  const own: Owner = (value) => {
-    trash.push(value)
-    return value
-  }
-
-  try {
+export function buildPaintingHandle(wasm: ManifoldToplevel, config: PaintingHandleConfig): BuildResult {
+  return withOwner((own) => {
     const dimensions = paintingHandleDimensions(config)
-    const tolerance = curveTolerance(Math.max(dimensions.width, dimensions.length), config.segments)
-    const segmentsFor = (diameter: number, previewMinimum: number) =>
-      Math.max(config.segments <= 256 ? previewMinimum : 3, segmentsForTolerance(diameter, tolerance))
-    const assembled = paintingHandleSolid(wasm, config, own, own, segmentsFor)
+    const segmentsFor = partSegments(Math.max(dimensions.width, dimensions.length), config.segments)
+    const assembled = paintingHandleSolid(wasm, config, own, segmentsFor)
     const bounds = assembled.boundingBox()
-    const printable = own(assembled.translate([-(bounds.min[0] + bounds.max[0]) / 2, -(bounds.min[1] + bounds.max[1]) / 2, -bounds.min[2]]))
-    const volume = printable.volume()
-    const triangles = printable.numTri()
-    return { mesh: printable.getMesh(), stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 } }
-  } finally {
-    for (const value of trash) value.delete()
-  }
+    return buildResult(
+      own(assembled.translate([-(bounds.min[0] + bounds.max[0]) / 2, -(bounds.min[1] + bounds.max[1]) / 2, -bounds.min[2]])),
+    )
+  })
 }
 
-export function buildPaintingTray(wasm: ManifoldToplevel, config: PaintingTrayConfig): HolderBuildResult {
+export function buildPaintingTray(wasm: ManifoldToplevel, config: PaintingTrayConfig): BuildResult {
   const { CrossSection, Manifold } = wasm
-  const trash: { delete: () => void }[] = []
-  const own: Owner = (value) => {
-    trash.push(value)
-    return value
-  }
-  const section = (value: CrossSection) => own(value)
-  const solidOf = (value: Manifold) => own(value)
-
-  try {
+  return withOwner((own) => {
     if (config.height < minimumPaintingTrayHeight(config)) {
       throw new Error('Tray thickness leaves too little material below the magnet pockets')
     }
@@ -278,40 +256,34 @@ export function buildPaintingTray(wasm: ManifoldToplevel, config: PaintingTrayCo
     }
 
     const layout = paintingTrayLayout(config)
-    const tolerance = curveTolerance(Math.max(layout.width, layout.length), config.segments)
-    const segmentsFor = (diameter: number, previewMinimum: number) =>
-      Math.max(config.segments <= 256 ? previewMinimum : 3, segmentsForTolerance(diameter, tolerance))
+    const segmentsFor = partSegments(Math.max(layout.width, layout.length), config.segments)
 
     const radius = Math.min(CORNER_RADIUS, layout.width / 2 - 0.01, layout.length / 2 - 0.01)
     const outline = roundedRectangle(CrossSection, layout.width, layout.length, radius, segmentsFor(radius * 2, 32), own)
-    const plate = solidOf(outline.extrude(config.height))
+    const plate = own(outline.extrude(config.height))
     const centerMarkSpan = paintingTrayCenterMarkSpan(config)
-    const centerMarkHorizontal = section(CrossSection.square([centerMarkSpan, CENTER_MARK_WIDTH], true))
-    const centerMarkVertical = section(CrossSection.square([CENTER_MARK_WIDTH, centerMarkSpan], true))
-    const centerMark = section(CrossSection.union([centerMarkHorizontal, centerMarkVertical]))
-    const centerMarkDrill = solidOf(centerMark.extrude(CENTER_MARK_DEPTH + 0.001))
-    const centerMarkCutter = solidOf(centerMarkDrill.translate([0, 0, -0.001]))
-    const markedPlate = solidOf(Manifold.difference([plate, centerMarkCutter]))
+    const centerMarkHorizontal = own(CrossSection.square([centerMarkSpan, CENTER_MARK_WIDTH], true))
+    const centerMarkVertical = own(CrossSection.square([CENTER_MARK_WIDTH, centerMarkSpan], true))
+    const centerMark = own(CrossSection.union([centerMarkHorizontal, centerMarkVertical]))
+    const centerMarkDrill = own(centerMark.extrude(CENTER_MARK_DEPTH + 0.001))
+    const centerMarkCutter = own(centerMarkDrill.translate([0, 0, -0.001]))
+    const markedPlate = own(Manifold.difference([plate, centerMarkCutter]))
     const pocketRadius = (config.magnets.diameter + config.magnets.clearance) / 2
-    const pocket = section(CrossSection.circle(pocketRadius, segmentsFor(pocketRadius * 2, 32)))
-    const pocketOutlines = layout.magnetCenters.map((center) => section(pocket.translate([center.x, center.y])))
-    const pockets = section(CrossSection.union(pocketOutlines))
+    const pocket = own(CrossSection.circle(pocketRadius, segmentsFor(pocketRadius * 2, 32)))
+    const pocketOutlines = layout.magnetCenters.map((center) => own(pocket.translate([center.x, center.y])))
+    const pockets = own(CrossSection.union(pocketOutlines))
     const pocketDepth = config.magnets.thickness + config.magnets.depthClearance
-    const drill = solidOf(pockets.extrude(pocketDepth + 0.001))
-    const cutter = solidOf(drill.translate([0, 0, config.height - pocketDepth]))
-    const tray = solidOf(Manifold.difference([markedPlate, cutter]))
+    const drill = own(pockets.extrude(pocketDepth + 0.001))
+    const cutter = own(drill.translate([0, 0, config.height - pocketDepth]))
+    const tray = own(Manifold.difference([markedPlate, cutter]))
     let solid = tray
     if (config.assembly !== false) {
-      const handle = paintingHandleSolid(wasm, paintingHandleConfig(config), own, own, segmentsFor)
+      const handle = paintingHandleSolid(wasm, paintingHandleConfig(config), own, segmentsFor)
       // Exploded, the grip stands beside the tray rather than under it, where the tray hides it from above.
       const beside = -layout.length / 2 - EXPLODED_HANDLE_GAP - handle.boundingBox().max[1]
-      const attachedHandle = solidOf(handle.translate(config.exploded ? [0, beside, 0] : [0, 0, HANDLE_PREVIEW_OVERLAP]))
-      solid = solidOf(Manifold.union([tray, attachedHandle]))
+      const attachedHandle = own(handle.translate(config.exploded ? [0, beside, 0] : [0, 0, HANDLE_PREVIEW_OVERLAP]))
+      solid = own(Manifold.union([tray, attachedHandle]))
     }
-    const volume = solid.volume()
-    const triangles = solid.numTri()
-    return { mesh: solid.getMesh(), stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 } }
-  } finally {
-    for (const value of trash) value.delete()
-  }
+    return buildResult(solid)
+  })
 }

@@ -1,5 +1,5 @@
 import { buildCounter, defaultCounterConfig } from '../../src/core/geometry/counter'
-import { exportSegmentsFor } from '../../src/core/geometry/quality'
+import { forExport } from '../../src/core/geometry/exportQuality'
 import type { CounterConfig, CounterPart } from '../../src/core/geometry/types'
 import { type Case, font } from './shared'
 
@@ -14,7 +14,7 @@ function parts(name: string, changes: Partial<CounterConfig>, defines: Case['def
   const one = (piece: string, part: CounterPart, source: 'mesh' | 'inserts' | 'third' = 'mesh'): Case => ({
     name: `${name}-${piece}`,
     build: (wasm) => {
-      const result = buildCounter(wasm, { ...config, part, segments: exportSegmentsFor(config.drumDiameter) }, font)
+      const result = buildCounter(wasm, forExport({ ...config, part }), font)
       return result[source]!
     },
     defines: { ...defines, part: piece },

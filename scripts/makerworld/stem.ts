@@ -1,5 +1,5 @@
-import { exportSegmentsFor } from '../../src/core/geometry/quality'
-import { buildFlightStem, defaultFlightStemConfig, stemMaximumDiameter } from '../../src/core/geometry/stem'
+import { forExport } from '../../src/core/geometry/exportQuality'
+import { buildFlightStem, defaultFlightStemConfig } from '../../src/core/geometry/stem'
 import type { FlightStemConfig } from '../../src/core/geometry/types'
 import type { Case } from './shared'
 
@@ -7,7 +7,7 @@ const custom = (name: string, changes: Partial<FlightStemConfig>, defines: Case[
   const config = { ...defaultFlightStemConfig(), ...changes }
   return {
     name,
-    build: (wasm) => buildFlightStem(wasm, { ...config, segments: exportSegmentsFor(stemMaximumDiameter(config)) }).mesh,
+    build: (wasm) => buildFlightStem(wasm, forExport(config)).mesh,
     defines,
   }
 }

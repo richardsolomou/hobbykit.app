@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
 import type { Mesh } from 'manifold-3d'
-import { parse, type Font } from 'opentype.js'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { bounds, font, openEdges } from './geometry.test.utils'
 import {
   buildHolder,
   defaultHolderConfig,
@@ -20,45 +19,10 @@ import { exportSegmentsFor } from './quality'
 import type { HolderConfig } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
-let font: Font
 
 beforeAll(async () => {
   wasm = await loadManifold()
-  const bytes = readFileSync('src/assets/fonts/oswald-700.woff')
-  font = parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
 })
-
-function bounds(mesh: Mesh) {
-  const { numProp, vertProperties } = mesh
-  const min = [Infinity, Infinity, Infinity]
-  const max = [-Infinity, -Infinity, -Infinity]
-  for (let i = 0; i < vertProperties.length; i += numProp) {
-    for (let axis = 0; axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], vertProperties[i + axis])
-      max[axis] = Math.max(max[axis], vertProperties[i + axis])
-    }
-  }
-  return { min, size: max.map((value, axis) => value - min[axis]) }
-}
-
-/** Edges not shared by exactly two triangles once vertices are welded by position, as a slicer loads them. */
-function openEdges(mesh: Mesh) {
-  const ids = new Map<string, number>()
-  const id = (vertex: number) => {
-    const key = [0, 1, 2].map((axis) => mesh.vertProperties[vertex * mesh.numProp + axis]).join()
-    if (!ids.has(key)) ids.set(key, ids.size)
-    return ids.get(key)!
-  }
-  const edges = new Map<string, number>()
-  for (let t = 0; t < mesh.triVerts.length; t += 3) {
-    const corners = [0, 1, 2].map((i) => id(mesh.triVerts[t + i]))
-    for (let i = 0; i < 3; i++) {
-      const edge = [corners[i], corners[(i + 1) % 3]].sort((a, b) => a - b).join()
-      edges.set(edge, (edges.get(edge) ?? 0) + 1)
-    }
-  }
-  return [...edges.values()].filter((count) => count !== 2).length
-}
 
 /** Each module the plan holds, built alone at export quality the way the export builds it. */
 function exportedModules(config: HolderConfig) {
@@ -441,7 +405,7 @@ describe('buildHolder', () => {
   it('builds a solid with the exact Gridfinity footprint and requested height', () => {
     const config = defaultHolderConfig()
     const result = buildHolder(wasm, config)
-    expect(result.stats.solid).toBe(true)
+    expect(openEdges(result.mesh)).toBe(0)
     expect(bounds(result.mesh).size).toEqual([41.5, 167.5, 14])
   })
 
@@ -474,7 +438,7 @@ describe('buildHolder', () => {
       maxRows: 1,
     }
     const result = buildHolder(wasm, config, font)
-    expect(result.stats.solid).toBe(true)
+    expect(openEdges(result.mesh)).toBe(0)
     expect(bounds(result.mesh).size).toEqual([83.5, 41.5, 14])
   })
 
@@ -515,7 +479,7 @@ describe('buildHolder', () => {
   it('cuts every default magnet pocket for larger supported bases', () => {
     const config = { ...defaultHolderConfig(), groups: [holderGroup('models-1', 2, { width: 65 })], maxRows: 2 }
     expect(holderMagnetPocketCount(config)).toBe(6)
-    expect(buildHolder(wasm, config).stats.solid).toBe(true)
+    expect(openEdges(buildHolder(wasm, config).mesh)).toBe(0)
   })
 
   it.each([
@@ -523,7 +487,7 @@ describe('buildHolder', () => {
     { name: 'magnets', config: defaultHolderConfig() },
   ])('rejects slots that cut through the Gridfinity foot with $name', ({ config }) => {
     const maxDepth = maxHolderSlotDepth(config)
-    expect(buildHolder(wasm, { ...config, slotDepth: maxDepth }, font).stats.solid).toBe(true)
+    expect(openEdges(buildHolder(wasm, { ...config, slotDepth: maxDepth }, font).mesh)).toBe(0)
     expect(() => buildHolder(wasm, { ...config, slotDepth: maxDepth + 0.01 }, font)).toThrow(
       'Slots leave too little material above the Gridfinity foot',
     )

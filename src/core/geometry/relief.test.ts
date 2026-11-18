@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
 import type { Mesh } from 'manifold-3d'
-import { parse, type Font } from 'opentype.js'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { duplicateVertices, font, overhangs } from './geometry.test.utils'
 import { buildBase } from './base'
 import { loadManifold } from './manifold'
 import { OVAL_SIZES, POLYGON_SIZES, presetFor, RECT_SIZES, ROUND_SIZES, type SizePreset } from './presets'
@@ -10,12 +9,9 @@ import { DEFAULT_TEXTURE } from './texture'
 import type { BaseConfig } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
-let font: Font
 
 beforeAll(async () => {
   wasm = await loadManifold()
-  const bytes = readFileSync('src/assets/fonts/oswald-700.woff')
-  font = parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
 })
 
 const ROUND_32 = ROUND_SIZES[2]
@@ -53,23 +49,6 @@ function pocketCeiling(mesh: Mesh, config: BaseConfig) {
   return ceiling
 }
 
-/** Downward faces above the plate flatter than 45°, by height, or `slope` for any that are not flat. */
-function overhangs(mesh: Mesh): string[] {
-  const { numProp, vertProperties: v, triVerts } = mesh
-  const found = new Set<string>()
-  for (let t = 0; t < triVerts.length; t += 3) {
-    const [a, b, c] = [0, 1, 2].map((k) => triVerts[t + k] * numProp)
-    const u = [0, 1, 2].map((axis) => v[b + axis] - v[a + axis])
-    const w = [0, 1, 2].map((axis) => v[c + axis] - v[a + axis])
-    const normal = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
-    const area = Math.hypot(...normal) / 2
-    const nz = normal[2] / (2 * area)
-    const z = Math.max(v[a + 2], v[b + 2], v[c + 2])
-    if (area > 1e-3 && nz < -Math.SQRT1_2 - 3e-3 && z > 1e-6) found.add(nz < -0.999 ? `flat at ${z.toFixed(2)}` : 'slope')
-  }
-  return [...found].sort()
-}
-
 /** The steepest face of the relief above the body, in degrees, ignoring its vertical walls and float32 slivers. */
 function steepest(mesh: Mesh, config: BaseConfig) {
   const { numProp, vertProperties: v, triVerts } = mesh
@@ -85,17 +64,6 @@ function steepest(mesh: Mesh, config: BaseConfig) {
     if (area > 1e-3 && nz > 0.02) flattest = Math.min(flattest, nz)
   }
   return (Math.acos(flattest) * 180) / Math.PI
-}
-
-function duplicateVertices(mesh: Mesh) {
-  const seen = new Set<string>()
-  let duplicates = 0
-  for (let i = 0; i < mesh.vertProperties.length; i += mesh.numProp) {
-    const key = `${mesh.vertProperties[i]},${mesh.vertProperties[i + 1]},${mesh.vertProperties[i + 2]}`
-    if (seen.has(key)) duplicates++
-    seen.add(key)
-  }
-  return duplicates
 }
 
 describe('relief textures', () => {

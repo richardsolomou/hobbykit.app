@@ -92,7 +92,6 @@ export function MiniatureGroupsEditor({ groups, fittedByGroup, spareByGroup, onC
               }}
             />
             <SizeSelect
-              compact
               label={`Standard base size ${index + 1}`}
               value={customOpen ? CUSTOM_SIZE : (standard?.label ?? CUSTOM_SIZE)}
               options={[

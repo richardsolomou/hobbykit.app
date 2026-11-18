@@ -241,7 +241,6 @@ interface ChoiceProps<T extends string | number> {
   label: string
   value: T
   defaultValue?: T
-  disabled?: boolean
   options: readonly { value: T; label: string }[]
   onChange: (value: T) => void
 }
@@ -267,7 +266,6 @@ export function PictureChoice<T extends string | number>({
   label,
   value,
   defaultValue,
-  disabled,
   options,
   onChange,
   columns = 3,
@@ -279,16 +277,15 @@ export function PictureChoice<T extends string | number>({
   if (options.length <= 1 || hidden) return null
   const defaultLabel = options.find((option) => option.value === defaultValue)?.label ?? String(defaultValue)
   return (
-    <Field data-disabled={disabled} className="gap-2">
+    <Field className="gap-2">
       <div className="flex items-center gap-2">
         <FieldLabel id={id} className={`font-normal ${modified ? 'text-modified' : ''}`}>
           {label}
         </FieldLabel>
-        {modified && !disabled && <ResetButton label={label} value={defaultLabel} onReset={() => onChange(defaultValue)} />}
+        {modified && <ResetButton label={label} value={defaultLabel} onReset={() => onChange(defaultValue)} />}
       </div>
       <RadioGroup
         aria-labelledby={id}
-        disabled={disabled}
         value={String(value)}
         onValueChange={(next) => {
           const picked = options.find((option) => String(option.value) === String(next))
@@ -394,23 +391,18 @@ export function StandardSizes({
   value,
   options,
   onChange,
-  label = 'Standard base size',
 }: {
   value: string | undefined
-  options: readonly SizeOption[]
+  options: readonly Pick<SizeOption, 'value' | 'use'>[]
   onChange: (value: string) => void
-  label?: string
 }) {
-  const id = useId()
   const selected = options.find((option) => option.value === value)
-  const wide = options.some((option) => (option.label ?? option.value).length > 5)
+  const wide = options.some((option) => option.value.length > 5)
   return (
     <Field className="gap-2">
-      <FieldLabel id={id} className="font-normal">
-        Standard sizes
-      </FieldLabel>
+      <FieldLabel className="font-normal">Standard sizes</FieldLabel>
       <RadioGroup
-        aria-label={label}
+        aria-label="Standard base size"
         value={value ?? null}
         onValueChange={(next) => onChange(String(next))}
         className={wide ? 'grid-cols-3 gap-1' : 'grid-cols-5 gap-1'}
@@ -419,10 +411,10 @@ export function StandardSizes({
           <Radio.Root
             key={option.value}
             value={option.value}
-            aria-label={`${option.label ?? option.value} ${option.use}`}
+            aria-label={`${option.value} ${option.use}`}
             className="readout flex items-center justify-center rounded-md border border-border bg-background py-1 text-xs text-muted-foreground outline-none transition-colors hover:border-muted-foreground hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-measure data-checked:text-foreground data-checked:hover:border-measure"
           >
-            {option.label ?? option.value}
+            {option.value}
           </Radio.Root>
         ))}
       </RadioGroup>
@@ -444,42 +436,32 @@ export function SizeSelect({
   value,
   options,
   onChange,
-  label = 'Standard base size',
-  compact = false,
+  label,
 }: {
-  value: string | null
+  value: string
   options: readonly SizeOption[]
   onChange: (value: string) => void
-  label?: string
-  compact?: boolean
+  label: string
 }) {
-  const id = useId()
   const selected = options.find((option) => option.value === value)
   return (
-    <Field orientation={compact ? undefined : 'horizontal'} className={compact ? 'min-w-0' : undefined}>
-      <div className={compact ? 'contents' : settingColumns}>
-        {!compact && (
-          <FieldLabel htmlFor={id} className={`${settingLabel} col-span-2`}>
-            Size
-          </FieldLabel>
-        )}
-        <Select value={value} onValueChange={(next) => onChange(String(next))}>
-          <SelectTrigger id={id} aria-label={label} className={compact ? 'w-full min-w-0' : 'w-28'}>
-            <SelectValue>
-              <span className="readout shrink-0">{selected?.label ?? selected?.value ?? 'Custom'}</span>
-              <span className="truncate text-muted-foreground">{selected?.use ?? 'off the standard range'}</span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent align="end" alignItemWithTrigger={false} style={{ width: '20rem', maxWidth: 'calc(100vw - 2rem)' }}>
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <span className="readout shrink-0">{option.label ?? option.value}</span>
-                <span className="text-muted-foreground">{option.use}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <Field className="min-w-0">
+      <Select value={value} onValueChange={(next) => onChange(String(next))}>
+        <SelectTrigger aria-label={label} className="w-full min-w-0">
+          <SelectValue>
+            <span className="readout shrink-0">{selected?.label ?? selected?.value ?? 'Custom'}</span>
+            <span className="truncate text-muted-foreground">{selected?.use ?? 'off the standard range'}</span>
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent align="end" alignItemWithTrigger={false} style={{ width: '20rem', maxWidth: 'calc(100vw - 2rem)' }}>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              <span className="readout shrink-0">{option.label ?? option.value}</span>
+              <span className="text-muted-foreground">{option.use}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </Field>
   )
 }

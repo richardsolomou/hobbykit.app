@@ -1,12 +1,11 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Mat4, Vec3 } from 'manifold-3d'
 import type { Font } from 'opentype.js'
-import type { BuildResult } from './base'
+import { buildResult, withOwner, type BuildResult } from './build'
 import { trimNumber } from './outline'
 import { previewSegmentsFor } from './quality'
 import { GLYPH_FILL, textPolygons, type Polygon } from './text'
 import type { CounterConfig, CounterLayout, CounterPart, CounterTile } from './types'
 
-const PLA_DENSITY = 1.24e-3
 const FACES = 10
 const HALF_FACE = Math.PI / FACES
 const FACE_DEGREES = 360 / FACES
@@ -136,7 +135,7 @@ const ROD_SHORT = 0.05
 /** The wheel diameter the caddy is designed at. Above it the whole caddy scales, so its walls and digits grow with it. */
 export const COUNTER_BASE_DIAMETER = 18
 /** The size the design was drawn at, and the default: smaller dials are fiddly to turn. */
-export const COUNTER_FULL_SIZE = 39.6
+const COUNTER_FULL_SIZE = 39.6
 export const counterScale = ({ drumDiameter }: Pick<CounterConfig, 'drumDiameter'>): number =>
   Math.max(1, drumDiameter / COUNTER_BASE_DIAMETER)
 /** The design a scaled caddy is built from: fits are real gaps, which must not grow, so they shrink here by the scale the model then gains. */
@@ -361,13 +360,7 @@ export function buildCounter(wasm: ManifoldToplevel, requested: CounterConfig, f
   const config = atBaseSize(requested)
   const scale = counterScale(requested)
   const { CrossSection, Manifold } = wasm
-  const trash: { delete: () => void }[] = []
-  const own = <T extends { delete: () => void }>(value: T): T => {
-    trash.push(value)
-    return value
-  }
-
-  try {
+  return withOwner((own) => {
     if (config.clearance <= 0) throw new Error('The wheels need clearance to turn')
     const maxClick = maximumCounterClick(requested)
     if (requested.click < MIN_COUNTER_CLICK - 1e-6 || requested.click > maxClick + 1e-6) {
@@ -913,15 +906,6 @@ export function buildCounter(wasm: ManifoldToplevel, requested: CounterConfig, f
       inserts = inserts && own(inserts.scale(scale))
       third = third && own(third.scale(scale))
     }
-    const volume = solid.volume() + (inserts?.volume() ?? 0) + (third?.volume() ?? 0)
-    const triangles = solid.numTri() + (inserts?.numTri() ?? 0) + (third?.numTri() ?? 0)
-    return {
-      mesh: solid.getMesh(),
-      ...(inserts ? { inserts: inserts.getMesh() } : {}),
-      ...(third ? { third: third.getMesh() } : {}),
-      stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 },
-    }
-  } finally {
-    for (const value of trash) value.delete()
-  }
+    return buildResult(solid, inserts, third)
+  })
 }

@@ -1,5 +1,5 @@
 import { Boxes, Code2, RotateCcw, Signpost } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +11,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Dimension } from '@/components/controls'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { maxHolderSlotDepth, minHolderHeight } from '@/core/geometry/holder'
 import { DEFAULT_PRESET, presetFor } from '@/core/geometry/presets'
 import { maxProfileSize } from '@/core/geometry/profile'
@@ -47,6 +49,63 @@ export const fitSlotDepth = (next: HolderConfig) => ({
     ? { height: minHolderHeight({ ...next, slotDepth: 1 }), slotDepth: 1 }
     : { slotDepth: Math.min(next.slotDepth, Math.floor(maxHolderSlotDepth(next) / 0.5) * 0.5) }),
 })
+
+type MagnetSize = Pick<BaseConfig['magnets'], 'diameter' | 'thickness' | 'clearance'>
+
+/** Magnets are shared across generators, so their size reads and writes the same everywhere. */
+export function MagnetSizeFields({
+  magnets,
+  maxThickness,
+  setSharedMagnets,
+}: {
+  magnets: MagnetSize
+  maxThickness: number
+  setSharedMagnets: (changes: SharedMagnetChanges) => void
+}) {
+  return (
+    <>
+      <Dimension
+        label="Magnet diameter"
+        value={magnets.diameter}
+        min={2}
+        max={8}
+        step={0.5}
+        defaultValue={BASE_DEFAULTS.magnets.diameter}
+        onChange={(diameter) => setSharedMagnets({ diameter })}
+      />
+      <Dimension
+        label="Magnet thickness"
+        value={magnets.thickness}
+        min={0.5}
+        max={maxThickness}
+        step={0.1}
+        defaultValue={BASE_DEFAULTS.magnets.thickness}
+        onChange={(thickness) => setSharedMagnets({ thickness })}
+      />
+    </>
+  )
+}
+
+export function MagnetClearanceField({
+  magnets,
+  setSharedMagnets,
+}: {
+  magnets: MagnetSize
+  setSharedMagnets: (changes: SharedMagnetChanges) => void
+}) {
+  return (
+    <Dimension
+      label="Magnet diameter clearance"
+      advanced
+      value={magnets.clearance}
+      min={0}
+      max={0.6}
+      step={0.05}
+      defaultValue={BASE_DEFAULTS.magnets.clearance}
+      onChange={(clearance) => setSharedMagnets({ clearance })}
+    />
+  )
+}
 
 export interface ResetAction {
   label: string
@@ -86,7 +145,20 @@ function ResetButton({ label, description, onReset }: ResetAction) {
 
 const footerLink = buttonVariants({ variant: 'link', size: 'sm', className: 'text-muted-foreground' })
 
-export function PanelFooter({ page, resets }: { page: Page['value']; resets: ResetAction[] }) {
+export function Panel({ page, resets, children }: { page: Page['value']; resets: ResetAction[]; children: ReactNode }) {
+  const { name, makerworld } = PAGES.find((item) => item.value === page)!
+  return (
+    <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
+      {/* Sections number themselves off this counter, in the order they appear. */}
+      <aside aria-label={`${name} settings`} className="relative flex min-h-full flex-col pb-4 [counter-reset:schedule]">
+        {children}
+        <PanelFooter makerworld={makerworld} resets={resets} />
+      </aside>
+    </ScrollArea>
+  )
+}
+
+function PanelFooter({ makerworld, resets }: { makerworld: string; resets: ResetAction[] }) {
   const startTour = useTour()
   return (
     // Pushed to the foot of the panel, so it sits at the bottom however few settings show.
@@ -101,7 +173,7 @@ export function PanelFooter({ page, resets }: { page: Page['value']; resets: Res
           <Signpost className="size-3.5" />
           Tour
         </button>
-        <a href={PAGES.find((item) => item.value === page)!.makerworld} target="_blank" rel="noreferrer" className={footerLink}>
+        <a href={makerworld} target="_blank" rel="noreferrer" className={footerLink}>
           <Boxes className="size-3.5" />
           MakerWorld
         </a>

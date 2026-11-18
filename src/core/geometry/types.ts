@@ -7,7 +7,7 @@ export type EdgeProfile = 'taper' | 'straight' | 'bevel' | 'round'
 export type MagnetLayout = 'balanced' | 'five-cross'
 export type MagnetPatternVersion = 1 | 2
 
-export interface MagnetSpec {
+interface MagnetSpec {
   /** 0 disables pockets. 1 sits at the centre, more spread over the footprint. */
   count: number
   /** Balanced follows the selected count; five-cross provides a centre and four outer pockets. */
@@ -27,14 +27,14 @@ export interface MagnetSpec {
   thickness: number
 }
 
-export interface RibSpec {
+interface RibSpec {
   count: number
   thickness: number
   /** Height above the well floor. */
   height: number
 }
 
-export interface LabelSpec {
+interface LabelSpec {
   enabled: boolean
   /** Defaults to the measured size, so a 28.5mm base reads "28.5". */
   text?: string
@@ -116,8 +116,6 @@ export interface BaseStats {
   volume: number
   /** Grams at 1.24 g/cm³ (PLA). */
   grams: number
-  /** True when the mesh is a closed solid with substance. */
-  solid: boolean
 }
 
 export interface HolderConfig {
@@ -332,7 +330,7 @@ export interface CounterConfig {
   exploded?: boolean
 }
 
-export interface BasePartConfig extends BaseConfig {
+interface BasePartConfig extends BaseConfig {
   kind?: 'base'
 }
 

@@ -10,7 +10,6 @@ import type { MeshData, WorkerReply, WorkerRequest } from '@/worker/protocol'
 export function useGenerator(config: PartConfig) {
   const worker = useRef<Worker>(null)
   const nextId = useRef(0)
-  const latestPreview = useRef(0)
   const building = useRef(false)
   const queued = useRef<PartConfig>(undefined)
   const sent = useRef<PartConfig>(undefined)
@@ -24,7 +23,6 @@ export function useGenerator(config: PartConfig) {
   /** Sends one config and remembers it is the one whose reply matters. */
   const send = useCallback((next: PartConfig) => {
     const id = ++nextId.current
-    latestPreview.current = id
     sent.current = next
     building.current = true
     worker.current?.postMessage({ id, config: next } satisfies WorkerRequest)
@@ -43,7 +41,7 @@ export function useGenerator(config: PartConfig) {
     worker.current = instance
     instance.onmessage = (event: MessageEvent<WorkerReply>) => {
       const reply = event.data
-      if (reply.id !== latestPreview.current) return // a newer config is already in flight
+      if (reply.id !== nextId.current) return // a newer config is already in flight
       if (reply.kind === 'error') {
         setError(reply.message)
       } else {
@@ -57,9 +55,7 @@ export function useGenerator(config: PartConfig) {
     return () => instance.terminate()
   }, [drain])
 
-  // No debounce: a build is started the moment the worker is free, and while it is
-  // busy only the newest config is held. Waiting for changes to stop meant nothing
-  // rendered at all until a drag ended.
+  // No debounce: a build starts the moment the worker is free, and while it is busy only the newest config is held.
   useEffect(() => {
     if (building.current) queued.current = config
     else send(config)

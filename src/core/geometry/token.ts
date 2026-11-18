@@ -1,6 +1,6 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Vec3 } from 'manifold-3d'
 import type { Font } from 'opentype.js'
-import type { BuildResult } from './base'
+import { buildResult, withOwner, type BuildResult } from './build'
 import { baseOutline, trimNumber } from './outline'
 import { profileSteps } from './profile'
 import { curveTolerance, previewSegmentsFor } from './quality'
@@ -8,9 +8,8 @@ import { GLYPH_FILL, glyphOutlines, type Polygon } from './text'
 import { traceSilhouette } from './trace'
 import type { TokenConfig, TokenImage } from './types'
 
-const PLA_DENSITY = 1.24e-3
 /** Clear top face left between the artwork and the start of the edge treatment. */
-export const TOKEN_FACE_MARGIN = 1.5
+const TOKEN_FACE_MARGIN = 1.5
 /** Smallest cap height worth printing; below it the text is refused rather than shrunk. */
 export const MIN_TOKEN_TEXT_HEIGHT = 1.5
 /** Features narrower than a 0.4mm nozzle's line are opened away before they reach the slicer. */
@@ -57,7 +56,7 @@ export function tokenFootprint({ shape, size }: Pick<TokenConfig, 'shape' | 'siz
   return { width: shape === 'hex' ? size * HEX_CORNERS_PER_FLAT : size, length: size }
 }
 
-export function tokenOutline(wasm: ManifoldToplevel, config: TokenConfig): CrossSection {
+function tokenOutline(wasm: ManifoldToplevel, config: TokenConfig): CrossSection {
   const { width, length } = tokenFootprint(config)
   const shape = config.shape === 'hex' ? 'polygon' : config.shape === 'square' ? 'rect' : 'round'
   return baseOutline(wasm, { shape, width, length, cornerRadius: config.cornerRadius, sides: 6, segments: config.segments })
@@ -190,13 +189,7 @@ function decodeLuminance(image: TokenImage): Uint8Array {
  */
 export function buildToken(wasm: ManifoldToplevel, config: TokenConfig, font?: Font): BuildResult {
   const { CrossSection, Manifold } = wasm
-  const trash: { delete: () => void }[] = []
-  const own = <T extends { delete: () => void }>(value: T): T => {
-    trash.push(value)
-    return value
-  }
-
-  try {
+  return withOwner((own) => {
     if (config.thickness < 1) throw new Error('Token must be at least 1 mm thick')
     if (config.thickness + Math.min(0, config.emboss) < 1 - 1e-6) {
       throw new Error('Engraving must leave at least 1 mm of material beneath the artwork')
@@ -262,17 +255,9 @@ export function buildToken(wasm: ManifoldToplevel, config: TokenConfig, font?: F
       const feature = own(own(relief.extrude(Math.abs(config.emboss))).translate([0, 0, config.thickness + Math.min(0, config.emboss)]))
       // Raised artwork starts exactly on the top face, so as a second part it shares no layer with the body.
       if (config.emboss > 0) inserts = feature
-      else solid = own(config.emboss < 0 ? solid.subtract(feature) : solid.add(feature))
+      else solid = own(solid.subtract(feature))
     }
 
-    const volume = solid.volume() + (inserts?.volume() ?? 0)
-    const triangles = solid.numTri() + (inserts?.numTri() ?? 0)
-    return {
-      mesh: solid.getMesh(),
-      ...(inserts ? { inserts: inserts.getMesh() } : {}),
-      stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 },
-    }
-  } finally {
-    for (const value of trash) value.delete()
-  }
+    return buildResult(solid, inserts)
+  })
 }

@@ -13,3 +13,10 @@ export const curveTolerance = (diameter: number, segments: number): number => (d
 export const previewSegmentsFor = (diameter: number): number => Math.min(256, Math.max(64, Math.ceil(diameter * 3.2)))
 
 export const exportSegmentsFor = (diameter: number): number => segmentsForTolerance(diameter, EXPORT_CURVE_TOLERANCE)
+
+/** Segment counts for every curve of a part `size` across, at the chord error its `segments` gives; a preview keeps at least `previewMinimum`. */
+export function partSegments(size: number, segments: number) {
+  const tolerance = curveTolerance(size, segments)
+  return (diameter: number, previewMinimum: number) =>
+    Math.max(segments <= 256 ? previewMinimum : 3, segmentsForTolerance(diameter, tolerance))
+}

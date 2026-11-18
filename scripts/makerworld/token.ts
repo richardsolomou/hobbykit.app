@@ -1,13 +1,12 @@
-import { exportSegmentsFor } from '../../src/core/geometry/quality'
-import { buildToken, defaultTokenConfig, tokenFootprint } from '../../src/core/geometry/token'
+import { forExport } from '../../src/core/geometry/exportQuality'
+import { buildToken, defaultTokenConfig } from '../../src/core/geometry/token'
 import type { TokenConfig } from '../../src/core/geometry/types'
 import { type Case, font } from './shared'
 
 /** The body and, for raised text, the text insert, each compared on its own as the script exports them. */
 const custom = (name: string, changes: Partial<TokenConfig>, defines: Case['defines']): Case[] => {
   const config = { ...defaultTokenConfig(), ...changes }
-  const build = (wasm: Parameters<Case['build']>[0]) =>
-    buildToken(wasm, { ...config, segments: exportSegmentsFor(tokenFootprint(config).width) }, font)
+  const build = (wasm: Parameters<Case['build']>[0]) => buildToken(wasm, forExport(config), font)
   const body: Case = { name: `${name}-body`, build: (wasm) => build(wasm).mesh, defines: { ...defines, part: 'body' } }
   if (!(config.emboss > 0 && config.text.trim())) return [body]
   const text: Case = {

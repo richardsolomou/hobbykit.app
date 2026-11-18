@@ -1,14 +1,13 @@
 import { buildHolder, defaultHolderConfig, holderGroup, holderPlan } from '../../src/core/geometry/holder'
-import { isElongated, trimNumber } from '../../src/core/geometry/outline'
+import { sizeText } from '../../src/core/geometry/outline'
 import { footprintKey, SIZES_BY_SHAPE, type SizePreset, standardSize } from '../../src/core/geometry/presets'
-import { exportSegmentsFor } from '../../src/core/geometry/quality'
+import { forExport } from '../../src/core/geometry/exportQuality'
 import type { HolderConfig, HolderGroup } from '../../src/core/geometry/types'
 import { type Case, font } from './shared'
 
 type Group = Partial<Omit<HolderGroup, 'id' | 'quantity'>>
 
-const sizeKey = (p: SizePreset) =>
-  `${p.shape}-${isElongated(p.shape) ? `${trimNumber(p.width)}x${trimNumber(p.length ?? p.width)}` : trimNumber(p.width)}`
+const sizeKey = (p: SizePreset) => `${p.shape}-${sizeText(p)}`
 const sized = (p: SizePreset): Group => ({ shape: p.shape, width: p.width, length: p.length ?? p.width })
 
 /** The first module the app exports, built at export quality, against the script with `defines`. */
@@ -17,10 +16,8 @@ function custom(name: string, quantity: number, group: Group, changes: Partial<H
     name,
     build: (wasm) => {
       const config = { ...defaultHolderConfig(), ...changes, groups: [holderGroup('models-1', quantity, group)] }
-      const module = holderPlan(config).modules[0]
-      if (!module) throw new Error(`${name}: nothing fits`)
-      const segments = exportSegmentsFor(Math.max(module.layout.width, module.layout.length))
-      return buildHolder(wasm, { ...config, module: 0, segments }, font).mesh
+      if (holderPlan(config).modules.length === 0) throw new Error(`${name}: nothing fits`)
+      return buildHolder(wasm, forExport({ ...config, module: 0 }), font).mesh
     },
     defines: { quantity, ...defines },
   }

@@ -1,12 +1,13 @@
-import type { CrossSection, Manifold, ManifoldToplevel, Mesh, Vec3 } from 'manifold-3d'
+import type { CrossSection, Manifold, ManifoldToplevel, Vec3 } from 'manifold-3d'
+import { buildResult, withOwner, type BuildResult } from './build'
 import type { Font } from 'opentype.js'
 import { magnetPositions, supportsFivePocketCross } from './base'
 import { fitLabel, LABEL_MARGIN, labelAngles, pointInContours, type LabelCircle } from './label'
-import { isElongated, trimNumber } from './outline'
-import { automaticMagnetCount, DEFAULT_SIZE, footprintKey, presetFor } from './presets'
-import { curveTolerance, segmentsForTolerance } from './quality'
+import { baseOutline, footprint, isElongated, sizeText, trimNumber } from './outline'
+import { automaticMagnetCount, DEFAULT_SIZE, defaultCornerRadius, footprintKey, presetFor } from './presets'
+import { partSegments } from './quality'
 import { GLYPH_FILL, polygonsWidth, textPolygons, type Polygon } from './text'
-import type { BaseStats, HolderConfig, HolderGroup, ShapeKind } from './types'
+import type { HolderConfig, HolderGroup, ShapeKind } from './types'
 
 const GRID = 42
 const GAP = 0.5
@@ -18,7 +19,6 @@ const PROFILE = [
   { inset: 0, z: 4.75 },
 ] as const
 const CORNER_RADIUS = 3.75
-const PLA_DENSITY = 1.24e-3
 const MIN_SLOT_FLOOR_THICKNESS = 0.4
 const ENGRAVING_DEPTH = 0.4
 const HEX_ROW_HEIGHT = Math.sqrt(3) / 2
@@ -38,11 +38,6 @@ export interface HolderLayout {
   width: number
   length: number
   slotCenters: HolderSlot[]
-}
-
-export interface HolderBuildResult {
-  mesh: Mesh
-  stats: BaseStats
 }
 
 export interface HolderModule {
@@ -93,23 +88,22 @@ export function holderGroup(id: string, quantity: number, overrides: Partial<Omi
     shape,
     width,
     length,
-    cornerRadius: overrides.cornerRadius ?? Math.min(2, Math.min(width, length) * 0.06),
+    cornerRadius: overrides.cornerRadius ?? defaultCornerRadius(width, length),
     sides: overrides.sides ?? 6,
   }
 }
 
 export function holderGroupLabel(group: Pick<HolderGroup, 'shape' | 'width' | 'length'>): string {
-  const size = isElongated(group.shape) ? `${trimNumber(group.width)}×${trimNumber(group.length)}` : `Ø${trimNumber(group.width)}`
+  const size = isElongated(group.shape) ? sizeText(group, '×') : `Ø${trimNumber(group.width)}`
   return group.shape === 'round' ? size : `${shapeLabel(group.shape)} ${size}`
 }
 
 function holderGroupSizeLabel(group: Pick<HolderGroup, 'shape' | 'width' | 'length'>): string {
-  return isElongated(group.shape) ? `${trimNumber(group.width)}×${trimNumber(group.length)}` : trimNumber(group.width)
+  return sizeText(group, '×')
 }
 
 function holderGroupNamePart(group: HolderGroup): string {
-  const size = isElongated(group.shape) ? `${trimNumber(group.width)}x${trimNumber(group.length)}` : trimNumber(group.width)
-  return `${group.quantity}x-${group.shape}-${size}mm`
+  return `${group.quantity}x-${group.shape}-${sizeText(group)}mm`
 }
 
 function shapeLabel(shape: ShapeKind): string {
@@ -118,12 +112,17 @@ function shapeLabel(shape: ShapeKind): string {
   return shape
 }
 
-function slotWidth(slot: Pick<HolderGroup, 'width'>) {
-  return slot.width
-}
+const slotLength = (slot: Pick<HolderGroup, 'shape' | 'width' | 'length'>) => footprint(slot).length
 
-function slotLength(slot: Pick<HolderGroup, 'shape' | 'width' | 'length'>) {
-  return isElongated(slot.shape) ? slot.length : slot.width
+/** A slot's outline grown by `clearance`, centred on the origin. */
+function slotOutline(wasm: ManifoldToplevel, slot: HolderSlot, clearance: number, segments: number): CrossSection {
+  return baseOutline(wasm, {
+    ...slot,
+    width: slot.width + clearance,
+    length: slotLength(slot) + clearance,
+    cornerRadius: slot.cornerRadius + clearance / 2,
+    segments,
+  })
 }
 
 export function holderSlotMagnetCenters(
@@ -134,7 +133,7 @@ export function holderSlotMagnetCenters(
     {
       label: '',
       shape: slot.shape,
-      width: slotWidth(slot),
+      width: slot.width,
       length: slotLength(slot),
       use: '',
     },
@@ -142,15 +141,14 @@ export function holderSlotMagnetCenters(
     settings.magnets.patternVersion,
   )
   const fiveCross =
-    settings.magnets.layout === 'five-cross' &&
-    (settings.magnets.patternVersion === 1 || supportsFivePocketCross(slot.shape, slotWidth(slot)))
+    settings.magnets.layout === 'five-cross' && (settings.magnets.patternVersion === 1 || supportsFivePocketCross(slot.shape, slot.width))
   const count = fiveCross
     ? 5
     : settings.magnets.patternVersion === 1
       ? (settings.magnetCounts[footprintKey(slot.shape, slot.width, slot.length)] ?? base.magnets.count)
       : (settings.magnetCounts[footprintKey(slot.shape, slot.width, slot.length)] ??
         automaticMagnetCount(
-          slotWidth(slot),
+          slot.width,
           slotLength(slot),
           settings.magnets.maxCount,
           settings.magnets.diameter,
@@ -158,7 +156,7 @@ export function holderSlotMagnetCenters(
         ))
   const pocketRadius = (settings.magnets.diameter + settings.magnets.clearance) / 2
   const bossRadius = pocketRadius + settings.magnetBossWall
-  const halfWidth = Math.max(0, slotWidth(slot) / 2 - settings.baseWallThickness)
+  const halfWidth = Math.max(0, slot.width / 2 - settings.baseWallThickness)
   const halfLength = Math.max(0, slotLength(slot) / 2 - settings.baseWallThickness)
   return magnetPositions(count, halfWidth, halfLength, bossRadius + LABEL_MARGIN, {
     ellipticalRow: slot.shape === 'oval',
@@ -181,7 +179,7 @@ function maxPossibleGroupQuantity(
   const edge = Math.max(edgeSpacing, MIN_EDGE_SPACING)
   const width = maxColumns * GRID - GAP - edge * 2
   const length = maxRows * GRID - GAP - edge * 2
-  const itemWidth = slotWidth(group) + clearance
+  const itemWidth = group.width + clearance
   const itemLength = slotLength(group) + clearance
   if (itemWidth > width || itemLength > length) return 0
   const pitchX = itemWidth + spacing
@@ -221,8 +219,8 @@ export function minHolderHeight(config: HolderConfig): number {
 }
 
 function distributed(points: HolderSlot[], width: number, length: number) {
-  const minX = Math.min(...points.map((point) => point.x - slotWidth(point) / 2))
-  const maxX = Math.max(...points.map((point) => point.x + slotWidth(point) / 2))
+  const minX = Math.min(...points.map((point) => point.x - point.width / 2))
+  const maxX = Math.max(...points.map((point) => point.x + point.width / 2))
   const minY = Math.min(...points.map((point) => point.y - slotLength(point) / 2))
   const maxY = Math.max(...points.map((point) => point.y + slotLength(point) / 2))
   const cx = (minX + maxX) / 2
@@ -230,7 +228,7 @@ function distributed(points: HolderSlot[], width: number, length: number) {
   const centred = points.map((point) => ({ ...point, x: point.x - cx, y: point.y - cy }))
   let scale = Infinity
   for (const point of centred) {
-    if (Math.abs(point.x) > 1e-9) scale = Math.min(scale, (width / 2 - slotWidth(point) / 2) / Math.abs(point.x))
+    if (Math.abs(point.x) > 1e-9) scale = Math.min(scale, (width / 2 - point.width / 2) / Math.abs(point.x))
     if (Math.abs(point.y) > 1e-9) scale = Math.min(scale, (length / 2 - slotLength(point) / 2) / Math.abs(point.y))
   }
   scale = Number.isFinite(scale) ? Math.max(1, scale) : 1
@@ -374,11 +372,11 @@ function relaxedPacking(diameters: number[], width: number, length: number, spac
 function validBoxPacking(points: HolderSlot[], width: number, length: number, spacing: number) {
   for (let i = 0; i < points.length; i++) {
     const point = points[i]
-    if (Math.abs(point.x) > width / 2 - slotWidth(point) / 2 + 1e-6 || Math.abs(point.y) > length / 2 - slotLength(point) / 2 + 1e-6)
+    if (Math.abs(point.x) > width / 2 - point.width / 2 + 1e-6 || Math.abs(point.y) > length / 2 - slotLength(point) / 2 + 1e-6)
       return false
     for (let j = 0; j < i; j++) {
       const other = points[j]
-      const separatedX = Math.abs(point.x - other.x) >= (slotWidth(point) + slotWidth(other)) / 2 + spacing - 1e-6
+      const separatedX = Math.abs(point.x - other.x) >= (point.width + other.width) / 2 + spacing - 1e-6
       const separatedY = Math.abs(point.y - other.y) >= (slotLength(point) + slotLength(other)) / 2 + spacing - 1e-6
       if (!separatedX && !separatedY) return false
     }
@@ -387,15 +385,15 @@ function validBoxPacking(points: HolderSlot[], width: number, length: number, sp
 }
 
 function boxPacking(items: HolderSlot[], width: number, length: number, spacing: number) {
-  const sorted = [...items].sort((a, b) => slotLength(b) - slotLength(a) || slotWidth(b) - slotWidth(a))
+  const sorted = [...items].sort((a, b) => slotLength(b) - slotLength(a) || b.width - a.width)
   const rows: HolderSlot[][] = []
   const rowWidths: number[] = []
   const rowHeights: number[] = []
   for (const item of sorted) {
-    if (slotWidth(item) > width || slotLength(item) > length) return undefined
+    if (item.width > width || slotLength(item) > length) return undefined
     let placed = false
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-      const nextWidth = rowWidths[rowIndex] + spacing + slotWidth(item)
+      const nextWidth = rowWidths[rowIndex] + spacing + item.width
       if (nextWidth > width) continue
       rows[rowIndex].push(item)
       rowWidths[rowIndex] = nextWidth
@@ -405,7 +403,7 @@ function boxPacking(items: HolderSlot[], width: number, length: number, spacing:
     }
     if (!placed) {
       rows.push([item])
-      rowWidths.push(slotWidth(item))
+      rowWidths.push(item.width)
       rowHeights.push(slotLength(item))
     }
   }
@@ -418,8 +416,8 @@ function boxPacking(items: HolderSlot[], width: number, length: number, spacing:
     const rowHeight = rowHeights[rowIndex]
     let x = -rowWidths[rowIndex] / 2
     for (const item of row) {
-      packed.push({ ...item, x: x + slotWidth(item) / 2, y: y + rowHeight / 2 })
-      x += slotWidth(item) + spacing
+      packed.push({ ...item, x: x + item.width / 2, y: y + rowHeight / 2 })
+      x += item.width + spacing
     }
     y += rowHeight + spacing
   }
@@ -450,13 +448,13 @@ function singleHolderLayout(
     .flatMap((group) =>
       Array.from({ length: group.quantity }, (_, index): HolderSlot => ({ ...group, id: `${group.id}-${index}`, x: 0, y: 0 })),
     )
-    .sort((a, b) => Math.max(slotWidth(b), slotLength(b)) - Math.max(slotWidth(a), slotLength(a)))
+    .sort((a, b) => Math.max(b.width, slotLength(b)) - Math.max(a.width, slotLength(a)))
   const key = `${exactSize ? '=' : ''}${maxColumns}:${maxRows}:${config.spacing}:${edgeSpacing}:${config.slotClearance}:${groups
     .map((group) => `${group.quantity}x${group.shape}-${group.width}x${slotLength(group)}-${group.cornerRadius}-${group.sides}`)
     .join(',')}`
   const cached = layoutCache.get(key)
   if (cached) return cached
-  const largestWidth = Math.max(0, ...slots.map(slotWidth))
+  const largestWidth = Math.max(0, ...slots.map((slot) => slot.width))
   const minimumColumns = Math.max(1, Math.ceil((largestWidth + config.slotClearance + edgeSpacing * 2 + GAP) / GRID))
   let layout: HolderLayout | undefined
   for (let unitsWide = exactSize ? maxColumns : minimumColumns; unitsWide <= maxColumns && !layout; unitsWide++) {
@@ -465,18 +463,12 @@ function singleHolderLayout(
     for (let unitsDeep = exactSize ? maxRows : 1; unitsDeep <= maxRows; unitsDeep++) {
       const length = unitsDeep * GRID - GAP
       const packingLength = length - edgeSpacing * 2
-      if (
-        slots.some(
-          (slot) => slotWidth(slot) + config.slotClearance > packingWidth || slotLength(slot) + config.slotClearance > packingLength,
-        )
-      )
+      if (slots.some((slot) => slot.width + config.slotClearance > packingWidth || slotLength(slot) + config.slotClearance > packingLength))
         continue
-      const circleSlots = slots.every(
-        (slot) => (slot.shape === 'round' || slot.shape === 'polygon') && slotWidth(slot) === slotLength(slot),
-      )
+      const circleSlots = slots.every((slot) => (slot.shape === 'round' || slot.shape === 'polygon') && slot.width === slotLength(slot))
       const packed = circleSlots
         ? relaxedPacking(
-            slots.map((slot) => slotWidth(slot) + config.slotClearance),
+            slots.map((slot) => slot.width + config.slotClearance),
             packingWidth,
             packingLength,
             config.spacing,
@@ -728,60 +720,21 @@ export function holderModuleName(module: HolderModule): string {
   return nameFor(module.layout, module.config.groups)
 }
 
-export function slotOutline(
-  wasm: ManifoldToplevel,
-  slot: Omit<HolderGroup, 'id' | 'quantity'>,
-  clearance: number,
-  segments: number,
-): CrossSection {
-  const { CrossSection } = wasm
-  const width = slotWidth(slot) + clearance
-  const length = slotLength(slot) + clearance
-  if (slot.shape === 'round') return CrossSection.circle(width / 2, segments)
-  if (slot.shape === 'oval') return CrossSection.circle(1, segments).scale([width / 2, length / 2])
-  if (slot.shape === 'pill') {
-    const radius = Math.min(width, length) / 2
-    const straight = Math.max(width - length, 0)
-    if (straight <= 0) return CrossSection.circle(radius, segments)
-    const cap = CrossSection.circle(radius, segments)
-    return CrossSection.union([
-      CrossSection.square([straight, length], true),
-      cap.translate([straight / 2, 0]),
-      cap.translate([-straight / 2, 0]),
-    ])
-  }
-  if (slot.shape === 'polygon') return CrossSection.circle(width / 2, Math.max(3, Math.round(slot.sides)))
-  const radius = Math.max(0, Math.min(slot.cornerRadius + clearance / 2, Math.min(width, length) / 2 - 0.01))
-  if (radius <= 0) return CrossSection.square([width, length], true)
-  return CrossSection.square([width - radius * 2, length - radius * 2], true).offset(radius, 'Round', 2, segments)
-}
-
-function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderModule, font?: Font): HolderBuildResult {
+function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderModule, font?: Font): BuildResult {
   const { CrossSection, Manifold } = wasm
-  const trash: { delete: () => void }[] = []
-  const own = <T extends { delete: () => void }>(value: T): T => {
-    trash.push(value)
-    return value
-  }
-  const section = (value: CrossSection) => own(value)
-  const solidOf = (value: Manifold) => own(value)
-
-  try {
+  return withOwner((own) => {
     if (config.maxColumns < 1 || config.maxRows < 1) throw new Error('A holder needs at least one allowed row and column')
     if (config.height < BASE_HEIGHT) throw new Error('Holder height must be at least one Gridfinity unit')
     if (config.slotDepth > maxHolderSlotDepth(config)) throw new Error('Slots leave too little material above the Gridfinity foot')
 
     if (layout.slotCenters.length === 0) throw new Error('Miniatures do not fit within the maximum Gridfinity rows and columns')
-    const tolerance = curveTolerance(Math.max(layout.width, layout.length), config.segments)
-    const preview = config.segments <= 256
-    const segmentsFor = (diameter: number, previewMinimum: number) =>
-      Math.max(preview ? previewMinimum : 3, segmentsForTolerance(diameter, tolerance))
+    const segmentsFor = partSegments(Math.max(layout.width, layout.length), config.segments)
     const profileSegments = segmentsFor(CORNER_RADIUS * 2, 32)
     const roundedRect = (outerWidth: number, outerLength: number, inset: number) => {
       const width = outerWidth - inset * 2
       const length = outerLength - inset * 2
       const radius = Math.max(0.01, CORNER_RADIUS - inset)
-      return section(CrossSection.square([width - radius * 2, length - radius * 2], true).offset(radius, 'Round', 2, profileSegments))
+      return own(own(CrossSection.square([width - radius * 2, length - radius * 2], true)).offset(radius, 'Round', 2, profileSegments))
     }
     const pointsAt = (outline: CrossSection, z: number): Vec3[] =>
       outline.toPolygons().flatMap((ring) => ring.map(([x, y]): Vec3 => [x, y, z]))
@@ -790,66 +743,55 @@ function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderMod
     for (let i = 0; i < PROFILE.length - 1; i++) {
       const from = roundedRect(GRID - GAP, GRID - GAP, PROFILE[i].inset)
       const to = roundedRect(GRID - GAP, GRID - GAP, PROFILE[i + 1].inset)
-      footSegments.push(solidOf(Manifold.hull([...pointsAt(from, PROFILE[i].z), ...pointsAt(to, PROFILE[i + 1].z)])))
+      footSegments.push(own(Manifold.hull([...pointsAt(from, PROFILE[i].z), ...pointsAt(to, PROFILE[i + 1].z)])))
     }
-    const foot = solidOf(Manifold.union(footSegments))
+    const foot = own(Manifold.union(footSegments))
     const feet: Manifold[] = []
     for (let unitY = 0; unitY < layout.unitsDeep; unitY++) {
       for (let unitX = 0; unitX < layout.unitsWide; unitX++) {
         const x = (unitX - (layout.unitsWide - 1) / 2) * GRID
         const y = (unitY - (layout.unitsDeep - 1) / 2) * GRID
-        feet.push(solidOf(foot.translate([x, y, 0])))
+        feet.push(own(foot.translate([x, y, 0])))
       }
     }
     const top = roundedRect(layout.width, layout.length, 0)
-    const bridge = solidOf(top.extrude(config.height - PROFILE.at(-1)!.z))
-    const raisedBridge = solidOf(bridge.translate([0, 0, PROFILE.at(-1)!.z]))
-    let solid = solidOf(Manifold.union([...feet, raisedBridge]))
+    const bridge = own(top.extrude(config.height - PROFILE.at(-1)!.z))
+    const raisedBridge = own(bridge.translate([0, 0, PROFILE.at(-1)!.z]))
+    let solid = own(Manifold.union([...feet, raisedBridge]))
 
     const slotOutlines = layout.slotCenters.map((slot) => {
-      const detail = Math.max(slotWidth(slot), slotLength(slot)) + config.slotClearance
-      return section(slotOutline(wasm, slot, config.slotClearance, segmentsFor(detail, 64)).translate([slot.x, slot.y]))
+      const detail = Math.max(slot.width, slotLength(slot)) + config.slotClearance
+      return own(own(slotOutline(wasm, slot, config.slotClearance, segmentsFor(detail, 64))).translate([slot.x, slot.y]))
     })
-    const slots = section(CrossSection.union(slotOutlines))
-    const slotCut = solidOf(slots.extrude(config.slotDepth + 0.01))
-    const cutters = [solidOf(slotCut.translate([0, 0, config.height - config.slotDepth]))]
+    const slots = own(CrossSection.union(slotOutlines))
+    const slotCut = own(slots.extrude(config.slotDepth + 0.01))
+    const cutters = [own(slotCut.translate([0, 0, config.height - config.slotDepth]))]
 
     if (config.magnets.enabled) {
       const radius = (config.magnets.diameter + config.magnets.clearance) / 2
-      const magnetDisc = section(CrossSection.circle(radius, segmentsFor(radius * 2, 32)))
+      const magnetDisc = own(CrossSection.circle(radius, segmentsFor(radius * 2, 32)))
       const magnetOutlines = layout.slotCenters.flatMap((slot) =>
-        holderSlotMagnetCenters(slot, config).map((center) => section(magnetDisc.translate([slot.x + center.x, slot.y + center.y]))),
+        holderSlotMagnetCenters(slot, config).map((center) => own(magnetDisc.translate([slot.x + center.x, slot.y + center.y]))),
       )
       if (magnetOutlines.length > 0) {
-        const magnets = section(CrossSection.union(magnetOutlines))
+        const magnets = own(CrossSection.union(magnetOutlines))
         const pocketDepth = config.magnets.thickness + config.magnets.depthClearance
-        const drill = solidOf(magnets.extrude(pocketDepth + 0.001))
+        const drill = own(magnets.extrude(pocketDepth + 0.001))
         const pocketFloor = config.height - config.slotDepth - pocketDepth
-        cutters.push(solidOf(drill.translate([0, 0, pocketFloor])))
+        cutters.push(own(drill.translate([0, 0, pocketFloor])))
       }
     }
 
     if (config.engraving.enabled && font) {
-      const depth = ENGRAVING_DEPTH
-      const textSection = (text: string, height: number, maxWidth: number, x: number, y: number) => {
-        const polygons = textPolygons(font, text, height)
-        const width = polygonsWidth(polygons)
-        const scale = width > maxWidth ? maxWidth / width : 1
-        const scaled: Polygon[] = polygons.map((polygon) => polygon.map(([px, py]): [number, number] => [px * scale + x, py * scale + y]))
-        return section(CrossSection.ofPolygons(scaled, GLYPH_FILL))
-      }
-
       if (config.engraving.placement === 'slots') {
         const labels: CrossSection[] = []
         for (const slot of layout.slotCenters) {
           const label = holderGroupSizeLabel(slot)
-          const narrow = Math.min(slotWidth(slot), slotLength(slot))
+          const narrow = Math.min(slot.width, slotLength(slot))
           const height = Math.min(4, narrow * 0.14)
-          const polygons = textPolygons(font, label.replace(/^Ø/, ''), height)
+          const polygons = textPolygons(font, label, height)
           if (polygons.length === 0) continue
-          const room = section(
-            slotOutline(wasm, slot, 0, segmentsFor(Math.max(slotWidth(slot), slotLength(slot)), 64)).offset(-LABEL_MARGIN),
-          )
+          const room = own(own(slotOutline(wasm, slot, 0, segmentsFor(Math.max(slot.width, slotLength(slot)), 64))).offset(-LABEL_MARGIN))
           if (room.isEmpty()) continue
           const roomBounds = room.bounds()
           const reach = Math.hypot((roomBounds.max[0] - roomBounds.min[0]) / 2, (roomBounds.max[1] - roomBounds.min[1]) / 2)
@@ -872,12 +814,12 @@ function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderMod
           const placed: Polygon[] = polygons.map((polygon) =>
             polygon.map(([px, py]): [number, number] => [slot.x + px * fit.scale + fit.x, slot.y + py * fit.scale + fit.y]),
           )
-          labels.push(section(CrossSection.ofPolygons(placed, GLYPH_FILL)))
+          labels.push(own(CrossSection.ofPolygons(placed, GLYPH_FILL)))
         }
         if (labels.length > 0) {
-          const outlines = section(CrossSection.union(labels))
-          const cut = solidOf(outlines.extrude(depth + 0.01))
-          cutters.push(solidOf(cut.translate([0, 0, config.height - config.slotDepth - depth])))
+          const outlines = own(CrossSection.union(labels))
+          const cut = own(outlines.extrude(ENGRAVING_DEPTH + 0.01))
+          cutters.push(own(cut.translate([0, 0, config.height - config.slotDepth - ENGRAVING_DEPTH])))
         }
       } else {
         const text = [...new Set(config.groups.map(holderGroupSizeLabel))].join(' / ')
@@ -895,9 +837,9 @@ function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderMod
                   if (slot.shape === 'round' || slot.shape === 'polygon') {
                     const dx = Math.max(Math.abs(slot.x - x) - halfWidth, 0)
                     const dy = Math.max(Math.abs(slot.y - y) - halfHeight, 0)
-                    return Math.hypot(dx, dy) - (slotWidth(slot) + config.slotClearance) / 2
+                    return Math.hypot(dx, dy) - (slot.width + config.slotClearance) / 2
                   }
-                  const dx = Math.abs(slot.x - x) - halfWidth - (slotWidth(slot) + config.slotClearance) / 2
+                  const dx = Math.abs(slot.x - x) - halfWidth - (slot.width + config.slotClearance) / 2
                   const dy = Math.abs(slot.y - y) - halfHeight - (slotLength(slot) + config.slotClearance) / 2
                   return dx < 0 && dy < 0 ? Math.max(dx, dy) : Math.hypot(Math.max(dx, 0), Math.max(dy, 0))
                 }),
@@ -905,29 +847,27 @@ function buildSingleHolder(wasm: ManifoldToplevel, { config, layout }: HolderMod
               if (clearance >= 1 && (!best || clearance > best.clearance)) best = { x, y, clearance }
             }
           }
-          if (best) placed = textSection(text, height, width, best.x, best.y)
+          if (best) {
+            const { x, y } = best
+            const moved: Polygon[] = polygons.map((polygon) => polygon.map(([px, py]): [number, number] => [px + x, py + y]))
+            placed = own(CrossSection.ofPolygons(moved, GLYPH_FILL))
+          }
         }
         if (placed) {
-          const cut = solidOf(placed.extrude(depth + 0.01))
-          cutters.push(solidOf(cut.translate([0, 0, config.height - depth])))
+          const cut = own(placed.extrude(ENGRAVING_DEPTH + 0.01))
+          cutters.push(own(cut.translate([0, 0, config.height - ENGRAVING_DEPTH])))
         }
       }
     }
-    solid = solidOf(Manifold.difference([solid, ...cutters]))
-
-    const volume = solid.volume()
-    const triangles = solid.numTri()
-    return { mesh: solid.getMesh(), stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 } }
-  } finally {
-    for (const value of trash) value.delete()
-  }
+    return buildResult(own(Manifold.difference([solid, ...cutters])))
+  })
 }
 
 /**
  * Builds every module where the plan puts it, or with `module` only that one at the origin. Each module is built from
  * the layout the plan found for it, because planning a module again within its own size can fit fewer slots.
  */
-export function buildHolder(wasm: ManifoldToplevel, { module: only, ...config }: HolderConfig, font?: Font): HolderBuildResult {
+export function buildHolder(wasm: ManifoldToplevel, { module: only, ...config }: HolderConfig, font?: Font): BuildResult {
   const plan = holderPlan(config)
   if (plan.modules.length === 0) throw new Error('No requested miniatures fit within the available Gridfinity box')
   if (only !== undefined) {
@@ -935,27 +875,17 @@ export function buildHolder(wasm: ManifoldToplevel, { module: only, ...config }:
     if (!module) throw new Error(`The holder plan has no module ${only + 1}`)
     return buildSingleHolder(wasm, module, font)
   }
-  const solids: Manifold[] = []
   const previewGap = config.segments <= 256 && plan.modules.length > 1 ? 6 : 0
   const columns = [...new Set(plan.modules.map((module) => module.column))].sort((a, b) => a - b)
   const rows = [...new Set(plan.modules.map((module) => module.row))].sort((a, b) => a - b)
   const previewShift = (value: number, positions: number[]) => (positions.indexOf(value) - (positions.length - 1) / 2) * previewGap
-  try {
-    for (const module of plan.modules) {
-      const built = buildSingleHolder(wasm, module, font)
-      const solid = new wasm.Manifold(built.mesh)
-      solids.push(solid)
+  return withOwner((own) => {
+    const placed = plan.modules.map((module) => {
+      const solid = own(new wasm.Manifold(buildSingleHolder(wasm, module, font).mesh))
       const offsetX = (module.column + module.layout.unitsWide / 2 - plan.unitsWide / 2) * GRID
       const offsetY = (module.row + module.layout.unitsDeep / 2 - plan.unitsDeep / 2) * GRID
-      const placed = solid.translate([offsetX + previewShift(module.column, columns), offsetY + previewShift(module.row, rows), 0])
-      solids.push(placed)
-    }
-    const combined = wasm.Manifold.union(solids.filter((_, index) => index % 2 === 1))
-    solids.push(combined)
-    const volume = combined.volume()
-    const triangles = combined.numTri()
-    return { mesh: combined.getMesh(), stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 } }
-  } finally {
-    for (const solid of solids) solid.delete()
-  }
+      return own(solid.translate([offsetX + previewShift(module.column, columns), offsetY + previewShift(module.row, rows), 0]))
+    })
+    return buildResult(own(wasm.Manifold.union(placed)))
+  })
 }

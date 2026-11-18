@@ -37,10 +37,22 @@ function Row({ label, value, truncate = false }: { label: string; value: string;
  */
 export function TitleBlock({ config, status, name, grams }: Props) {
   return (
-    <TitleFrame status={status} name={name}>
-      <PartRows config={config} />
-      {grams !== undefined && <Row label="Filament" value={filamentEstimate(grams)} />}
-    </TitleFrame>
+    // On a phone only the name and status show, in a strip along the foot, so the part keeps most of the screen.
+    <footer className="pointer-events-none absolute inset-x-3 bottom-3 border-2 border-measure/50 bg-card/90 text-card-foreground backdrop-blur-sm sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-72">
+      <div className="flex items-center gap-2 px-3 py-2 sm:border-b-2 sm:border-measure/50">
+        <span className="readout truncate text-xs text-measure">{name}</span>
+        <Badge variant={status === 'blocked' ? 'destructive' : 'secondary'} className="note ms-auto">
+          {status}
+        </Badge>
+      </div>
+
+      {/* Only what the dimension leaders do not show. Nothing here claims the mesh is watertight, which only a real
+          export can prove, and the weight is of the solid, which a slicer's walls and infill print lighter. */}
+      <dl className="grid grid-cols-[5.5rem_1fr] items-baseline text-xs max-sm:hidden *:py-1 [&>dd]:pl-3 [&>dt]:border-r [&>dt]:border-border [&>dt]:px-3">
+        <PartRows config={config} />
+        {grams !== undefined && <Row label="Filament" value={filamentEstimate(grams)} />}
+      </dl>
+    </footer>
   )
 }
 
@@ -63,13 +75,12 @@ function PartRows({ config }: { config: PartConfig }) {
     )
   }
   if (config.kind === 'paint-rack') {
+    const layout = paintRackLayout(config)
     return (
       <>
         <Row label="Loadout" value={paintRackLoadout(config)} />
-        <Row label="Bottles" value={`${paintRackLayout(config).bottles} in ${trimNumber(config.pitch)} mm cells`} />
-        {paintRackLayout(config).brushes > 0 && (
-          <Row label="Brushes" value={`${paintRackLayout(config).brushes} × Ø${trimNumber(config.brushDiameter)} mm`} />
-        )}
+        <Row label="Bottles" value={`${layout.bottles} in ${trimNumber(config.pitch)} mm cells`} />
+        {layout.brushes > 0 && <Row label="Brushes" value={`${layout.brushes} × Ø${trimNumber(config.brushDiameter)} mm`} />}
         <Row label="Rise" value={`${trimNumber(config.rise)} mm per row`} />
       </>
     )
@@ -128,29 +139,5 @@ function PartRows({ config }: { config: PartConfig }) {
       />
       <Row label="Label" value={config.label.enabled ? `“${config.label.text?.trim() || defaultLabel(config)}”` : 'none'} />
     </>
-  )
-}
-
-function TitleFrame({ status, name, children }: { status: Props['status']; name: string; children: React.ReactNode }) {
-  return (
-    // On a phone only the name and status show, in a strip along the foot, so the part keeps most of the screen.
-    <footer className="pointer-events-none absolute inset-x-3 bottom-3 border-2 border-measure/50 bg-card/90 text-card-foreground backdrop-blur-sm sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-72">
-      <div className="flex items-center gap-2 px-3 py-2 sm:border-b-2 sm:border-measure/50">
-        <span className="readout truncate text-xs text-measure">{name}</span>
-        <Badge variant={status === 'blocked' ? 'destructive' : 'secondary'} className="note ms-auto">
-          {status}
-        </Badge>
-      </div>
-
-      {/* Footprint and height are already called out by the dimension leaders on
-          the part itself, so the block carries only what nothing else shows. Nothing
-          here claims the mesh is watertight: a badge that did stayed lit right through
-          the one real topology bug this has had, so that is asserted against a real
-          export in the tests. The filament weight is of the solid, which a slicer's
-          walls and infill will print lighter than. */}
-      <dl className="grid grid-cols-[5.5rem_1fr] items-baseline text-xs max-sm:hidden *:py-1 [&>dd]:pl-3 [&>dt]:border-r [&>dt]:border-border [&>dt]:px-3">
-        {children}
-      </dl>
-    </footer>
   )
 }

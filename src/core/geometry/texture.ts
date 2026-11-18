@@ -1,4 +1,5 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d'
+import type { Owner } from './build'
 import type { BaseConfig, TexturePattern, TextureSpec } from './types'
 
 /** Material kept between a joint's apex and the well, pockets or label above it. */
@@ -15,7 +16,7 @@ const SEED_STRIDE = 97
 export const MAX_SEED = 9999
 
 /** Highest relief offered; the base's own height already gives the pockets their roof. */
-export const MAX_RELIEF = 4
+const MAX_RELIEF = 4
 
 export type JointPattern = Extract<
   TexturePattern,
@@ -84,7 +85,7 @@ export function maxTextureDepth(config: Pick<BaseConfig, 'floorThickness' | 'hei
 }
 
 /** A fixed hash, so the same footprint always gets the same pattern. */
-export function noise(i: number, j: number, k: number): number {
+function noise(i: number, j: number, k: number): number {
   const s = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453
   return s - Math.floor(s)
 }
@@ -324,12 +325,7 @@ export function textureCells(
  * print without support even though they face the build plate. Joints run out
  * through the edge, so the pattern reaches the lip.
  */
-export function textureCut(
-  wasm: ManifoldToplevel,
-  config: BaseConfig,
-  outline: CrossSection,
-  own: <T extends { delete: () => void }>(o: T) => T,
-): Manifold | undefined {
+export function textureCut(wasm: ManifoldToplevel, config: BaseConfig, outline: CrossSection, own: Owner): Manifold | undefined {
   const { Manifold } = wasm
   const { pattern, depth } = config.texture
   if (pattern === 'none' || isRelief(pattern) || depth <= 0) return undefined

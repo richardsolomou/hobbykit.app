@@ -1,10 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
-import { parse } from 'opentype.js'
 import { describe, expect, it } from 'vitest'
+import { font } from './geometry.test.utils'
 import { makerworldSource } from './makerworld'
 
-const bytes = readFileSync('src/assets/fonts/oswald-700.woff')
-const font = parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
 const scripts = readdirSync('makerworld').filter((name) => name.endsWith('.scad'))
 
 describe.each(scripts)('makerworld/%s', (name) => {

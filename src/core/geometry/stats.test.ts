@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { parse, type Font } from 'opentype.js'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { font } from './geometry.test.utils'
 import { buildBase } from './base'
 import { buildHolder, defaultHolderConfig, holderGroup, holderPlan } from './holder'
 import { loadManifold } from './manifold'
@@ -12,12 +11,9 @@ import { buildToken, defaultTokenConfig } from './token'
 import type { BaseStats } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
-let font: Font
 
 beforeAll(async () => {
   wasm = await loadManifold()
-  const bytes = readFileSync('src/assets/fonts/oswald-700.woff')
-  font = parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
 })
 
 const PLA_GRAMS_PER_MM3 = 1.24e-3

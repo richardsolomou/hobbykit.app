@@ -1,5 +1,6 @@
 import type { Mesh } from 'manifold-3d'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { duplicateVertices, overhangs } from './geometry.test.utils'
 import { buildBase } from './base'
 import { loadManifold } from './manifold'
 import { fitToSize, OVAL_SIZES, POLYGON_SIZES, presetFor, RECT_SIZES, resized, ROUND_SIZES, type SizePreset } from './presets'
@@ -31,38 +32,6 @@ function textured(size: SizePreset, exported = false, pattern: TexturePattern = 
 
 const build = (config: BaseConfig) => buildBase(wasm, config)
 
-function duplicateVertices(mesh: Mesh) {
-  const seen = new Set<string>()
-  let duplicates = 0
-  for (let i = 0; i < mesh.vertProperties.length; i += mesh.numProp) {
-    const key = `${mesh.vertProperties[i]},${mesh.vertProperties[i + 1]},${mesh.vertProperties[i + 2]}`
-    if (seen.has(key)) duplicates++
-    seen.add(key)
-  }
-  return duplicates
-}
-
-/**
- * Every downward face flatter than 45° above the build plate, as a flat at its
- * height or a slope. Float32 vertices tip a 45° face by up to about a tenth of a
- * degree, so the check allows that and ignores slivers under 0.001mm².
- */
-function overhangs(mesh: Mesh): Set<string> {
-  const { numProp, vertProperties: v, triVerts } = mesh
-  const found = new Set<string>()
-  for (let t = 0; t < triVerts.length; t += 3) {
-    const [a, b, c] = [0, 1, 2].map((k) => triVerts[t + k] * numProp)
-    const u = [0, 1, 2].map((axis) => v[b + axis] - v[a + axis])
-    const w = [0, 1, 2].map((axis) => v[c + axis] - v[a + axis])
-    const normal = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
-    const area = Math.hypot(...normal) / 2
-    const nz = normal[2] / (2 * area)
-    const z = Math.max(v[a + 2], v[b + 2], v[c + 2])
-    if (area > 1e-3 && nz < -Math.SQRT1_2 - 3e-3 && z > 1e-6) found.add(nz < -0.999 ? `flat at ${z.toFixed(2)}` : 'slope')
-  }
-  return found
-}
-
 /** Farthest reach of any vertex cut into the plate face. */
 function jointReach(mesh: Mesh, depth: number) {
   const { numProp, vertProperties: v } = mesh
@@ -87,7 +56,7 @@ describe('joint textures', () => {
   })
 
   it.for(CASES)('roofs every joint of a $label base at 45° except its narrow apex', ({ pattern, size }) => {
-    expect([...overhangs(build(textured(size, true, pattern)).mesh)]).toEqual(['flat at 0.49'])
+    expect(overhangs(build(textured(size, true, pattern)).mesh)).toEqual(['flat at 0.49'])
   })
 
   it('runs the joints out through the edge', () => {
@@ -141,7 +110,7 @@ describe('joint textures', () => {
   })
 
   it.for(CASES)('roofs every joint of a solid $label base at 45° except its narrow apex', ({ pattern, size }) => {
-    expect([...overhangs(build({ ...textured(size, true, pattern), solid: true }).mesh)]).toEqual(['flat at 0.49'])
+    expect(overhangs(build({ ...textured(size, true, pattern), solid: true }).mesh)).toEqual(['flat at 0.49'])
   })
 
   it.for(IRREGULAR)('lays %s out differently for another variation', (pattern) => {
