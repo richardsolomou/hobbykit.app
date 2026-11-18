@@ -54,7 +54,7 @@ When a changeset reaches `main`, CI updates `package.json` and `CHANGELOG.md`, t
 - `src/lib` — browser orchestration for preview scheduling, one-shot export builds, downloads, and media queries, plus the generator page list that `vite.config.ts` prerenders into per-page HTML, `robots.txt`, `sitemap.xml`, and `llms.txt`.
 - `docs/generators` — one guide per generator, linked from the README and served beside its page as Markdown.
 - `e2e` — Playwright coverage against the production build.
-- `scripts` — Node entry points for inspecting real exports and for `just social-cards`, which retakes the link preview images in `public/og`.
+- `scripts` — Node entry points for inspecting real exports and for `just social-cards`, which retakes the link preview images in `public/og` and the README and GitHub preview images in `docs/images`.
 - `makerworld` — OpenSCAD ports of the generators for MakerWorld's Parametric Model Maker, one file each, with their comparison cases in `scripts/makerworld`. Run `just makerworld check <name>` after changing a generator's geometry; it needs `brew install --cask openscad@snapshot`.
 
 ## Geometry model
