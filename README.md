@@ -17,7 +17,7 @@
 
 </div>
 
-HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matching flying stems, Gridfinity holders, low-profile spray trays, stepped paint racks, gaming tokens, and dial counters. Pick a standard footprint or enter an exact one, choose the magnets you have, and export a model ready for the slicer. A base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
+HobbyKit makes support-free STL and 3MF files for tabletop miniature bases, matching flying stems, Gridfinity holders, low-profile spray trays, stepped paint racks, and gaming tokens. Pick a standard footprint or enter an exact one, choose the magnets you have, and export a model ready for the slicer. A base's size is embossed inside, so a loose print still tells you what it is: a `28.5` base says `28.5`, not `29`. Type your own label instead, such as a unit name or squad number; text that cannot fit the base is reported rather than dropped, and the filename still names the size.
 
 Everything runs in the browser. Models are built locally and nothing is uploaded.
 
@@ -57,10 +57,6 @@ Stand your paints in stepped rows so every label shows. Read the [paint racks gu
 
 Make a round, square, or hex token for objectives, Oath of Moment, or anything else a game tracks. Read the [tokens guide](https://hobbykit.app/guides/tokens).
 
-## Dial counters 🎲
-
-Track wounds, victory points, or command points from 00 to 99 on two dials that click into place, turned by knobs at the sides of a case that shows only the count, with raised digits on press-in tiles in a second colour. Read the [dial counters guide](https://hobbykit.app/guides/counters).
-
 ## Designed for one job 🎯
 
 - Round, oval, pill, rectangle, and regular polygon bases.
@@ -68,7 +64,6 @@ Track wounds, victory points, or command points from 00 to 99 on two dials that 
 - Printable 15, 20, 30, and 35mm flying stems with adjustable peg or ball-joint connections.
 - Round, square, and hex tokens with wrapped text and traced image silhouettes, raised in a second colour or engraved.
 - Stepped honeycomb paint racks for dropper bottles and pots.
-- 00–99 dial counters held at each count by printed spring arms, in an enclosure with side knobs, open hubs, or a frame on a base, with digits on press-in tiles, printed in a second colour or engraved for paint.
 - Shared magnet dimensions across bases, holders, and spray trays.
 - Balanced or five-pocket cross magnet arrangements for bases and holders. Saved cross layouts keep one centre pocket and four outer pockets on both axes, including elongated footprints.
 - Exact size labels, filenames, dimensions, and high-quality exports.
@@ -86,14 +81,7 @@ The generator, 3D preview, fonts, and exporters all run locally in your browser.
 
 ## Development 🛠️
 
-Development requires Node 24.x and pnpm 12.13.0.
-
-```sh
-pnpm install
-pnpm dev
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture, checks, and sample exports. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, architecture, checks, and sample exports. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 Cloudflare builds the static app with `pnpm build` and serves `dist/`. See the [deployment guide](docs/deployment.md) for Pages setup, custom-domain configuration, and production checks.
 

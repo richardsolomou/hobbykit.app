@@ -169,13 +169,16 @@ export function texturePicture(pattern: TexturePattern): ReactNode {
   return isRelief(pattern) ? <ReliefPicture pattern={pattern} /> : <JointPicture pattern={pattern} />
 }
 
+const DIAL_TOP = 8
+const DIAL_BOTTOM = 22
+
 /** A dial seen from the front, its top digit's tile showing, `x` its left edge. */
-function Dial({ x, top = 8, bottom = 22 }: { x: number; top?: number; bottom?: number }) {
+function Dial({ x }: { x: number }) {
   return (
     <>
-      <rect x={x} y={top} width={7} height={bottom - top} rx={1} {...body} />
-      <line x1={x + 1} y1={top + 2} x2={x + 6} y2={top + 2} />
-      <line x1={x + 1} y1={(top + bottom) / 2} x2={x + 6} y2={(top + bottom) / 2} />
+      <rect x={x} y={DIAL_TOP} width={7} height={DIAL_BOTTOM - DIAL_TOP} rx={1} {...body} />
+      <line x1={x + 1} y1={DIAL_TOP + 2} x2={x + 6} y2={DIAL_TOP + 2} />
+      <line x1={x + 1} y1={(DIAL_TOP + DIAL_BOTTOM) / 2} x2={x + 6} y2={(DIAL_TOP + DIAL_BOTTOM) / 2} />
     </>
   )
 }

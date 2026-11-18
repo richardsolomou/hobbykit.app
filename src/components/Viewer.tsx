@@ -251,13 +251,8 @@ export function Viewer({
       return [((scratch.x + 1) / 2) * container.clientWidth, ((1 - scratch.y) / 2) * container.clientHeight] as const
     }
 
-    /*
-     * Frames are drawn only when something changed. Redrawing an unchanged scene
-     * every frame kept the main thread busy for as long as the page was open,
-     * which starved input and every other task whenever the machine was loaded.
-     * Damping still advances every frame, and a step that moves the camera fires
-     * `change`, which marks the frame dirty.
-     */
+    // Frames are drawn only when marked dirty, so an idle page leaves the main thread free; damping still advances
+    // every frame, and a step that moves the camera fires `change`, which marks the frame dirty.
     let raf = 0
     const tick = () => {
       raf = requestAnimationFrame(tick)

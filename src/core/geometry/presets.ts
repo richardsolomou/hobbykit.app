@@ -186,7 +186,7 @@ export function automaticMagnetCount(width: number, length: number, maxCount: nu
  * With no ring and no row there is nothing to line up with and the count just
  * follows the span.
  */
-export function ribCountFor(width: number, length: number, magnets: number): number {
+function ribCountFor(width: number, length: number, magnets: number): number {
   const short = Math.min(width, length)
 
   if (magnets >= 2) {
@@ -199,16 +199,16 @@ export function ribCountFor(width: number, length: number, magnets: number): num
 }
 
 /** Keeps the number readable on a 25mm base without dominating a 100mm one. */
-export function labelHeight(width: number, length: number): number {
+function labelHeight(width: number, length: number): number {
   return Math.min(8, Math.max(3.5, Math.min(width, length) * 0.2))
 }
 
 /** Larger spans need a little more skin to resist flex when pressed. */
-export function defaultFloorThickness(width: number, length: number): number {
+function defaultFloorThickness(width: number, length: number): number {
   return Math.min(width, length) >= 65 ? 1.5 : 1
 }
 
-export function defaultBaseHeight(width: number, length: number): number {
+function defaultBaseHeight(width: number, length: number): number {
   return 3 + defaultFloorThickness(width, length)
 }
 

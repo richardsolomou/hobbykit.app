@@ -13,11 +13,10 @@ import { ButtonGroup } from '@/components/ui/button-group'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { useTextSettingChanged } from '@/lib/analytics'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { supportsFivePocketCross } from '@/core/geometry/base'
 import { labelText } from '@/core/geometry/label'
 import { DEFAULT_TEXTURE, isRegular, isRelief, MAX_SEED, solidWithPattern, withPattern } from '@/core/geometry/texture'
-import { defaultLabel, footprint, isElongated, trimNumber } from '@/core/geometry/outline'
+import { defaultLabel, footprint, isElongated, sizeText, trimNumber } from '@/core/geometry/outline'
 import {
   automaticMagnetCount,
   DEFAULT_SIZE,
@@ -37,8 +36,10 @@ import {
   AUTOMATIC_MAGNET_COUNT,
   BASE_DEFAULTS,
   MAGNET_LAYOUTS,
+  MagnetClearanceField,
+  MagnetSizeFields,
   PROFILES,
-  PanelFooter,
+  Panel,
   safeEdgeSize,
   safeTextureDepth,
   type MagnetCountChoice,
@@ -81,10 +82,7 @@ const MIN_TEXTURE_DEPTH = 0.2
 const counts = (values: number[]) => values.map((value) => ({ value, label: value === 0 ? 'None' : String(value) }))
 const RIB_COUNTS = counts(RIB_CHOICES).map((option) => ({ ...option, picture: ribPicture(option.value) }))
 
-const sizeText = (shape: ShapeKind, width: number, length: number) =>
-  isElongated(shape) ? `${trimNumber(width)}×${trimNumber(length)}` : trimNumber(width)
-const entryText = (entry: BatchEntry) =>
-  `${SHAPES.find((shape) => shape.value === entry.shape)!.label} ${sizeText(entry.shape, entry.width, entry.length)}`
+const entryText = (entry: BatchEntry) => `${SHAPES.find((shape) => shape.value === entry.shape)!.label} ${sizeText(entry, '×')}`
 
 interface Props {
   resets: ResetAction[]
@@ -150,8 +148,6 @@ export function BasePanel({
     },
     ...counts(MAGNET_CHOICES).map((option) => ({ ...option, picture: magnetCountPicture(option.value) })),
   ]
-  /** Supports follow the magnets: one under each in a ring, a spoke down a row. */
-  const automaticRibs = auto.ribs
   const magnetLayoutOptions =
     config.magnets.patternVersion === 1 || supportsFivePocketCross(config.shape, config.width) ? MAGNET_LAYOUTS : MAGNET_LAYOUTS.slice(0, 1)
 
@@ -173,472 +169,437 @@ export function BasePanel({
   }
 
   return (
-    <ScrollArea className="h-full w-81 max-w-[85vw] shrink-0 border-border bg-card md:border-r">
-      {/* Sections number themselves off this counter, in the order they appear. */}
-      <aside aria-label="Base settings" className="relative flex min-h-full flex-col pb-4 [counter-reset:schedule]">
-        <Section title="Shape & Size" first>
-          <PictureChoice
-            label="Shape"
-            value={config.shape}
-            defaultValue={BASE_DEFAULTS.shape}
-            options={SHAPES.map((shape) => ({ ...shape, picture: BASE_SHAPE_PICTURES[shape.value] }))}
-            columns={5}
-            onChange={changeShape}
-          />
+    <Panel page="base" resets={resets}>
+      <Section title="Shape & Size" first>
+        <PictureChoice
+          label="Shape"
+          value={config.shape}
+          defaultValue={BASE_DEFAULTS.shape}
+          options={SHAPES.map((shape) => ({ ...shape, picture: BASE_SHAPE_PICTURES[shape.value] }))}
+          columns={5}
+          onChange={changeShape}
+        />
+        <Dimension
+          label={elongated ? 'Width' : config.shape === 'round' ? 'Diameter' : 'Across corners'}
+          value={config.width}
+          min={15}
+          max={180}
+          step={0.5}
+          onChange={(next) => setFootprint(config.shape, next, config.length)}
+        />
+        {elongated && (
           <Dimension
-            label={elongated ? 'Width' : config.shape === 'round' ? 'Diameter' : 'Across corners'}
-            value={config.width}
+            label="Depth"
+            value={config.length}
             min={15}
             max={180}
             step={0.5}
-            onChange={(next) => setFootprint(config.shape, next, config.length)}
+            onChange={(next) => setFootprint(config.shape, config.width, next)}
           />
-          {elongated && (
-            <Dimension
-              label="Depth"
-              value={config.length}
-              min={15}
-              max={180}
-              step={0.5}
-              onChange={(next) => setFootprint(config.shape, config.width, next)}
-            />
-          )}
-          <StandardSizes
-            value={standard?.label}
-            options={sizes.map((size) => ({ value: size.label, use: size.use }))}
-            onChange={(label) => {
-              const size = sizes.find((candidate) => candidate.label === label)
-              if (!size) return
-              setFootprint(config.shape, size.width, size.length ?? size.width)
-            }}
-          />
-        </Section>
+        )}
+        <StandardSizes
+          value={standard?.label}
+          options={sizes.map((size) => ({ value: size.label, use: size.use }))}
+          onChange={(label) => {
+            const size = sizes.find((candidate) => candidate.label === label)
+            if (!size) return
+            setFootprint(config.shape, size.width, size.length ?? size.width)
+          }}
+        />
+      </Section>
 
+      <Section
+        title="Magnets"
+        aside={
+          <span className="readout text-xs text-muted-foreground">
+            {config.magnets.count === 0 ? 'none' : `${trimNumber(config.magnets.diameter + config.magnets.clearance)} mm hole`}
+          </span>
+        }
+      >
+        {config.magnets.count > 0 && (
+          <MagnetSizeFields magnets={config.magnets} maxThickness={maxSharedMagnetThickness} setSharedMagnets={setSharedMagnets} />
+        )}
+        <PictureChoice
+          label="Pocket layout"
+          advanced
+          value={config.magnets.layout}
+          defaultValue={BASE_DEFAULTS.magnets.layout}
+          options={magnetLayoutOptions.map((layout) => ({ ...layout, picture: MAGNET_LAYOUT_PICTURES[layout.value] }))}
+          columns={4}
+          onChange={(layout) => setSharedMagnets({ layout })}
+        />
+        {config.magnets.layout !== 'five-cross' && (
+          <PictureChoice
+            label="Magnets per base"
+            value={magnetCountValue}
+            defaultValue={AUTOMATIC_MAGNET_COUNT}
+            options={magnetCountOptions}
+            columns={5}
+            onChange={setMagnetCount}
+          />
+        )}
+        <FieldDescription>
+          {config.magnets.layout === 'five-cross'
+            ? 'The cross always provides one centre and four outer pockets.'
+            : 'Automatic balances the footprint using the selected magnet dimensions.'}
+        </FieldDescription>
+      </Section>
+
+      <Section title="Label">
+        <ToggleSetting
+          label="Labels"
+          checked={config.label.enabled}
+          defaultChecked={BASE_DEFAULTS.label.enabled}
+          onChange={setSharedLabels}
+        />
+        {config.label.enabled && (
+          <>
+            <Field>
+              <FieldLabel htmlFor="marking-text" className="sr-only">
+                Label text
+              </FieldLabel>
+              <Input
+                id="marking-text"
+                value={config.label.text ?? ''}
+                placeholder={defaultLabel(config)}
+                onChange={(e) => patch({ label: { ...config.label, text: labelText(e.currentTarget.value) } })}
+                {...labelTextReport}
+                className="readout"
+              />
+              <FieldDescription>Leave empty to emboss the exact size.</FieldDescription>
+            </Field>
+            <Dimension
+              label="Label size"
+              advanced
+              value={config.label.height}
+              min={2}
+              max={16}
+              step={0.1}
+              defaultValue={auto.labelHeight}
+              automatic={follows('labelHeight')}
+              onChange={(height) => setSized('labelHeight', height, { label: { ...config.label, height } })}
+            />
+            <Dimension
+              label="Label thickness"
+              advanced
+              value={config.label.emboss}
+              min={0.2}
+              max={1.5}
+              step={0.1}
+              defaultValue={BASE_DEFAULTS.label.emboss}
+              onChange={(emboss) => patch({ label: { ...config.label, emboss } })}
+            />
+          </>
+        )}
+      </Section>
+
+      <Section title="Texture">
+        <PictureChoice
+          label="Pattern"
+          value={config.texture.pattern}
+          defaultValue={BASE_DEFAULTS.texture.pattern}
+          options={TEXTURE_OPTIONS}
+          columns={4}
+          onChange={(pattern) => {
+            patch({
+              texture: withPattern(config.texture, pattern),
+              solid: solidWithPattern(config.solid, config.texture.pattern, pattern),
+            })
+          }}
+        />
+        {config.texture.pattern !== 'none' &&
+          (safeTextureDepth(config) < MIN_TEXTURE_DEPTH ? (
+            <FieldDescription>
+              {config.solid ? 'Raise the base to make room for the joints.' : 'Thicken the top to make room for the joints.'}
+            </FieldDescription>
+          ) : (
+            <>
+              <Dimension
+                label={TEXTURES.find((texture) => texture.value === config.texture.pattern)!.size}
+                value={config.texture.scale}
+                min={3}
+                max={30}
+                step={0.5}
+                defaultValue={DEFAULT_TEXTURE[config.texture.pattern].scale}
+                onChange={(scale) => patch({ texture: { ...config.texture, scale } })}
+              />
+              <Dimension
+                label={faceUp ? 'Relief height' : 'Joint depth'}
+                value={config.texture.depth}
+                min={MIN_TEXTURE_DEPTH}
+                max={safeTextureDepth(config)}
+                step={0.1}
+                defaultValue={Math.min(DEFAULT_TEXTURE[config.texture.pattern].depth, safeTextureDepth(config))}
+                onChange={(depth) => patch({ texture: { ...config.texture, depth } })}
+              />
+              {!isRegular(config.texture.pattern) && (
+                <>
+                  <Dimension
+                    label="Irregularity"
+                    value={config.texture.irregularity}
+                    min={0}
+                    max={100}
+                    step={5}
+                    unit="%"
+                    defaultValue={DEFAULT_TEXTURE[config.texture.pattern].irregularity}
+                    onChange={(irregularity) => patch({ texture: { ...config.texture, irregularity } })}
+                  />
+                  <Dimension
+                    label="Variation"
+                    value={config.texture.seed}
+                    min={1}
+                    max={MAX_SEED}
+                    step={1}
+                    unit=""
+                    defaultValue={BASE_DEFAULTS.texture.seed}
+                    action={{
+                      label: 'Shuffle variation',
+                      icon: <Shuffle />,
+                      onClick: () => patch({ texture: { ...config.texture, seed: 1 + Math.floor(Math.random() * MAX_SEED) } }),
+                    }}
+                    onChange={(seed) => patch({ texture: { ...config.texture, seed } })}
+                  />
+                </>
+              )}
+              {faceUp && (
+                <FieldDescription>
+                  {hollow
+                    ? 'Prints model face up, so the hollow underside opens onto the plate and its roof has to bridge. Supports stand on the plate to shorten the bridges.'
+                    : 'Prints model face up. Magnet pockets open underneath, and the label is engraved there.'}
+                </FieldDescription>
+              )}
+            </>
+          ))}
+      </Section>
+
+      <Section title="Body" aside={<span className="readout text-xs text-muted-foreground">{trimNumber(config.height)}mm</span>}>
+        <Dimension
+          label="Base height"
+          value={config.height}
+          min={2}
+          max={12}
+          step={0.25}
+          defaultValue={auto.height}
+          automatic={follows('height')}
+          onChange={(height) => setSized('height', height, { height })}
+        />
+        <ToggleSetting label="Solid" checked={config.solid} defaultChecked={faceUp} onChange={(solid) => patch({ solid })} />
+        {hollow && (
+          <Dimension
+            label="Top thickness"
+            advanced
+            value={config.floorThickness}
+            min={0.4}
+            max={Math.max(0.5, config.height - 0.5)}
+            step={0.1}
+            defaultValue={auto.floorThickness}
+            automatic={follows('floorThickness')}
+            onChange={(floorThickness) => setSized('floorThickness', floorThickness, { floorThickness })}
+          />
+        )}
+        <Dimension
+          label="Wall thickness"
+          advanced
+          value={config.wallThickness}
+          min={1}
+          max={6}
+          step={0.1}
+          defaultValue={BASE_DEFAULTS.wallThickness}
+          onChange={(wallThickness) => setSharedMagnetPlacement({ wallThickness })}
+        />
+        <PictureChoice
+          label="Bottom edge"
+          value={config.profile}
+          defaultValue={BASE_DEFAULTS.profile}
+          options={PROFILE_OPTIONS}
+          columns={4}
+          onChange={(profile) => patch({ profile })}
+        />
+        {config.profile !== 'straight' && (
+          <Dimension
+            label="Edge size"
+            advanced
+            value={config.profileSize}
+            min={0}
+            max={safeEdgeSize(config)}
+            step={0.1}
+            defaultValue={BASE_DEFAULTS.profileSize}
+            onChange={(profileSize) => patch({ profileSize })}
+          />
+        )}
+        {config.shape === 'rect' && (
+          <Dimension
+            label="Corner radius"
+            advanced
+            value={config.cornerRadius}
+            min={0}
+            max={12}
+            step={0.5}
+            defaultValue={auto.cornerRadius}
+            automatic={follows('cornerRadius')}
+            onChange={(cornerRadius) => setSized('cornerRadius', cornerRadius, { cornerRadius })}
+          />
+        )}
+        {config.shape === 'polygon' && (
+          <Dimension
+            label="Sides"
+            advanced
+            value={config.sides}
+            min={3}
+            max={12}
+            step={1}
+            unit=""
+            defaultValue={BASE_DEFAULTS.sides}
+            onChange={(sides) => patch({ sides })}
+          />
+        )}
+      </Section>
+
+      {hollow && (
         <Section
-          title="Magnets"
+          title="Internal Supports"
           aside={
             <span className="readout text-xs text-muted-foreground">
-              {config.magnets.count === 0 ? 'none' : `${trimNumber(config.magnets.diameter + config.magnets.clearance)} mm hole`}
+              {config.ribs.count === 0 ? 'none' : `${config.ribs.count} spokes`}
             </span>
           }
         >
-          {config.magnets.count > 0 && (
-            <>
-              <Dimension
-                label="Magnet diameter"
-                value={config.magnets.diameter}
-                min={2}
-                max={8}
-                step={0.5}
-                defaultValue={BASE_DEFAULTS.magnets.diameter}
-                onChange={(diameter) => setSharedMagnets({ diameter })}
-              />
-              <Dimension
-                label="Magnet thickness"
-                value={config.magnets.thickness}
-                min={0.5}
-                max={maxSharedMagnetThickness}
-                step={0.1}
-                defaultValue={BASE_DEFAULTS.magnets.thickness}
-                onChange={(thickness) => setSharedMagnets({ thickness })}
-              />
-            </>
-          )}
-          <PictureChoice
-            label="Pocket layout"
-            advanced
-            value={config.magnets.layout}
-            defaultValue={BASE_DEFAULTS.magnets.layout}
-            options={magnetLayoutOptions.map((layout) => ({ ...layout, picture: MAGNET_LAYOUT_PICTURES[layout.value] }))}
-            columns={4}
-            onChange={(layout) => setSharedMagnets({ layout })}
-          />
           {config.magnets.layout !== 'five-cross' && (
             <PictureChoice
-              label="Magnets per base"
-              value={magnetCountValue}
+              label="Number of supports"
+              advanced
+              value={follows('ribs') ? AUTOMATIC_MAGNET_COUNT : config.ribs.count}
               defaultValue={AUTOMATIC_MAGNET_COUNT}
-              options={magnetCountOptions}
-              columns={5}
-              onChange={setMagnetCount}
+              options={[{ value: AUTOMATIC_MAGNET_COUNT, label: `Auto · ${auto.ribs}`, picture: ribPicture(auto.ribs) }, ...RIB_COUNTS]}
+              columns={4}
+              onChange={(count) =>
+                patch({
+                  ribs: { ...config.ribs, count: count === AUTOMATIC_MAGNET_COUNT ? auto.ribs : count },
+                  pinned:
+                    count === AUTOMATIC_MAGNET_COUNT
+                      ? config.pinned.filter((key) => key !== 'ribs')
+                      : [...new Set([...config.pinned, 'ribs' as const])],
+                })
+              }
             />
           )}
-          <FieldDescription>
-            {config.magnets.layout === 'five-cross'
-              ? 'The cross always provides one centre and four outer pockets.'
-              : 'Automatic balances the footprint using the selected magnet dimensions.'}
-          </FieldDescription>
-        </Section>
-
-        <Section title="Label">
-          <ToggleSetting
-            label="Labels"
-            checked={config.label.enabled}
-            defaultChecked={BASE_DEFAULTS.label.enabled}
-            onChange={setSharedLabels}
-          />
-          {config.label.enabled && (
+          {config.ribs.count > 0 && (
             <>
-              <Field>
-                <FieldLabel htmlFor="marking-text" className="sr-only">
-                  Label text
-                </FieldLabel>
-                <Input
-                  id="marking-text"
-                  value={config.label.text ?? ''}
-                  placeholder={defaultLabel(config)}
-                  onChange={(e) => patch({ label: { ...config.label, text: labelText(e.currentTarget.value) } })}
-                  {...labelTextReport}
-                  className="readout"
+              <Dimension
+                label="Support thickness"
+                advanced
+                value={config.ribs.thickness}
+                min={0.8}
+                max={4}
+                step={0.1}
+                defaultValue={BASE_DEFAULTS.ribs.thickness}
+                onChange={(thickness) => patch({ ribs: { ...config.ribs, thickness } })}
+              />
+              {!faceUp && (
+                <Dimension
+                  label="Support height"
+                  advanced
+                  value={config.ribs.height}
+                  min={0.4}
+                  max={Math.max(0.5, config.height - config.floorThickness)}
+                  step={0.1}
+                  defaultValue={BASE_DEFAULTS.ribs.height}
+                  onChange={(height) => patch({ ribs: { ...config.ribs, height } })}
                 />
-                <FieldDescription>Leave empty to emboss the exact size.</FieldDescription>
-              </Field>
-              <Dimension
-                label="Label size"
-                advanced
-                value={config.label.height}
-                min={2}
-                max={16}
-                step={0.1}
-                defaultValue={auto.labelHeight}
-                automatic={follows('labelHeight')}
-                onChange={(height) => setSized('labelHeight', height, { label: { ...config.label, height } })}
-              />
-              <Dimension
-                label="Label thickness"
-                advanced
-                value={config.label.emboss}
-                min={0.2}
-                max={1.5}
-                step={0.1}
-                defaultValue={BASE_DEFAULTS.label.emboss}
-                onChange={(emboss) => patch({ label: { ...config.label, emboss } })}
-              />
+              )}
             </>
           )}
         </Section>
+      )}
 
-        <Section title="Texture">
-          <PictureChoice
-            label="Pattern"
-            value={config.texture.pattern}
-            defaultValue={BASE_DEFAULTS.texture.pattern}
-            options={TEXTURE_OPTIONS}
-            columns={4}
-            onChange={(pattern) => {
-              patch({
-                texture: withPattern(config.texture, pattern),
-                solid: solidWithPattern(config.solid, config.texture.pattern, pattern),
-              })
-            }}
-          />
-          {config.texture.pattern !== 'none' &&
-            (safeTextureDepth(config) < MIN_TEXTURE_DEPTH ? (
-              <FieldDescription>
-                {config.solid ? 'Raise the base to make room for the joints.' : 'Thicken the top to make room for the joints.'}
-              </FieldDescription>
-            ) : (
-              <>
-                <Dimension
-                  label={TEXTURES.find((texture) => texture.value === config.texture.pattern)!.size}
-                  value={config.texture.scale}
-                  min={3}
-                  max={30}
-                  step={0.5}
-                  defaultValue={DEFAULT_TEXTURE[config.texture.pattern].scale}
-                  onChange={(scale) => patch({ texture: { ...config.texture, scale } })}
-                />
-                <Dimension
-                  label={faceUp ? 'Relief height' : 'Joint depth'}
-                  value={config.texture.depth}
-                  min={MIN_TEXTURE_DEPTH}
-                  max={safeTextureDepth(config)}
-                  step={0.1}
-                  defaultValue={Math.min(DEFAULT_TEXTURE[config.texture.pattern].depth, safeTextureDepth(config))}
-                  onChange={(depth) => patch({ texture: { ...config.texture, depth } })}
-                />
-                {!isRegular(config.texture.pattern) && (
-                  <>
-                    <Dimension
-                      label="Irregularity"
-                      value={config.texture.irregularity}
-                      min={0}
-                      max={100}
-                      step={5}
-                      unit="%"
-                      defaultValue={DEFAULT_TEXTURE[config.texture.pattern].irregularity}
-                      onChange={(irregularity) => patch({ texture: { ...config.texture, irregularity } })}
-                    />
-                    <Dimension
-                      label="Variation"
-                      value={config.texture.seed}
-                      min={1}
-                      max={MAX_SEED}
-                      step={1}
-                      unit=""
-                      defaultValue={BASE_DEFAULTS.texture.seed}
-                      action={{
-                        label: 'Shuffle variation',
-                        icon: <Shuffle />,
-                        onClick: () => patch({ texture: { ...config.texture, seed: 1 + Math.floor(Math.random() * MAX_SEED) } }),
-                      }}
-                      onChange={(seed) => patch({ texture: { ...config.texture, seed } })}
-                    />
-                  </>
-                )}
-                {faceUp && (
-                  <FieldDescription>
-                    {hollow
-                      ? 'Prints model face up, so the hollow underside opens onto the plate and its roof has to bridge. Supports stand on the plate to shorten the bridges.'
-                      : 'Prints model face up. Magnet pockets open underneath, and the label is engraved there.'}
-                  </FieldDescription>
-                )}
-              </>
-            ))}
-        </Section>
-
-        <Section title="Body" aside={<span className="readout text-xs text-muted-foreground">{trimNumber(config.height)}mm</span>}>
-          <Dimension
-            label="Base height"
-            value={config.height}
-            min={2}
-            max={12}
-            step={0.25}
-            defaultValue={auto.height}
-            automatic={follows('height')}
-            onChange={(height) => setSized('height', height, { height })}
-          />
-          <ToggleSetting label="Solid" checked={config.solid} defaultChecked={faceUp} onChange={(solid) => patch({ solid })} />
-          {hollow && (
-            <Dimension
-              label="Top thickness"
-              advanced
-              value={config.floorThickness}
-              min={0.4}
-              max={Math.max(0.5, config.height - 0.5)}
-              step={0.1}
-              defaultValue={auto.floorThickness}
-              automatic={follows('floorThickness')}
-              onChange={(floorThickness) => setSized('floorThickness', floorThickness, { floorThickness })}
-            />
-          )}
-          <Dimension
-            label="Wall thickness"
-            advanced
-            value={config.wallThickness}
-            min={1}
-            max={6}
-            step={0.1}
-            defaultValue={BASE_DEFAULTS.wallThickness}
-            onChange={(wallThickness) => setSharedMagnetPlacement({ wallThickness })}
-          />
-          <PictureChoice
-            label="Bottom edge"
-            value={config.profile}
-            defaultValue={BASE_DEFAULTS.profile}
-            options={PROFILE_OPTIONS}
-            columns={4}
-            onChange={(profile) => patch({ profile })}
-          />
-          {config.profile !== 'straight' && (
-            <Dimension
-              label="Edge size"
-              advanced
-              value={config.profileSize}
-              min={0}
-              max={safeEdgeSize(config)}
-              step={0.1}
-              defaultValue={BASE_DEFAULTS.profileSize}
-              onChange={(profileSize) => patch({ profileSize })}
-            />
-          )}
-          {config.shape === 'rect' && (
-            <Dimension
-              label="Corner radius"
-              advanced
-              value={config.cornerRadius}
-              min={0}
-              max={12}
-              step={0.5}
-              defaultValue={auto.cornerRadius}
-              automatic={follows('cornerRadius')}
-              onChange={(cornerRadius) => setSized('cornerRadius', cornerRadius, { cornerRadius })}
-            />
-          )}
-          {config.shape === 'polygon' && (
-            <Dimension
-              label="Sides"
-              advanced
-              value={config.sides}
-              min={3}
-              max={12}
-              step={1}
-              unit=""
-              defaultValue={BASE_DEFAULTS.sides}
-              onChange={(sides) => patch({ sides })}
-            />
-          )}
-        </Section>
-
-        {hollow && (
-          <Section
-            title="Internal Supports"
-            aside={
-              <span className="readout text-xs text-muted-foreground">
-                {config.ribs.count === 0 ? 'none' : `${config.ribs.count} spokes`}
-              </span>
-            }
-          >
-            {config.magnets.layout !== 'five-cross' && (
-              <PictureChoice
-                label="Number of supports"
-                advanced
-                value={follows('ribs') ? AUTOMATIC_MAGNET_COUNT : config.ribs.count}
-                defaultValue={AUTOMATIC_MAGNET_COUNT}
-                options={[
-                  { value: AUTOMATIC_MAGNET_COUNT, label: `Auto · ${automaticRibs}`, picture: ribPicture(automaticRibs) },
-                  ...RIB_COUNTS,
-                ]}
-                columns={4}
-                onChange={(count) =>
-                  patch({
-                    ribs: { ...config.ribs, count: count === AUTOMATIC_MAGNET_COUNT ? automaticRibs : count },
-                    pinned:
-                      count === AUTOMATIC_MAGNET_COUNT
-                        ? config.pinned.filter((key) => key !== 'ribs')
-                        : [...new Set([...config.pinned, 'ribs' as const])],
-                  })
-                }
-              />
-            )}
-            {config.ribs.count > 0 && (
-              <>
-                <Dimension
-                  label="Support thickness"
-                  advanced
-                  value={config.ribs.thickness}
-                  min={0.8}
-                  max={4}
-                  step={0.1}
-                  defaultValue={BASE_DEFAULTS.ribs.thickness}
-                  onChange={(thickness) => patch({ ribs: { ...config.ribs, thickness } })}
-                />
-                {!faceUp && (
-                  <Dimension
-                    label="Support height"
-                    advanced
-                    value={config.ribs.height}
-                    min={0.4}
-                    max={Math.max(0.5, config.height - config.floorThickness)}
-                    step={0.1}
-                    defaultValue={BASE_DEFAULTS.ribs.height}
-                    onChange={(height) => patch({ ribs: { ...config.ribs, height } })}
-                  />
-                )}
-              </>
-            )}
-          </Section>
-        )}
-
-        {config.magnets.count > 0 && (
-          <Section
-            title="Magnet Fit"
-            aside={<span className="readout text-xs text-muted-foreground">Ø{trimNumber(config.magnets.clearance)} fit</span>}
-          >
-            <Dimension
-              label="Magnet diameter clearance"
-              advanced
-              value={config.magnets.clearance}
-              min={0}
-              max={0.6}
-              step={0.05}
-              defaultValue={BASE_DEFAULTS.magnets.clearance}
-              onChange={(clearance) => setSharedMagnets({ clearance })}
-            />
-            <Dimension
-              label="Magnet depth clearance"
-              advanced
-              value={config.magnets.depthClearance}
-              min={0}
-              max={maxSharedDepthClearance}
-              step={0.05}
-              defaultValue={BASE_DEFAULTS.magnets.depthClearance}
-              onChange={(depthClearance) => setSharedMagnets({ depthClearance })}
-            />
-            <Dimension
-              label="Wall around pocket"
-              advanced
-              value={config.magnets.bossWall}
-              min={0.4}
-              max={3}
-              step={0.1}
-              defaultValue={BASE_DEFAULTS.magnets.bossWall}
-              onChange={(bossWall) => setSharedMagnetPlacement({ bossWall })}
-            />
-          </Section>
-        )}
-
+      {config.magnets.count > 0 && (
         <Section
-          title="Batch"
-          aside={batchTotal > 0 ? <span className="readout text-xs text-muted-foreground">{batchTotal} bases</span> : undefined}
+          title="Magnet Fit"
+          aside={<span className="readout text-xs text-muted-foreground">Ø{trimNumber(config.magnets.clearance)} fit</span>}
         >
-          {batch.map((entry, index) => {
-            const text = entryText(entry)
-            return (
-              <div
-                key={`${entry.shape}:${entry.width}x${entry.length}`}
-                className="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-2"
-              >
-                <Dimension
-                  label={`Quantity of ${text}`}
-                  value={entry.quantity}
-                  min={1}
-                  max={100}
-                  step={1}
-                  unit=""
-                  compact
-                  onChange={(quantity) => setQuantity(index, Math.round(quantity))}
-                />
-                <span className="readout truncate text-xs">{text}</span>
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  aria-label={`Remove ${text} from batch`}
-                  onClick={() => {
-                    posthog.capture('base_batch_size_removed', { sizes: batch.length - 1 })
-                    setBatch((current) => current.filter((_, entryIndex) => entryIndex !== index))
-                  }}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            )
-          })}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              posthog.capture('base_batch_size_added', { shape: config.shape, width, length })
-              setBatch((current) => addToBatch(current, config))
-            }}
-          >
-            <Plus /> Add {sizeText(config.shape, width, length)} to batch
-          </Button>
-          {batch.length > 0 && (
-            <ButtonGroup className="w-full [&>*]:flex-1">
-              <Button size="sm" onClick={exportBatchStl} disabled={exporting !== undefined}>
-                <Download />
-                {exporting === 'batch-stl' ? 'Building STLs' : 'Batch STLs'}
-              </Button>
-              <Button size="sm" variant="outline" onClick={exportBatch3mf} disabled={exporting !== undefined}>
-                <Box />
-                {exporting === 'batch-3mf' ? 'Building 3MF' : 'Batch 3MF'}
-              </Button>
-            </ButtonGroup>
-          )}
+          <MagnetClearanceField magnets={config.magnets} setSharedMagnets={setSharedMagnets} />
+          <Dimension
+            label="Magnet depth clearance"
+            advanced
+            value={config.magnets.depthClearance}
+            min={0}
+            max={maxSharedDepthClearance}
+            step={0.05}
+            defaultValue={BASE_DEFAULTS.magnets.depthClearance}
+            onChange={(depthClearance) => setSharedMagnets({ depthClearance })}
+          />
+          <Dimension
+            label="Wall around pocket"
+            advanced
+            value={config.magnets.bossWall}
+            min={0.4}
+            max={3}
+            step={0.1}
+            defaultValue={BASE_DEFAULTS.magnets.bossWall}
+            onChange={(bossWall) => setSharedMagnetPlacement({ bossWall })}
+          />
         </Section>
-        <PanelFooter page="base" resets={resets} />
-      </aside>
-    </ScrollArea>
+      )}
+
+      <Section
+        title="Batch"
+        aside={batchTotal > 0 ? <span className="readout text-xs text-muted-foreground">{batchTotal} bases</span> : undefined}
+      >
+        {batch.map((entry, index) => {
+          const text = entryText(entry)
+          return (
+            <div
+              key={`${entry.shape}:${entry.width}x${entry.length}`}
+              className="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-2"
+            >
+              <Dimension
+                label={`Quantity of ${text}`}
+                value={entry.quantity}
+                min={1}
+                max={100}
+                step={1}
+                unit=""
+                compact
+                onChange={(quantity) => setQuantity(index, Math.round(quantity))}
+              />
+              <span className="readout truncate text-xs">{text}</span>
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                aria-label={`Remove ${text} from batch`}
+                onClick={() => {
+                  posthog.capture('base_batch_size_removed', { sizes: batch.length - 1 })
+                  setBatch((current) => current.filter((_, entryIndex) => entryIndex !== index))
+                }}
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          )
+        })}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            posthog.capture('base_batch_size_added', { shape: config.shape, width, length })
+            setBatch((current) => addToBatch(current, config))
+          }}
+        >
+          <Plus /> Add {sizeText(config, '×')} to batch
+        </Button>
+        {batch.length > 0 && (
+          <ButtonGroup className="w-full [&>*]:flex-1">
+            <Button size="sm" onClick={exportBatchStl} disabled={exporting !== undefined}>
+              <Download />
+              {exporting === 'batch-stl' ? 'Building STLs' : 'Batch STLs'}
+            </Button>
+            <Button size="sm" variant="outline" onClick={exportBatch3mf} disabled={exporting !== undefined}>
+              <Box />
+              {exporting === 'batch-3mf' ? 'Building 3MF' : 'Batch 3MF'}
+            </Button>
+          </ButtonGroup>
+        )}
+      </Section>
+    </Panel>
   )
 }

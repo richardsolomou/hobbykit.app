@@ -1,9 +1,8 @@
-import type { CrossSection, Manifold, ManifoldToplevel } from 'manifold-3d'
-import type { BuildResult } from './base'
-import { curveTolerance, segmentsForTolerance } from './quality'
+import type { Manifold, ManifoldToplevel } from 'manifold-3d'
+import { buildResult, withOwner, type BuildResult } from './build'
+import { partSegments } from './quality'
 import type { PaintRackConfig } from './types'
 
-const PLA_DENSITY = 1.24e-3
 const MIN_WALL = 0.8
 /** Clearance between the facing walls of neighbouring pieces, so separately printed pieces still slot together. */
 const PIECE_CLEARANCE = 0.2
@@ -19,14 +18,14 @@ export type PaintRackPieceKind = 'module' | 'corner' | 'left-end' | 'right-end'
  * A run's frame in the loadout: a run rotates a quarter turn clockwise for every corner before it. Within a run
  * the rows climb along +y and the columns go left to right along +x.
  */
-export interface PaintRackFrame {
+interface PaintRackFrame {
   x: number
   y: number
   turns: number
 }
 
 /** Where a corner cell is cut by the corner's mitre: it keeps the side where `nx·x + ny·y` is at most `offset`. */
-export interface PaintRackMitre {
+interface PaintRackMitre {
   nx: number
   ny: number
   offset: number
@@ -332,15 +331,7 @@ export function defaultPaintRackConfig(): PaintRackConfig {
  */
 export function buildPaintRack(wasm: ManifoldToplevel, config: PaintRackConfig): BuildResult {
   const { CrossSection, Manifold } = wasm
-  const trash: { delete: () => void }[] = []
-  const own = <T extends { delete: () => void }>(value: T): T => {
-    trash.push(value)
-    return value
-  }
-  const section = (value: CrossSection) => own(value)
-  const solidOf = (value: Manifold) => own(value)
-
-  try {
+  return withOwner((own) => {
     if (config.items.length === 0) throw new Error('Add a piece to start the rack')
     if (config.wall < MIN_WALL - 1e-9) throw new Error('Rack walls are too thin to print')
     const holeRadius = config.holeDiameter / 2
@@ -357,10 +348,10 @@ export function buildPaintRack(wasm: ManifoldToplevel, config: PaintRackConfig):
     if (config.brushDiameter < MIN_BRUSH_HOLE) throw new Error('Brush holes are too narrow for a brush')
 
     const layout = paintRackLayout(config)
-    const tolerance = curveTolerance(layout.width, config.segments)
-    const circleSegments = (radius: number) => Math.max(config.segments <= 256 ? 48 : 3, segmentsForTolerance(radius * 2, tolerance))
+    const segmentsFor = partSegments(layout.width, config.segments)
+    const circleSegments = (radius: number) => segmentsFor(radius * 2, 48)
 
-    const hexagon = (flats: number) => section(section(CrossSection.circle(flats / SQRT3, 6)).rotate(90))
+    const hexagon = (flats: number) => own(own(CrossSection.circle(flats / SQRT3, 6)).rotate(90))
     const outerHex = hexagon(config.pitch + config.wall)
     const innerHex = hexagon(config.pitch - config.wall)
     // Seats reach the middle of the walls rather than stopping at their faces, which would leave them tangent.
@@ -374,7 +365,7 @@ export function buildPaintRack(wasm: ManifoldToplevel, config: PaintRackConfig):
     const seatTop = (radius: number) => -config.seatDepth - (radius - seatRadius)
     const far = cornerRadius(config) + 1
     const tube = seatRadius + config.wall
-    const seatProfile = section(
+    const seatProfile = own(
       new CrossSection([
         [
           [holeRadius, seatTop(holeRadius) - config.wall],
@@ -388,8 +379,8 @@ export function buildPaintRack(wasm: ManifoldToplevel, config: PaintRackConfig):
         ],
       ]),
     )
-    const seat = solidOf(seatProfile.revolve(circleSegments(far)))
-    const deckHole = solidOf(Manifold.cylinder(DECK + 2, seatRadius + config.wall / 2, seatRadius + config.wall / 2, circleSegments(tube)))
+    const seat = own(seatProfile.revolve(circleSegments(far)))
+    const deckHole = own(Manifold.cylinder(DECK + 2, seatRadius + config.wall / 2, seatRadius + config.wall / 2, circleSegments(tube)))
     /**
      * The pocket is the hex cell itself, rounded only by a rim at the top whose underside chamfers out to the
      * walls at 45°: it reads as a round cup while adding little more than wedges in the corners. The cone runs
@@ -399,50 +390,46 @@ export function buildPaintRack(wasm: ManifoldToplevel, config: PaintRackConfig):
     const chamfer = cornerRadius(config) - pocketRadius + 1
     const pocketVoid = (deck: number, height: number) => {
       const rim = height - RIM
-      const shape = solidOf(
+      const shape = own(
         Manifold.union([
-          solidOf(solidOf(Manifold.cylinder(RIM + 2, pocketRadius, pocketRadius, pocketSegments)).translate([0, 0, rim - 1])),
-          solidOf(
-            solidOf(Manifold.cylinder(chamfer + 1, pocketRadius + chamfer, pocketRadius - 1, pocketSegments)).translate([
-              0,
-              0,
-              rim - chamfer,
-            ]),
+          own(own(Manifold.cylinder(RIM + 2, pocketRadius, pocketRadius, pocketSegments)).translate([0, 0, rim - 1])),
+          own(
+            own(Manifold.cylinder(chamfer + 1, pocketRadius + chamfer, pocketRadius - 1, pocketSegments)).translate([0, 0, rim - chamfer]),
           ),
           // Below the chamfer the pocket is the whole hex; a shallow pocket is all chamfer, cut off by the deck.
-          solidOf(
-            solidOf(
+          own(
+            own(
               Manifold.cylinder(Math.max(1, rim - chamfer + 1.5 - deck), pocketRadius + chamfer, pocketRadius + chamfer, pocketSegments),
             ).translate([0, 0, deck - 1]),
           ),
         ]),
       )
-      return solidOf(Manifold.intersection([shape, solidOf(solidOf(innerHex.extrude(height + 1 - deck)).translate([0, 0, deck]))]))
+      return own(Manifold.intersection([shape, own(own(innerHex.extrude(height + 1 - deck)).translate([0, 0, deck]))]))
     }
     // Where the funnel's underside meets the walls' corners, below the deck's top.
     const funnelDrop = config.seatDepth + (config.pitch - config.wall) / SQRT3 - seatRadius + config.wall
     // A funnel that would reach the plate before the walls' corners lands on a floor instead of floating.
     // The floor's hole is a wall narrower than the funnel's so their faces never coincide.
     const floorHoleRadius = holeRadius - config.wall
-    const floorHole = solidOf(Manifold.cylinder(config.wall + 2, floorHoleRadius, floorHoleRadius, circleSegments(floorHoleRadius)))
+    const floorHole = own(Manifold.cylinder(config.wall + 2, floorHoleRadius, floorHoleRadius, circleSegments(floorHoleRadius)))
 
     const tall = layout.height + 4
     /** Everything on the mitre's kept side, pushed past the mitre by `slack`: built facing +x, then turned onto its normal. */
     const halfPlane = (mitre: PaintRackMitre, slack: number) => {
       const span = layout.width + layout.length + config.pitch * 10
-      const side = section(CrossSection.square([span, span * 2]).translate([mitre.offset + slack - span, -span]))
+      const side = own(CrossSection.square([span, span * 2]).translate([mitre.offset + slack - span, -span]))
       const angle = (Math.atan2(mitre.ny, mitre.nx) * 180) / Math.PI
-      return solidOf(solidOf(section(side.rotate(angle)).extrude(tall)).translate([0, 0, -2]))
+      return own(own(own(side.rotate(angle)).extrude(tall)).translate([0, 0, -2]))
     }
     const brushRadius = config.brushDiameter / 2
-    const brushTube = section(
-      section(CrossSection.circle(brushRadius + config.wall, circleSegments(brushRadius + config.wall))).subtract(
-        section(CrossSection.circle(brushRadius - config.wall / 2, circleSegments(brushRadius))),
+    const brushTube = own(
+      own(CrossSection.circle(brushRadius + config.wall, circleSegments(brushRadius + config.wall))).subtract(
+        own(CrossSection.circle(brushRadius - config.wall / 2, circleSegments(brushRadius))),
       ),
     )
-    const brushHole = solidOf(Manifold.cylinder(layout.height + 4, brushRadius, brushRadius, circleSegments(brushRadius)))
+    const brushHole = own(Manifold.cylinder(layout.height + 4, brushRadius, brushRadius, circleSegments(brushRadius)))
     const clipTo = (value: Manifold, mitre: PaintRackMitre | undefined, slack: number) =>
-      mitre ? solidOf(Manifold.intersection([value, halfPlane(mitre, slack)])) : value
+      mitre ? own(Manifold.intersection([value, halfPlane(mitre, slack)])) : value
 
     /** One piece in its run frame: hex cells sharing their walls, each capped by a deck over its seat. */
     const buildPiece = (piece: PaintRackPiece): Manifold => {
@@ -451,18 +438,18 @@ export function buildPaintRack(wasm: ManifoldToplevel, config: PaintRackConfig):
       const seats: Manifold[] = []
       const holes: Manifold[] = []
       for (const cell of piece.cells) {
-        const place = (value: Manifold) => solidOf(solidOf(value.rotate([0, 0, cell.angle])).translate([cell.x, cell.y, 0]))
+        const place = (value: Manifold) => own(own(value.rotate([0, 0, cell.angle])).translate([cell.x, cell.y, 0]))
         // Each half of a corner reaches a wall past the mitre and is hollowed only to the mitre wall's face.
-        solids.push(clipTo(place(solidOf(outerHex.extrude(cell.height))), cell.mitre, config.wall))
+        solids.push(clipTo(place(own(outerHex.extrude(cell.height))), cell.mitre, config.wall))
         if (cell.kind === 'solid') continue
         if (cell.kind === 'brushes') {
           // Hollow under a cap at the rim. Each brush stands in a tube from the table up into the cap; the tube starts
           // narrower than its hole, which is drilled last, so the hole is the only face at that radius.
-          const hollow = solidOf(solidOf(innerHex.extrude(cell.height - DECK + 1)).translate([0, 0, -1]))
+          const hollow = own(own(innerHex.extrude(cell.height - DECK + 1)).translate([0, 0, -1]))
           voids.push(clipTo(place(hollow), cell.mitre, -config.wall / 2))
           for (const [x, y] of cell.brushes ?? []) {
-            seats.push(solidOf(solidOf(brushTube.extrude(cell.height - DECK / 2)).translate([x, y, 0])))
-            holes.push(solidOf(brushHole.translate([x, y, -1])))
+            seats.push(own(own(brushTube.extrude(cell.height - DECK / 2)).translate([x, y, 0])))
+            holes.push(own(brushHole.translate([x, y, -1])))
           }
           continue
         }
@@ -472,38 +459,34 @@ export function buildPaintRack(wasm: ManifoldToplevel, config: PaintRackConfig):
         // The cell is hollow up to its deck, which stays part of the walls' own solid, as does the pocket's rim.
         const hollow = floored ? config.wall : -1
         const cellVoids = [
-          solidOf(solidOf(innerHex.extrude(deck - DECK - hollow)).translate([0, 0, hollow])),
-          solidOf(deckHole.translate([0, 0, deck - DECK - 1])),
+          own(own(innerHex.extrude(deck - DECK - hollow)).translate([0, 0, hollow])),
+          own(deckHole.translate([0, 0, deck - DECK - 1])),
         ]
         if (config.pocketDepth > 0) cellVoids.push(pocketVoid(deck, cell.height))
-        if (floored) cellVoids.push(solidOf(floorHole.translate([0, 0, -1])))
+        if (floored) cellVoids.push(own(floorHole.translate([0, 0, -1])))
         for (const value of cellVoids) voids.push(clipTo(place(value), cell.mitre, -config.wall / 2))
-        const clip = solidOf(solidOf(seatClip.extrude(deck - base)).translate([0, 0, base]))
-        seats.push(clipTo(place(solidOf(Manifold.intersection([solidOf(seat.translate([0, 0, deck])), clip]))), cell.mitre, 0))
+        const clip = own(own(seatClip.extrude(deck - base)).translate([0, 0, base]))
+        seats.push(clipTo(place(own(Manifold.intersection([own(seat.translate([0, 0, deck])), clip]))), cell.mitre, 0))
       }
-      const walls = solidOf(Manifold.difference([solidOf(Manifold.union(solids)), solidOf(Manifold.union(voids))]))
-      const built = solidOf(Manifold.union([walls, ...seats]))
-      return holes.length ? solidOf(Manifold.difference([built, ...holes])) : built
+      const walls = own(Manifold.difference([own(Manifold.union(solids)), own(Manifold.union(voids))]))
+      const built = own(Manifold.union([walls, ...seats]))
+      return holes.length ? own(Manifold.difference([built, ...holes])) : built
     }
 
     const inWorld = (value: Manifold, frame: PaintRackFrame) => {
       const [x, y] = toWorld(frame, [0, 0])
-      return solidOf(solidOf(value.rotate([0, 0, -90 * frame.turns])).translate([x - layout.center.x, y - layout.center.y, 0]))
+      return own(own(value.rotate([0, 0, -90 * frame.turns])).translate([x - layout.center.x, y - layout.center.y, 0]))
     }
     let solid: Manifold
     if (config.piece === undefined) {
-      solid = solidOf(Manifold.union(layout.pieces.map((piece) => inWorld(buildPiece(piece), piece.frame))))
+      solid = own(Manifold.union(layout.pieces.map((piece) => inWorld(buildPiece(piece), piece.frame))))
     } else {
       const piece = layout.pieces[config.piece]
       if (!piece) throw new Error('The rack has no such piece')
       const built = buildPiece(piece)
       const { min, max } = built.boundingBox()
-      solid = solidOf(built.translate([-(min[0] + max[0]) / 2, -(min[1] + max[1]) / 2, 0]))
+      solid = own(built.translate([-(min[0] + max[0]) / 2, -(min[1] + max[1]) / 2, 0]))
     }
-    const volume = solid.volume()
-    const triangles = solid.numTri()
-    return { mesh: solid.getMesh(), stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 } }
-  } finally {
-    for (const value of trash) value.delete()
-  }
+    return buildResult(solid)
+  })
 }

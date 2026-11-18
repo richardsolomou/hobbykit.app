@@ -63,13 +63,13 @@ When a changeset reaches `main`, CI updates `package.json` and `CHANGELOG.md`, t
 
 The body is the convex hull of the footprint offset at each height of the edge profile. This is exact for the supported convex shapes. Concave footprints need a different loft and are outside the current model.
 
-Every Manifold object created in `buildBase` must pass through `own()`. WASM objects are not garbage collected, and the `finally` block is the only cleanup path.
+Every Manifold object a generator creates must pass through the `own()` that `withOwner` hands it. WASM objects are not garbage collected, and `withOwner` is the only cleanup path.
 
 Exports rebuild circular geometry at a 1µm chord tolerance. The preview deliberately uses fewer segments so controls remain responsive.
 
 ## Conventions
 
-- Keep the product focused on printable miniature bases and the holders built around them. General-purpose CAD, slicing, miniature sculpting, and printer control belong elsewhere.
+- Keep the product focused on printable bases and the hobby accessories around them. General-purpose CAD, slicing, miniature sculpting, and printer control belong elsewhere.
 - Use registry components before adding app-specific controls. Files under `src/components/ui` are vendored.
 - Test geometry behavior, including invalid boundaries, against real meshes rather than bounding-box approximations.
 - Inspect every rendered UI change in a browser at desktop and phone widths.

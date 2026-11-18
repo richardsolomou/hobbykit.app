@@ -1,8 +1,9 @@
 import { baseName, footprint } from '../core/geometry/outline'
-import { footprintKey, resized } from '../core/geometry/presets'
+import { footprintKey } from '../core/geometry/presets'
 import { maxProfileSize } from '../core/geometry/profile'
 import type { BaseConfig } from '../core/geometry/types'
-import { synchronizeWorkspace, type BatchEntry, type WorkspaceState } from './workspace'
+import { applyBase } from './baseLink'
+import type { BatchEntry, WorkspaceState } from './workspace'
 
 const entryKey = (entry: Pick<BatchEntry, 'shape' | 'width' | 'length'>) => footprintKey(entry.shape, entry.width, entry.length)
 
@@ -23,8 +24,7 @@ export function addToBatch(batch: BatchEntry[], config: BaseConfig): BatchEntry[
 export function batchBaseConfig(workspace: WorkspaceState, entry: BatchEntry): BaseConfig {
   const current = workspace.base
   if (entryKey(entry) === footprintKey(current.shape, current.width, current.length)) return current
-  const next = resized({ ...current, shape: entry.shape }, entry.width, entry.length)
-  const { base } = synchronizeWorkspace({ ...workspace, base: { ...next, label: { ...next.label, text: undefined } } })
+  const { base } = applyBase(workspace, entry)
   return { ...base, profileSize: Math.min(base.profileSize, maxProfileSize(base)) }
 }
 

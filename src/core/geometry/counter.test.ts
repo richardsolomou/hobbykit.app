@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
 import type { Mesh } from 'manifold-3d'
-import { parse, type Font } from 'opentype.js'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { bounds, duplicateVertices, font, vertices } from './geometry.test.utils'
 import { loadManifold } from './manifold'
 import { polygonsWidth, textPolygons } from './text'
 import type { CounterConfig, CounterPart, CounterTile } from './types'
@@ -27,12 +26,9 @@ import {
 } from './counter'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
-let font: Font
 
 beforeAll(async () => {
   wasm = await loadManifold()
-  const bytes = readFileSync('src/assets/fonts/oswald-700.woff')
-  font = parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
 })
 
 /** The base design with hubs on legs, which holds the tube the plainest way; larger sizes scale from it, and the default size and layout are covered on their own. */
@@ -86,25 +82,6 @@ const CONFIGS: [string, CounterConfig][] = [
   ['exploded hubs', counter({ layout: 'hubs', exploded: true })],
   ['an exploded view of the smallest wheels', counter({ drumDiameter: smallest, exploded: true })],
 ]
-
-function vertices(mesh: Mesh) {
-  return Array.from({ length: mesh.vertProperties.length / mesh.numProp }, (_value, index) =>
-    [0, 1, 2].map((axis) => mesh.vertProperties[index * mesh.numProp + axis]),
-  )
-}
-
-function bounds(mesh: Mesh) {
-  const points = vertices(mesh)
-  return {
-    min: [0, 1, 2].map((axis) => Math.min(...points.map((p) => p[axis]))),
-    max: [0, 1, 2].map((axis) => Math.max(...points.map((p) => p[axis]))),
-  }
-}
-
-function duplicatePositions(mesh: Mesh) {
-  const keys = vertices(mesh).map((vertex) => vertex.join(','))
-  return keys.length - new Set(keys).size
-}
 
 /**
  * Downward faces steeper than 45° from vertical, other than the face on the plate and the ceilings
@@ -177,13 +154,13 @@ describe('buildCounter', () => {
     })
 
     it.each(parts)('leaves no two vertices of the %s at one position', (name) => {
-      expect(duplicatePositions(part(config, name).mesh)).toBe(0)
+      expect(duplicateVertices(part(config, name).mesh)).toBe(0)
     })
 
     it('leaves no two vertices of the assembled inserts at one position', () => {
       const { inserts } = build(config)
 
-      expect(inserts ? duplicatePositions(inserts) : 0).toBe(0)
+      expect(inserts ? duplicateVertices(inserts) : 0).toBe(0)
     })
 
     it('keeps the inserts out of the drums they sit in', () => {

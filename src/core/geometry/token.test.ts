@@ -1,18 +1,14 @@
-import { readFileSync } from 'node:fs'
 import type { Mesh } from 'manifold-3d'
-import { parse, type Font } from 'opentype.js'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { bounds, font } from './geometry.test.utils'
 import { loadManifold } from './manifold'
 import { buildToken, defaultTokenConfig, tokenFaceInset, tokenHeight, tokenName } from './token'
 import type { EdgeProfile, TokenConfig, TokenImage, TokenShape } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
-let font: Font
 
 beforeAll(async () => {
   wasm = await loadManifold()
-  const bytes = readFileSync('src/assets/fonts/oswald-700.woff')
-  font = parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
 })
 
 /** A white square image, with a dark disc in the middle unless it is blank, holed when `hole` is set. */
@@ -28,19 +24,6 @@ function discImage(size = 64, blank = false, hole = 0): TokenImage {
 }
 
 const build = (changes: Partial<TokenConfig> = {}) => buildToken(wasm, { ...defaultTokenConfig(), ...changes }, font)
-
-function bounds(mesh: Mesh) {
-  const { numProp, vertProperties: vertices } = mesh
-  const min = [Infinity, Infinity, Infinity]
-  const max = [-Infinity, -Infinity, -Infinity]
-  for (let i = 0; i < vertices.length; i += numProp) {
-    for (let axis = 0; axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], vertices[i + axis])
-      max[axis] = Math.max(max[axis], vertices[i + axis])
-    }
-  }
-  return { min, max }
-}
 
 /** Vertices standing above the disc, which belong to the raised artwork. */
 function raised(mesh: Mesh, thickness: number): [number, number][] {

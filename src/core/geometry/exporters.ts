@@ -115,7 +115,7 @@ interface PlacedItem {
   transform: string
 }
 
-function footprintBounds({ numProp, vertProperties: vertices }: MeshLike) {
+export function footprintBounds({ numProp, vertProperties: vertices }: MeshLike) {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity

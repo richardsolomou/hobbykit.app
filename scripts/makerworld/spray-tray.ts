@@ -3,10 +3,8 @@ import {
   buildPaintingTray,
   defaultPaintingTrayConfig,
   paintingHandleConfig,
-  paintingHandleDimensions,
-  paintingTrayLayout,
 } from '../../src/core/geometry/paintingTray'
-import { exportSegmentsFor } from '../../src/core/geometry/quality'
+import { forExport } from '../../src/core/geometry/exportQuality'
 import type { PaintingHandleSettings, PaintingTrayConfig } from '../../src/core/geometry/types'
 import type { Case } from './shared'
 
@@ -17,8 +15,7 @@ const tray = (name: string, changes: Partial<PaintingTrayConfig>, defines: Case[
   name: `tray-${name}`,
   build: (wasm) => {
     const config = { ...DEFAULTS, ...changes }
-    const { width, length } = paintingTrayLayout(config)
-    return buildPaintingTray(wasm, { ...config, assembly: false, segments: exportSegmentsFor(Math.max(width, length)) }).mesh
+    return buildPaintingTray(wasm, forExport({ ...config, assembly: false })).mesh
   },
   defines: { part: 'tray', ...defines },
 })
@@ -27,8 +24,7 @@ const handle = (name: string, changes: Partial<PaintingHandleSettings>, defines:
   name: `handle-${name}`,
   build: (wasm) => {
     const config = paintingHandleConfig({ ...DEFAULTS, handle: { ...DEFAULTS.handle, ...changes } })
-    const { width, length } = paintingHandleDimensions(config)
-    return buildPaintingHandle(wasm, { ...config, segments: exportSegmentsFor(Math.max(width, length)) }).mesh
+    return buildPaintingHandle(wasm, forExport(config)).mesh
   },
   defines: { part: 'handle', ...defines },
 })

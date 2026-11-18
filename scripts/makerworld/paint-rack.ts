@@ -1,7 +1,7 @@
 import type { ManifoldToplevel } from 'manifold-3d'
 import type { MeshLike } from '../../src/core/geometry/exporters'
 import { buildPaintRack, defaultPaintRackConfig, paintRackLayout } from '../../src/core/geometry/paintRack'
-import { exportSegmentsFor } from '../../src/core/geometry/quality'
+import { forExport } from '../../src/core/geometry/exportQuality'
 import type { PaintRackConfig } from '../../src/core/geometry/types'
 import type { Case } from './shared'
 
@@ -12,9 +12,10 @@ type Part = 'all' | 'module' | 'left-end' | 'right-end'
 
 /** Each piece as the app exports it, centred on its footprint. */
 function exported(wasm: ManifoldToplevel, config: PaintRackConfig): { kind: string; mesh: MeshLike }[] {
-  const layout = paintRackLayout(config)
-  const segments = exportSegmentsFor(Math.max(layout.width, layout.length))
-  return layout.pieces.map((piece, index) => ({ kind: piece.kind, mesh: buildPaintRack(wasm, { ...config, piece: index, segments }).mesh }))
+  return paintRackLayout(config).pieces.map((piece, index) => ({
+    kind: piece.kind,
+    mesh: buildPaintRack(wasm, forExport({ ...config, piece: index })).mesh,
+  }))
 }
 
 /** The pieces left to right, PLATE_GAP apart, as the script lays them out to print together. */

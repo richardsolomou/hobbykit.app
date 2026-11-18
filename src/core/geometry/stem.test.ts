@@ -1,5 +1,5 @@
-import type { Mesh } from 'manifold-3d'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { bounds, openEdges } from './geometry.test.utils'
 import { loadManifold } from './manifold'
 import { buildFlightStem, CLASSIC_STEM_HEIGHTS, defaultFlightStemConfig, stemMaximumDiameter, stemName, stemOverallHeight } from './stem'
 
@@ -8,19 +8,6 @@ let wasm: Awaited<ReturnType<typeof loadManifold>>
 beforeAll(async () => {
   wasm = await loadManifold()
 })
-
-function bounds(mesh: Mesh) {
-  const { numProp, vertProperties: vertices } = mesh
-  const min = [Infinity, Infinity, Infinity]
-  const max = [-Infinity, -Infinity, -Infinity]
-  for (let i = 0; i < vertices.length; i += numProp) {
-    for (let axis = 0; axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], vertices[i + axis])
-      max[axis] = Math.max(max[axis], vertices[i + axis])
-    }
-  }
-  return { min, size: max.map((value, axis) => value - min[axis]) }
-}
 
 describe('buildFlightStem', () => {
   it('uses the classic clear-stem dimensions by default', () => {
@@ -39,7 +26,7 @@ describe('buildFlightStem', () => {
     const result = buildFlightStem(wasm, config)
     const measured = bounds(result.mesh)
 
-    expect(result.stats.solid).toBe(true)
+    expect(openEdges(result.mesh)).toBe(0)
     expect(measured.min[2]).toBeCloseTo(0, 5)
     expect(measured.size[0]).toBeCloseTo(config.bodyDiameter, 2)
     expect(measured.size[1]).toBeCloseTo(config.bodyDiameter, 2)
@@ -48,7 +35,7 @@ describe('buildFlightStem', () => {
 
   it.each(CLASSIC_STEM_HEIGHTS)('builds a %d mm classic stem', (bodyHeight) => {
     const config = { ...defaultFlightStemConfig(), bodyHeight }
-    expect(buildFlightStem(wasm, config).stats.solid).toBe(true)
+    expect(openEdges(buildFlightStem(wasm, config).mesh)).toBe(0)
     expect(stemName(config)).toBe(`flying-stem-${bodyHeight}mm`)
   })
 
@@ -57,7 +44,7 @@ describe('buildFlightStem', () => {
     const result = buildFlightStem(wasm, config)
     const measured = bounds(result.mesh)
 
-    expect(result.stats.solid).toBe(true)
+    expect(openEdges(result.mesh)).toBe(0)
     expect(measured.size[0]).toBeCloseTo(stemMaximumDiameter(config), 2)
     expect(measured.size[2]).toBeCloseTo(stemOverallHeight(config), 5)
     expect(stemName(config)).toBe('flying-stem-15mm-ball')

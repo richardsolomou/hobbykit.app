@@ -51,6 +51,7 @@ import type {
   PaintingTrayConfig,
   PaintRackConfig,
   CounterConfig,
+  PartConfig,
 } from '@/core/geometry/types'
 import { loadTokenImage } from '@/lib/tokenImage'
 import { batchBaseConfig, batchName } from '@/lib/batch'
@@ -68,7 +69,6 @@ import {
   resetShared,
   saveWorkspace,
   synchronizeWorkspace,
-  type GeneratorSettings,
   type WorkspaceState,
 } from '@/lib/workspace'
 
@@ -78,20 +78,6 @@ type Generator = (typeof PAGES)[number]['value']
 const COUNTER_FRAMING_SCALE = 1.4
 
 const modelForPath = (): Generator => generatorForPath(window.location.pathname)
-const modelLabel = (model: Generator) =>
-  model === 'base'
-    ? 'Base'
-    : model === 'holder'
-      ? 'Holder'
-      : model === 'painting'
-        ? 'Spray tray'
-        : model === 'rack'
-          ? 'Paint rack'
-          : model === 'stem'
-            ? 'Stem'
-            : model === 'token'
-              ? 'Token'
-              : 'Dial counter'
 
 const SHARE_NOTICE_MS = 5000
 
@@ -122,16 +108,10 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
     setWorkspaceState((current) => synchronizeWorkspace(typeof next === 'function' ? next(current) : next))
   const setConfig = (next: BaseConfig | ((current: BaseConfig) => BaseConfig)) =>
     setWorkspace((current) => ({ ...current, base: typeof next === 'function' ? next(current.base) : next }))
-  const setHolder = (next: HolderConfig | ((current: HolderConfig) => HolderConfig)) =>
-    setWorkspace((current) => ({ ...current, holder: typeof next === 'function' ? next(current.holder) : next }))
-  const setPaintingTray = (next: PaintingTrayConfig | ((current: PaintingTrayConfig) => PaintingTrayConfig)) =>
-    setWorkspace((current) => ({
-      ...current,
-      paintingTray: typeof next === 'function' ? next(current.paintingTray) : next,
-    }))
+  const setHolder = (next: HolderConfig) => setWorkspace((current) => ({ ...current, holder: next }))
+  const setPaintingTray = (next: PaintingTrayConfig) => setWorkspace((current) => ({ ...current, paintingTray: next }))
   const setPaintRack = (next: PaintRackConfig) => setWorkspace((current) => ({ ...current, paintRack: next }))
-  const setStem = (next: FlightStemConfig | ((current: FlightStemConfig) => FlightStemConfig)) =>
-    setWorkspace((current) => ({ ...current, stem: typeof next === 'function' ? next(current.stem) : next }))
+  const setStem = (next: FlightStemConfig) => setWorkspace((current) => ({ ...current, stem: next }))
   const setCounter = (next: CounterConfig) => setWorkspace((current) => ({ ...current, counter: next }))
   const setFilaments = (filaments: FilamentColours) => setWorkspace((current) => ({ ...current, filaments }))
   const patchToken = (changes: Partial<TokenConfig>) =>
@@ -184,21 +164,22 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
   }, [model])
   // Tailwind's `md`, the width at which the panel stops needing to slide in.
   const docked = useMediaQuery('(min-width: 48rem)')
-  const partConfig =
+  const partConfig: PartConfig =
     model === 'base'
       ? config
       : model === 'holder'
         ? holder
         : model === 'painting'
-          ? { ...paintingTray, exploded }
+          ? paintingTray
           : model === 'rack'
             ? paintRack
             : model === 'stem'
               ? stem
               : model === 'token'
                 ? token
-                : { ...counter, exploded }
-  const { preview, built, grams, error, buildMs } = useGenerator(partConfig)
+                : counter
+  const previewConfig = explodable ? { ...partConfig, exploded } : partConfig
+  const { preview, built, grams, error, buildMs } = useGenerator(previewConfig)
   const reportBlocked = useEffectEvent((message: string) => posthog.capture('preview_blocked', { message, build_ms: buildMs }))
   useEffect(() => {
     if (error) reportBlocked(error)
@@ -373,13 +354,8 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
     exportRackPiece,
   } = useExport({
     model,
-    base: config,
-    holder,
-    paintingTray,
-    paintRack,
-    stem,
-    token,
-    counter,
+    config: partConfig,
+    name: partName,
     filaments: workspace.filaments,
     width: partWidth,
     length: partLength,
@@ -434,15 +410,19 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
     })
   }
 
-  const resetPart = (part: GeneratorSettings, label: string, shared: boolean): ResetAction => ({
-    label,
-    description: `Every ${label} setting returns to its default${part === 'base' ? ' and the batch list empties' : ''}. ${shared ? 'Shared settings and the' : 'The'} other generators keep their values.`,
-    onReset: () => {
-      posthog.capture('settings_reset', { scope: part })
-      if (part === 'token') setTokenImageError(undefined)
-      setWorkspace((current) => resetGenerator(current, part))
-    },
-  })
+  const resetPart = (shared: boolean): ResetAction => {
+    const { part } = page
+    const label = page.name.toLowerCase()
+    return {
+      label,
+      description: `Every ${label} setting returns to its default${part === 'base' ? ' and the batch list empties' : ''}. ${shared ? 'Shared settings and the' : 'The'} other generators keep their values.`,
+      onReset: () => {
+        posthog.capture('settings_reset', { scope: part })
+        if (part === 'token') setTokenImageError(undefined)
+        setWorkspace((current) => resetGenerator(current, part))
+      },
+    }
+  }
   const resetSharedSettings: ResetAction = {
     label: 'shared settings',
     description:
@@ -471,7 +451,7 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
         exporting={exporting}
         exportBatchStl={exportBatchStl}
         exportBatch3mf={exportBatch3mf}
-        resets={[resetPart('base', 'base', true), resetSharedSettings]}
+        resets={[resetPart(true), resetSharedSettings]}
       />
     ) : model === 'holder' ? (
       <HolderPanel
@@ -480,9 +460,10 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
         holderSize={holderSize}
         plan={plan}
         maxSharedMagnetThickness={maxSharedMagnetThickness}
+        maxSharedDepthClearance={maxSharedDepthClearance}
         setSharedMagnets={setSharedMagnets}
         setSharedLabels={setSharedLabels}
-        resets={[resetPart('holder', 'holder', true), resetSharedSettings]}
+        resets={[resetPart(true), resetSharedSettings]}
       />
     ) : model === 'painting' ? (
       <PaintingTrayPanel
@@ -492,7 +473,7 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
         maxSharedMagnetThickness={maxSharedMagnetThickness}
         maxSharedDepthClearance={maxSharedDepthClearance}
         setSharedMagnets={setSharedMagnets}
-        resets={[resetPart('paintingTray', 'spray tray', true), resetSharedSettings]}
+        resets={[resetPart(true), resetSharedSettings]}
       />
     ) : model === 'rack' ? (
       <PaintRackPanel
@@ -500,24 +481,19 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
         setPaintRack={setPaintRack}
         exporting={exporting !== undefined}
         exportPiece={exportRackPiece}
-        resets={[resetPart('paintRack', 'paint rack', false)]}
+        resets={[resetPart(false)]}
       />
     ) : model === 'stem' ? (
-      <StemPanel stem={stem} setStem={setStem} resets={[resetPart('stem', 'stem', false)]} />
+      <StemPanel stem={stem} setStem={setStem} resets={[resetPart(false)]} />
     ) : model === 'counter' ? (
-      <CounterPanel
-        counter={counter}
-        setCounter={setCounter}
-        filaments={workspace.filaments}
-        resets={[resetPart('counter', 'dial counter', false)]}
-      />
+      <CounterPanel counter={counter} setCounter={setCounter} filaments={workspace.filaments} resets={[resetPart(false)]} />
     ) : (
       <TokenPanel
         token={token}
         patchToken={patchToken}
         addTokenImage={addTokenImage}
         tokenImageError={tokenImageError}
-        resets={[resetPart('token', 'token', false)]}
+        resets={[resetPart(false)]}
       />
     )
 
@@ -542,7 +518,7 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
                 onOpenChangeComplete={() => drawerState.current.settled()}
               >
                 <SheetTrigger
-                  render={<Button size="icon-sm" variant="outline" aria-label={`${modelLabel(model)} settings`} data-tour="settings" />}
+                  render={<Button size="icon-sm" variant="outline" aria-label={`${page.name} settings`} data-tour="settings" />}
                 >
                   <PanelLeft />
                 </SheetTrigger>
@@ -552,7 +528,7 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
                   <SheetHeader className="flex shrink-0 flex-row items-center gap-3 border-b border-border px-5 py-3.5 pr-12">
                     <SheetTitle className="note truncate">
                       <span aria-hidden>{page.mobileLabel}</span>
-                      <span className="sr-only">{modelLabel(model)} settings</span>
+                      <span className="sr-only">{page.name} settings</span>
                     </SheetTitle>
                   </SheetHeader>
                   <div className="flex min-h-0 flex-1 flex-col">{panel}</div>

@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
 import type { Mesh } from 'manifold-3d'
-import { parse, type Font } from 'opentype.js'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { bounds, duplicateVertices, font, openEdges } from './geometry.test.utils'
 import { buildBase, magnetPositions, ribAngles } from './base'
 import { toStl } from './exporters'
 import { LABEL_CHARACTERS, LABEL_MARGIN, LABEL_MAX_LENGTH, labelText, pointInContours } from './label'
@@ -25,30 +24,13 @@ import {
 import { EXPORT_CURVE_TOLERANCE, exportSegmentsFor, previewSegmentsFor } from './quality'
 import type { BaseConfig } from './types'
 
-const FONT_PATH = 'src/assets/fonts/oswald-700.woff'
 const ROUND_32 = standardSize('round', '32')
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
-let font: Font
 
 beforeAll(async () => {
   wasm = await loadManifold()
-  const bytes = readFileSync(FONT_PATH)
-  font = parse(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
 })
-
-function bounds(mesh: Mesh) {
-  const { numProp, vertProperties: v } = mesh
-  const min = [Infinity, Infinity, Infinity]
-  const max = [-Infinity, -Infinity, -Infinity]
-  for (let i = 0; i < v.length; i += numProp) {
-    for (let axis = 0; axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], v[i + axis])
-      max[axis] = Math.max(max[axis], v[i + axis])
-    }
-  }
-  return { min, max, size: max.map((m, i) => m - min[i]) }
-}
 
 /** Measures the bore around a magnet centre: solid material contributes no vertices there. */
 function pocketAt(mesh: Mesh, cx: number, cy: number, pocketRadius: number) {
@@ -76,17 +58,6 @@ function bottomReach(mesh: Mesh) {
     if (Math.abs(v[i + 2]) < 1e-6) widest = Math.max(widest, Math.hypot(v[i], v[i + 1]))
   }
   return widest
-}
-
-function duplicateVertices(mesh: Mesh) {
-  const seen = new Set<string>()
-  let duplicates = 0
-  for (let i = 0; i < mesh.vertProperties.length; i += mesh.numProp) {
-    const key = `${mesh.vertProperties[i]},${mesh.vertProperties[i + 1]},${mesh.vertProperties[i + 2]}`
-    if (seen.has(key)) duplicates++
-    seen.add(key)
-  }
-  return duplicates
 }
 
 const build = (config: BaseConfig) => buildBase(wasm, config, font)
@@ -254,29 +225,21 @@ describe('buildBase', () => {
     expect(build(config).stats.volume).toBeGreaterThan(build(plain).stats.volume)
   })
 
-  it.for([0, 2, 3, 4, 6])('builds a solid with %i ribs', (count) => {
+  it.for([0, 2, 3, 4, 6])('builds a watertight base with %i ribs', (count) => {
     const config = preset(standardSize('round', '50'))
-    expect(build({ ...config, ribs: { ...config.ribs, count } }).stats.solid).toBe(true)
+    expect(openEdges(build({ ...config, ribs: { ...config.ribs, count } }).mesh)).toBe(0)
   })
 
-  it.for(['taper', 'straight', 'bevel', 'round'] as const)('builds a solid with a %s bottom edge', (profile) => {
-    expect(build({ ...preset(ROUND_32), profile }).stats.solid).toBe(true)
+  it.for(['taper', 'straight', 'bevel', 'round'] as const)('builds a watertight base with a %s bottom edge', (profile) => {
+    expect(openEdges(build({ ...preset(ROUND_32), profile }).mesh)).toBe(0)
   })
 
   it.for(['taper', 'straight', 'bevel', 'round'] as const)('holds the full size with a %s bottom edge', (profile) => {
     expect(bounds(build({ ...preset(ROUND_32), profile }).mesh).size[0]).toBeCloseTo(32, 1)
   })
 
-  it.for(ROUND_SIZES)('builds a solid $label mm round base', (size) => {
-    expect(build(preset(size)).stats.solid).toBe(true)
-  })
-
   it.for(ROUND_SIZES)('measures $label mm across', (size) => {
     expect(bounds(build(preset(size)).mesh).size[0]).toBeCloseTo(size.width, 1)
-  })
-
-  it.for(OVAL_SIZES)('builds a solid $label oval', (size) => {
-    expect(build(preset(size)).stats.solid).toBe(true)
   })
 
   it.for(OVAL_SIZES)('measures $label across both axes', (size) => {
@@ -285,22 +248,18 @@ describe('buildBase', () => {
     expect(extents[1]).toBeCloseTo(size.length ?? size.width, 1)
   })
 
-  it.for(RECT_SIZES)('builds a solid $label rank base', (size) => {
-    expect(build(preset(size)).stats.solid).toBe(true)
-  })
-
   it.for(RECT_SIZES)('measures $label as frontage by depth', (size) => {
     const { size: extents } = bounds(build(preset(size)).mesh)
     expect(extents[0]).toBeCloseTo(size.width, 1)
     expect(extents[1]).toBeCloseTo(size.length ?? size.width, 1)
   })
 
-  it.for(PILL_SIZES)('builds a solid $label pill', (size) => {
-    expect(build(preset(size)).stats.solid).toBe(true)
+  it.for(PILL_SIZES)('builds a watertight $label pill', (size) => {
+    expect(openEdges(build(preset(size)).mesh)).toBe(0)
   })
 
-  it.for(POLYGON_SIZES)('builds a solid $label hex', (size) => {
-    expect(build(preset(size)).stats.solid).toBe(true)
+  it.for(POLYGON_SIZES)('builds a watertight $label hex', (size) => {
+    expect(openEdges(build(preset(size)).mesh)).toBe(0)
   })
 
   it('keeps a hex inside the round it replaces', () => {
@@ -331,9 +290,9 @@ describe('buildBase', () => {
     expect(size[1]).toBeCloseTo(40, 2)
   })
 
-  it.for([3, 5, 6, 8])('builds a solid %i-sided polygon base', (sides) => {
+  it.for([3, 5, 6, 8])('builds a watertight %i-sided polygon base', (sides) => {
     const config = { ...preset(standardSize('round', '50')), shape: 'polygon' as const, sides }
-    expect(build(config).stats.solid).toBe(true)
+    expect(openEdges(build(config).mesh)).toBe(0)
   })
 
   it('spreads magnets along the long axis of an elongated base', () => {

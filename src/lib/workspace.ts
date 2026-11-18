@@ -63,7 +63,7 @@ export interface BatchEntry {
   quantity: number
 }
 
-export interface SharedSettings {
+interface SharedSettings {
   labelsEnabled: boolean
   wallThickness: number
   magnetBossWall: number
@@ -253,7 +253,7 @@ const PARTS_USING_SHARED = new Set<GeneratorSettings>(['base', 'holder', 'painti
  * One generator's settings and the shared settings that shape it, as a share link carries them.
  * The base batch stays behind: it is the sender's own export queue, not part of the base's design.
  */
-export interface WorkspaceSetup {
+interface WorkspaceSetup {
   version: number
   part: GeneratorSettings
   config: WorkspaceState[GeneratorSettings]
@@ -388,8 +388,7 @@ function migrateWorkspaceV19(value: unknown): unknown {
 
 /** Version 18 only changed the counter's defaults, which version 19 replaced. */
 function migrateWorkspaceV18(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig() }
+  return value
 }
 
 /** The slim caddy shares no dimensions with the drums and pointer it replaced, and colours arrived with it. */
@@ -416,9 +415,9 @@ function migrateWorkspaceV14(value: unknown): unknown {
   return { ...workspace, base: { ...workspace.base, texture: presetFor(DEFAULT_PRESET).texture } }
 }
 
+/** Version 13 only added the counter and its colours, which version 17 replaced. */
 function migrateWorkspaceV13(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig(), filaments: DEFAULT_FILAMENTS }
+  return value
 }
 
 function migrateWorkspaceV12(value: unknown): unknown {

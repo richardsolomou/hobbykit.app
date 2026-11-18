@@ -14,7 +14,6 @@ const SLOW_PREVIEW_MS = 2000
 export function useGenerator(config: PartConfig) {
   const worker = useRef<Worker>(null)
   const nextId = useRef(0)
-  const latestPreview = useRef(0)
   const building = useRef(false)
   const queued = useRef<PartConfig>(undefined)
   const sent = useRef<PartConfig>(undefined)
@@ -32,7 +31,6 @@ export function useGenerator(config: PartConfig) {
   /** Sends one config and remembers it is the one whose reply matters. */
   const send = useCallback((next: PartConfig) => {
     const id = ++nextId.current
-    latestPreview.current = id
     sent.current = next
     sentAt.current = performance.now()
     building.current = true
@@ -52,7 +50,7 @@ export function useGenerator(config: PartConfig) {
     worker.current = instance
     instance.onmessage = (event: MessageEvent<WorkerReply>) => {
       const reply = event.data
-      if (reply.id !== latestPreview.current) return // a newer config is already in flight
+      if (reply.id !== nextId.current) return // a newer config is already in flight
       const ms = Math.round(performance.now() - sentAt.current)
       const part = sent.current?.kind ?? 'base'
       setBuildMs(ms)
@@ -73,9 +71,7 @@ export function useGenerator(config: PartConfig) {
     return () => instance.terminate()
   }, [drain])
 
-  // No debounce: a build is started the moment the worker is free, and while it is
-  // busy only the newest config is held. Waiting for changes to stop meant nothing
-  // rendered at all until a drag ended.
+  // No debounce: a build starts the moment the worker is free, and while it is busy only the newest config is held.
   useEffect(() => {
     if (building.current) queued.current = config
     else send(config)

@@ -1,4 +1,5 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d'
+import type { Owner } from './build'
 import { isRelief, seeded, type Hash, type ReliefPattern } from './texture'
 import { EXPORT_CURVE_TOLERANCE } from './quality'
 import type { BaseConfig, TextureSpec } from './types'
@@ -10,7 +11,7 @@ const EXPORT_RESOLUTION = 0.25
 /**
  * The relief's heights are blurred by a Gaussian this wide in mm, so no slope is
  * steeper than the grid can follow and no noise is finer than a few nozzle
- * lines. Sampling cliffs and fine noise unblurred left saw teeth along every wall.
+ * lines; unblurred, cliffs and fine noise export as saw teeth along every wall.
  */
 const SOFTEN = 0.5
 /** Previews coarsen with size to a 0.8mm grid by 100mm, which keeps a large base near half a second. */
@@ -48,8 +49,8 @@ function valueNoise(x: number, y: number, hash: Hash, channel: number): number {
 
 /**
  * Fractal value noise in [0, 1] from `frequency` up, stretched so it uses most
- * of that range. The stretch is linear: easing it saturated whole regions at 0
- * or 1, which printed as flat plateaus cut off a layer or two down.
+ * of that range. The stretch stays linear because easing saturates whole regions
+ * at 0 or 1, which print as flat plateaus cut off a layer or two down.
  */
 function fbm(x: number, y: number, frequency: number, octaves: number, ctx: Context, channel: number, persistence = 0.5) {
   let total = 0
@@ -262,7 +263,7 @@ export function reliefBlock(
   config: BaseConfig,
   face: CrossSection,
   tolerance: number,
-  own: <T extends { delete: () => void }>(o: T) => T,
+  own: Owner,
 ): Manifold | undefined {
   const { pattern, scale, depth } = config.texture
   if (!isRelief(pattern) || depth <= 0) return undefined

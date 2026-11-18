@@ -17,17 +17,19 @@ export function footprint(config: Pick<BaseConfig, 'shape' | 'width' | 'length'>
   return { width: config.width, length: isElongated(config.shape) ? config.length : config.width }
 }
 
+/** A footprint as text: the width alone, or width and length for an elongated shape. */
+export function sizeText({ shape, width, length = width }: { shape: ShapeKind; width: number; length?: number }, separator = 'x'): string {
+  return isElongated(shape) ? `${trimNumber(width)}${separator}${trimNumber(length)}` : trimNumber(width)
+}
+
 /** What the size label says when the text field is left empty. */
 export function defaultLabel(config: BaseConfig): string {
-  const { width, length } = footprint(config)
-  return isElongated(config.shape) ? `${trimNumber(width)}x${trimNumber(length)}` : trimNumber(width)
+  return sizeText(config)
 }
 
 /** A filename stem that survives every filesystem. */
 export function baseName(config: BaseConfig): string {
-  const { width, length } = footprint(config)
-  const size = isElongated(config.shape) ? `${trimNumber(width)}x${trimNumber(length)}` : trimNumber(width)
-  return `base-${config.shape}-${size}mm`
+  return `base-${config.shape}-${sizeText(config)}mm`
 }
 
 /**

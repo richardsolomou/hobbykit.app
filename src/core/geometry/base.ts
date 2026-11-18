@@ -1,4 +1,5 @@
-import type { CrossSection, Manifold, ManifoldToplevel, Mesh, Vec3 } from 'manifold-3d'
+import type { ManifoldToplevel, Vec3 } from 'manifold-3d'
+import { buildResult, withOwner, type BuildResult } from './build'
 import type { Font } from 'opentype.js'
 import { fitLabel, LABEL_MARGIN, labelAngles, LABEL_MAX_LENGTH, labelText, pointInContours, type LabelCircle } from './label'
 import { baseOutline, defaultLabel } from './outline'
@@ -7,26 +8,10 @@ import { curveTolerance } from './quality'
 import { MIN_POCKET_ROOF, reliefBlock } from './relief'
 import { isRelief, MIN_TEXTURE_FLOOR, textureCut } from './texture'
 import { GLYPH_FILL, polygonsWidth, textPolygons, type Polygon } from './text'
-import type { BaseConfig, BaseStats, MagnetLayout, ShapeKind } from './types'
+import type { BaseConfig, MagnetLayout, ShapeKind } from './types'
 
-export interface BuildResult {
-  mesh: Mesh
-  /** Pieces printed separately in another filament and shown in place, which the preview colours apart. */
-  inserts?: Mesh
-  /** Pieces in a third filament, shown in place in its own colour. */
-  third?: Mesh
-  stats: BaseStats
-}
-
-const PLA_DENSITY = 1.24e-3 // g/mm³
 /** Beyond this width-to-length ratio, magnets line up along the long axis instead of on a ring. */
 const ELONGATED_RATIO = 1.35
-
-export interface Circle {
-  x: number
-  y: number
-  r: number
-}
 
 interface MagnetPositionOptions {
   ellipticalRow?: boolean
@@ -52,7 +37,7 @@ export function magnetPositions(
   halfLength: number,
   clear: number,
   options: MagnetPositionOptions = {},
-): Circle[] {
+): LabelCircle[] {
   if (count <= 0) return []
   const short = Math.min(halfWidth, halfLength)
   const radius = Math.max(Math.min(short * 0.5, short - clear), 0)
@@ -112,7 +97,7 @@ function angleBetween(a: number, b: number): number {
  * lands closest to the rest wins. A single central magnet has no bearing at
  * all, and every rib meets it at the centre regardless.
  */
-export function ribAngles(count: number, magnets: Circle[]): number[] {
+export function ribAngles(count: number, magnets: LabelCircle[]): number[] {
   if (count <= 0) return []
   const spacing = TAU / count
   const spokes = (phase: number) => Array.from({ length: count }, (_, i) => phase + spacing * i)
@@ -138,7 +123,7 @@ function ribObstacles(angles: number[], length: number, thickness: number): Labe
   if (!Number.isFinite(length) || length <= 0) return []
   const step = Math.max(0.4, thickness / 2)
   return angles.flatMap((a) => {
-    const discs: Circle[] = []
+    const discs: LabelCircle[] = []
     for (let r = 0; r <= length; r += step) discs.push({ x: r * Math.cos(a), y: r * Math.sin(a), r: thickness / 2 })
     return discs
   })
@@ -146,17 +131,7 @@ function ribObstacles(angles: number[], length: number, thickness: number): Labe
 
 export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Font): BuildResult {
   const { CrossSection, Manifold } = wasm
-  const trash: { delete: () => void }[] = []
-
-  /** Hands every intermediate to the disposal list; WASM memory is not GC'd. */
-  const own = <T extends { delete: () => void }>(o: T): T => {
-    trash.push(o)
-    return o
-  }
-  const section = (cs: CrossSection) => own(cs)
-  const solidOf = (m: Manifold) => own(m)
-
-  try {
+  return withOwner((own) => {
     /*
      * Relief rises from the model face, which would overhang if it lay on the plate,
      * so a relief base turns over: model face up, with pockets and any well opening
@@ -180,31 +155,31 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
       throw new Error('Edge profile leaves too little wall at the well floor — reduce the edge size')
     }
 
-    const outline = section(baseOutline(wasm, config))
+    const outline = own(baseOutline(wasm, config))
 
     // Loft the body as the convex hull of the outline offset at each profile height.
     // Every supported footprint is convex, so the hull is exactly the intended solid.
     const points: Vec3[] = []
     for (const step of profileSteps(config.height, config.profile, config.profileSize, tolerance)) {
-      const ring = step.inset > 0 ? section(outline.offset(-step.inset, 'Miter', 2, config.segments)) : outline
+      const ring = step.inset > 0 ? own(outline.offset(-step.inset, 'Miter', 2, config.segments)) : outline
       for (const contour of ring.toPolygons()) {
         for (const [x, y] of contour) points.push([x, y, faceUp ? config.height - step.z : step.z])
       }
     }
-    let solid = solidOf(Manifold.hull(points))
+    let solid = own(Manifold.hull(points))
 
     if (faceUp) {
       const modelInset = profileInsetAt(config.height, config.profile, config.profileSize, 0, tolerance)
-      const modelFace = modelInset > 0 ? section(outline.offset(-modelInset, 'Miter', 2, config.segments)) : outline
+      const modelFace = modelInset > 0 ? own(outline.offset(-modelInset, 'Miter', 2, config.segments)) : outline
       const relief = reliefBlock(wasm, config, modelFace, tolerance, own)
-      if (relief) solid = solidOf(solid.add(relief))
+      if (relief) solid = own(solid.add(relief))
     }
     const texture = textureCut(wasm, config, outline, own)
-    if (texture) solid = solidOf(solid.subtract(texture))
+    if (texture) solid = own(solid.subtract(texture))
 
     // A footprint narrower than twice the wall offsets away to nothing. Its bounds
     // come back infinite, which would send everything downstream to NaN.
-    const wellOutline = section(outline.offset(-config.wallThickness, 'Miter', 2, config.segments))
+    const wellOutline = own(outline.offset(-config.wallThickness, 'Miter', 2, config.segments))
     if (wellOutline.isEmpty()) throw new Error('Walls leave no room inside — thin the wall')
 
     const wellBounds = wellOutline.bounds()
@@ -214,8 +189,8 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
 
     if (hollow) {
       // Cut past the open face so no zero-thickness skin is left behind.
-      const plug = solidOf(wellOutline.extrude(wellDepth + 1))
-      solid = solidOf(solid.subtract(solidOf(plug.translate([0, 0, faceUp ? -1 : config.floorThickness]))))
+      const plug = own(wellOutline.extrude(wellDepth + 1))
+      solid = own(solid.subtract(own(plug.translate([0, 0, faceUp ? -1 : config.floorThickness]))))
     }
 
     const pocketRadius = (config.magnets.diameter + config.magnets.clearance) / 2
@@ -234,11 +209,10 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
      * room for adhesive behind it.
      */
     if (hollow && magnets.length > 0) {
-      // Bosses carry the pockets up through the well so magnets seat against the floor.
-      const bossDisc = section(CrossSection.circle(bossRadius, config.segments))
-      const bossColumn = solidOf(bossDisc.extrude(wellDepth))
+      const bossDisc = own(CrossSection.circle(bossRadius, config.segments))
+      const bossColumn = own(bossDisc.extrude(wellDepth))
       for (const m of magnets) {
-        solid = solidOf(solid.add(solidOf(bossColumn.translate([m.x, m.y, wellStart]))))
+        solid = own(solid.add(own(bossColumn.translate([m.x, m.y, wellStart]))))
       }
     }
 
@@ -249,18 +223,18 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
     const ribHeight = faceUp ? wellDepth : Math.min(config.ribs.height, wellDepth)
     if (spokeAngles.length > 0 && ribHeight > 0) {
       const reach = wellReach + config.wallThickness
-      const bar = section(CrossSection.square([reach, config.ribs.thickness], true))
-      const spoke = section(bar.translate([reach / 2, 0]))
-      let spokes = section(spoke.rotate((spokeAngles[0] * 180) / Math.PI))
-      for (const a of spokeAngles.slice(1)) spokes = section(spokes.add(section(spoke.rotate((a * 180) / Math.PI))))
+      const bar = own(CrossSection.square([reach, config.ribs.thickness], true))
+      const spoke = own(bar.translate([reach / 2, 0]))
+      let spokes = own(spoke.rotate((spokeAngles[0] * 180) / Math.PI))
+      for (const a of spokeAngles.slice(1)) spokes = own(spokes.add(own(spoke.rotate((a * 180) / Math.PI))))
       // Ribs run a little way into the wall. Stopping them exactly on the well
       // boundary would leave the two surfaces tangent, which welds into a pinched
       // vertex in any tool that merges by position.
       const overlap = Math.min(0.4, config.wallThickness / 2)
-      const ribLimit = section(wellOutline.offset(overlap, 'Miter', 2, config.segments))
-      const trimmed = section(spokes.intersect(ribLimit))
-      const column = solidOf(trimmed.extrude(ribHeight))
-      solid = solidOf(solid.add(solidOf(column.translate([0, 0, wellStart]))))
+      const ribLimit = own(wellOutline.offset(overlap, 'Miter', 2, config.segments))
+      const trimmed = own(spokes.intersect(ribLimit))
+      const column = own(trimmed.extrude(ribHeight))
+      solid = own(solid.add(own(column.translate([0, 0, wellStart]))))
     }
 
     if (config.label.enabled && font) {
@@ -271,7 +245,7 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
       const text = custom || defaultLabel(config)
       const polys = textPolygons(font, text, config.label.height)
       if (polys.length > 0) {
-        const room = section(wellOutline.offset(-LABEL_MARGIN, 'Miter', 2, config.segments))
+        const room = own(wellOutline.offset(-LABEL_MARGIN, 'Miter', 2, config.segments))
         const contours = room.toPolygons()
         const obstacles = [
           ...magnets.map((m) => ({ x: m.x, y: m.y, r: bossRadius })),
@@ -287,20 +261,20 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
         )
         if (fit) {
           const scaled: Polygon[] = polys.map((p) => p.map(([x, y]): [number, number] => [x * fit.scale, y * fit.scale]))
-          const glyphs = section(CrossSection.ofPolygons(scaled, GLYPH_FILL))
-          const placed = section(glyphs.translate([fit.x, fit.y]))
+          const glyphs = own(CrossSection.ofPolygons(scaled, GLYPH_FILL))
+          const placed = own(glyphs.translate([fit.x, fit.y]))
           if (faceUp) {
             // Engraved into the face on the plate, or the well ceiling, mirrored so it reads from below.
             const depth = hollow ? Math.min(config.label.emboss, config.floorThickness - MIN_TEXTURE_FLOOR) : config.label.emboss
-            const engraving = solidOf(section(placed.mirror([1, 0])).extrude(depth + 1))
-            if (depth > 0) solid = solidOf(solid.subtract(solidOf(engraving.translate([0, 0, (hollow ? wellDepth : 0) - 1]))))
+            const engraving = own(own(placed.mirror([1, 0])).extrude(depth + 1))
+            if (depth > 0) solid = own(solid.subtract(own(engraving.translate([0, 0, (hollow ? wellDepth : 0) - 1]))))
           } else if (!hollow) {
             // Engraved into the face that meets the tray, the top as it prints.
-            const engraving = solidOf(placed.extrude(config.label.emboss + 1))
-            solid = solidOf(solid.subtract(solidOf(engraving.translate([0, 0, config.height - config.label.emboss]))))
+            const engraving = own(placed.extrude(config.label.emboss + 1))
+            solid = own(solid.subtract(own(engraving.translate([0, 0, config.height - config.label.emboss]))))
           } else {
-            const raised = solidOf(placed.extrude(Math.min(config.label.emboss, wellDepth)))
-            solid = solidOf(solid.add(solidOf(raised.translate([0, 0, config.floorThickness]))))
+            const raised = own(placed.extrude(Math.min(config.label.emboss, wellDepth)))
+            solid = own(solid.add(own(raised.translate([0, 0, config.floorThickness]))))
           }
         } else if (custom) {
           throw new Error('Label text does not fit this base — shorten it or reduce the label size')
@@ -311,22 +285,14 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
     // Pockets open on the face that meets the tray: the top of a base as it prints,
     // or the plate face of one printed face up.
     if (magnets.length > 0) {
-      const pocketDisc = section(CrossSection.circle(pocketRadius, config.segments))
-      const drill = solidOf(pocketDisc.extrude(pocketDepth + 1.001))
+      const pocketDisc = own(CrossSection.circle(pocketRadius, config.segments))
+      const drill = own(pocketDisc.extrude(pocketDepth + 1.001))
       const z = faceUp ? -1.001 : config.height - pocketDepth
       for (const m of magnets) {
-        solid = solidOf(solid.subtract(solidOf(drill.translate([m.x, m.y, z]))))
+        solid = own(solid.subtract(own(drill.translate([m.x, m.y, z]))))
       }
     }
 
-    const volume = solid.volume()
-    const triangles = solid.numTri()
-    return {
-      mesh: solid.getMesh(),
-      // Manifold guarantees watertight output, so anything with substance is printable.
-      stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 },
-    }
-  } finally {
-    for (const o of trash) o.delete()
-  }
+    return buildResult(solid)
+  })
 }

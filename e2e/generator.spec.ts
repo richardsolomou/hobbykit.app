@@ -18,18 +18,16 @@ const sizeOption = (page: Page, label: string) =>
     .getByRole('radiogroup', { name: 'Standard base size' })
     .getByRole('radio', { name: new RegExp(`^${label.replaceAll('.', '\\.')}\\b`) })
 
-/** Picks a standard size; the dimensions are always there to type, so a custom size needs nothing picked. */
 async function pickSize(page: Page, label: string) {
-  if (label === 'Custom') return
   await sizeOption(page, label).click()
 }
 
-/** Picks an option from a picture grid or a dropdown, whichever the control is. */
 /** The option picked in a picture grid. */
 function picked(page: Page, label: string, option: string) {
   return page.getByRole('radiogroup', { name: label }).getByRole('radio', { name: option, exact: true })
 }
 
+/** Picks an option from a picture grid or a dropdown, whichever the control is. */
 async function pickChoice(page: Page, label: string, option: string) {
   const pictures = page.getByRole('radiogroup', { name: label })
   if ((await pictures.count()) > 0) {
@@ -38,6 +36,13 @@ async function pickChoice(page: Page, label: string, option: string) {
   }
   await page.getByRole('combobox', { name: label }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
+}
+
+/** Types a dimension and commits it with Enter. */
+async function setDimension(page: Page, label: string | RegExp, value: string, { exact = false } = {}) {
+  const input = page.getByLabel(label, { exact })
+  await input.fill(value)
+  await input.press('Enter')
 }
 
 /** Geometry is built in a worker, so the drawing settles a moment after a click. */
@@ -66,8 +71,11 @@ async function visit(page: Page, name: string) {
   await rebuilt(page, before)
 }
 
+/** The current test's page errors; each worker runs its tests one at a time. */
+let errors: string[] = []
+
 test.beforeEach(async ({ page }) => {
-  const errors: string[] = []
+  errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
@@ -79,8 +87,10 @@ test.beforeEach(async ({ page }) => {
   await skipTours(page)
   await page.goto('/')
   await settled(page)
-  // Surfaced at the end of every test rather than as its own case, so any spec
-  // that trips a runtime error fails where the cause is visible.
+})
+
+// Records the page's runtime errors on each test's report without failing it.
+test.afterEach(() => {
   test.info().annotations.push({ type: 'console', description: errors.join('\n') })
 })
 
@@ -298,8 +308,7 @@ test('marks and resets changed toggles and choices', async ({ page }) => {
 test('keeps shape and size independent while sharing matching magnet settings in the session', async ({ page }) => {
   await pickChoice(page, 'Shape', 'Oval')
   await pickSize(page, '90×52.5')
-  await page.getByLabel('Magnet diameter in mm').fill('6')
-  await page.getByLabel('Magnet diameter in mm').press('Enter')
+  await setDimension(page, 'Magnet diameter in mm', '6')
 
   await page.getByRole('link', { name: 'Holders' }).click()
   await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('32')
@@ -310,8 +319,7 @@ test('keeps shape and size independent while sharing matching magnet settings in
   await expect(page.getByLabel('Magnet diameter in mm')).toHaveValue('6.0')
   await expect(footer(page)).toContainText('10 × 6.2 mm hole')
 
-  await page.getByLabel('Magnet diameter in mm').fill('7')
-  await page.getByLabel('Magnet diameter in mm').press('Enter')
+  await setDimension(page, 'Magnet diameter in mm', '7')
   await expect(footer(page)).toContainText('10 × 7.2 mm hole')
   const ninetyByFiftyTwo = await triangles(page)
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
@@ -349,13 +357,11 @@ test('shares the selected pocket pattern between bases and holders', async ({ pa
 })
 
 test('remembers workspace settings on reload', async ({ page }) => {
-  await page.getByLabel('Diameter in mm', { exact: true }).fill('37')
-  await page.getByLabel('Diameter in mm', { exact: true }).press('Enter')
+  await setDimension(page, 'Diameter in mm', '37', { exact: true })
   const height = page.getByLabel('Base height in mm')
   await height.fill('5')
   await height.press('Enter')
-  await page.getByLabel('Magnet diameter in mm').fill('7')
-  await page.getByLabel('Magnet diameter in mm').press('Enter')
+  await setDimension(page, 'Magnet diameter in mm', '7')
   await page.getByRole('switch', { name: 'Labels', exact: true }).click()
   await page.reload()
   await settled(page)
@@ -380,11 +386,8 @@ async function openLink(browser: Browser, url: string) {
 }
 
 test('opens a copied link with the same setup in a fresh browser', { tag: '@ci' }, async ({ page, browser }) => {
-  await pickSize(page, 'Custom')
-  await page.getByLabel('Diameter in mm', { exact: true }).fill('37')
-  await page.getByLabel('Diameter in mm', { exact: true }).press('Enter')
-  await page.getByLabel('Magnet diameter in mm').fill('7')
-  await page.getByLabel('Magnet diameter in mm').press('Enter')
+  await setDimension(page, 'Diameter in mm', '37', { exact: true })
+  await setDimension(page, 'Magnet diameter in mm', '7')
 
   const recipient = await openLink(browser, await copyLink(page))
   await expect(across(recipient)).toHaveText('Ø37')
@@ -398,8 +401,7 @@ test('clears an opened link so a reload uses the saved workspace', async ({ page
 
   const recipient = await openLink(browser, await copyLink(page))
   await expect(recipient).toHaveURL(/\/$/)
-  await recipient.getByLabel('Base height in mm').fill('6')
-  await recipient.getByLabel('Base height in mm').press('Enter')
+  await setDimension(recipient, 'Base height in mm', '6')
   await recipient.reload()
   await settled(recipient)
   await expect(recipient.getByLabel('Base height in mm')).toHaveValue('6.0')
@@ -456,8 +458,7 @@ test('opens the retired movement trays address on bases with a saved workspace i
 })
 
 test('ignores a garbled link and keeps the saved workspace', async ({ page }) => {
-  await page.getByLabel('Base height in mm').fill('5')
-  await page.getByLabel('Base height in mm').press('Enter')
+  await setDimension(page, 'Base height in mm', '5')
   await page.goto('/holders#setup=not-a-real-link')
   await settled(page)
   await expect(page).toHaveURL(/\/holders$/)
@@ -501,11 +502,6 @@ test('carries a small token image in its link', async ({ page, browser }) => {
   const recipient = await openLink(browser, await copyLink(page))
   await expect(footer(recipient)).toContainText('shield.svg')
 })
-
-async function setDimension(page: Page, label: string, value: string) {
-  await page.getByLabel(label).fill(value)
-  await page.getByLabel(label).press('Enter')
-}
 
 test('resets one generator to its defaults after confirmation', async ({ page }) => {
   const height = page.getByLabel('Base height in mm')
@@ -883,8 +879,7 @@ test('builds a low-profile spray tray with an interleaved magnet grid', async ({
   const roundTriangles = await triangles(page)
   await pickChoice(page, 'Grip shape', 'Oval barrel')
   await rebuilt(page, roundTriangles)
-  await page.getByLabel('Grip length in mm').fill('110')
-  await page.getByLabel('Grip length in mm').press('Enter')
+  await setDimension(page, 'Grip length in mm', '110')
   await expect(tall(page)).toHaveText('112.9')
   await expect(footer(page)).toContainText('Oval barrel · Straight · 28 × 110 mm')
 
@@ -900,8 +895,7 @@ test('builds a low-profile spray tray with an interleaved magnet grid', async ({
   ])
 
   const gridTriangles = await triangles(page)
-  await page.getByLabel('Columns in ', { exact: true }).fill('5')
-  await page.getByLabel('Columns in ', { exact: true }).press('Enter')
+  await setDimension(page, 'Columns in ', '5', { exact: true })
   await rebuilt(page, gridTriangles)
   await expect(footer(page)).toContainText('5×4 + 4×3 · 50 mm pitch')
   await expect(footer(page)).toContainText('32 × 5.2 mm hole')
@@ -918,8 +912,7 @@ test('builds a stepped paint rack', async ({ page }) => {
   await expect(footer(page)).toContainText('20 in 35 mm cells')
 
   const five = await triangles(page)
-  await page.getByLabel('Columns of piece 1 in cols', { exact: true }).fill('3')
-  await page.getByLabel('Columns of piece 1 in cols', { exact: true }).press('Enter')
+  await setDimension(page, 'Columns of piece 1 in cols', '3', { exact: true })
   await rebuilt(page, five)
   await expect(across(page)).toHaveText('123.35 × 132.33')
 
@@ -1014,8 +1007,7 @@ test('exports a batch of base sizes together', async ({ page }) => {
   // Four high-quality export builds, where every other spec needs at most one.
   test.slow()
   await page.getByRole('button', { name: 'Add 32 to batch' }).click()
-  await page.getByLabel(/^Quantity of Round 32 in/).fill('10')
-  await page.getByLabel(/^Quantity of Round 32 in/).press('Enter')
+  await setDimension(page, /^Quantity of Round 32 in/, '10')
   const before = await triangles(page)
   await pickSize(page, '40')
   await rebuilt(page, before)
@@ -1085,8 +1077,7 @@ test('builds and exports an automatically sized Gridfinity holder', async ({ pag
 
 test('frames every slot in a tall holder', async ({ page }) => {
   await visit(page, 'Holders')
-  await page.getByLabel(/^Quantity 1 in/).fill('4')
-  await page.getByLabel(/^Quantity 1 in/).press('Enter')
+  await setDimension(page, /^Quantity 1 in/, '4')
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
   await page.getByRole('option', { name: /^50\b/ }).click()
   await expect(page.getByText('4/4 fitted')).toBeVisible()
@@ -1202,8 +1193,7 @@ test('offers only holder heights that fit the selected slot features', async ({ 
 test('moves to a second column when the row constraint requires it', async ({ page }) => {
   await visit(page, 'Holders')
   const before = await triangles(page)
-  await page.getByLabel(/^Maximum rows in/).fill('3')
-  await page.getByLabel(/^Maximum rows in/).press('Enter')
+  await setDimension(page, /^Maximum rows in/, '3')
   await rebuilt(page, before)
   await expect(across(page)).toHaveText('83.5 × 83.5')
   await expect(footer(page)).toContainText('1 in 2 × 2')
@@ -1211,11 +1201,9 @@ test('moves to a second column when the row constraint requires it', async ({ pa
 
 test('fits what it can and reports box overflow', async ({ page }) => {
   await visit(page, 'Holders')
-  await page.getByLabel(/^Maximum columns in/).fill('1')
-  await page.getByLabel(/^Maximum columns in/).press('Enter')
+  await setDimension(page, /^Maximum columns in/, '1')
   const before = await triangles(page)
-  await page.getByLabel(/^Maximum rows in/).fill('1')
-  await page.getByLabel(/^Maximum rows in/).press('Enter')
+  await setDimension(page, /^Maximum rows in/, '1')
   await rebuilt(page, before)
   await expect(page.getByText('Only 1 of 5 fit')).toBeVisible()
   await expect(footer(page)).toContainText('4×Ø32')
@@ -1223,11 +1211,9 @@ test('fits what it can and reports box overflow', async ({ page }) => {
 
 test('uses clear wording when no holder miniatures fit', async ({ page }) => {
   await visit(page, 'Holders')
-  await page.getByLabel(/^Maximum columns in/).fill('1')
-  await page.getByLabel(/^Maximum columns in/).press('Enter')
+  await setDimension(page, /^Maximum columns in/, '1')
   const constrained = await triangles(page)
-  await page.getByLabel(/^Maximum rows in/).fill('1')
-  await page.getByLabel(/^Maximum rows in/).press('Enter')
+  await setDimension(page, /^Maximum rows in/, '1')
   await rebuilt(page, constrained)
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
   await page.getByRole('option', { name: '90 Redemptor and Brutalis Dreadnoughts' }).click()
@@ -1399,8 +1385,7 @@ test('still builds with the wall and floor wound to their limits', async ({ page
 
 test('caps the edge profile when the recess floor is thinned', async ({ page }) => {
   // Neither change alters the triangle count, so there is no rebuild to wait for.
-  await page.getByLabel('Top thickness in mm').fill('0.4')
-  await page.getByLabel('Top thickness in mm').press('Enter')
+  await setDimension(page, 'Top thickness in mm', '0.4')
   await expect(page.getByLabel('Top thickness in mm')).toHaveValue('0.4')
   await settled(page)
 
@@ -1412,7 +1397,6 @@ test('caps the edge profile when the recess floor is thinned', async ({ page }) 
 
 test('takes an exact typed dimension', async ({ page }) => {
   // The whole point of a typed field over a slider: 28.5 is reachable.
-  await pickSize(page, 'Custom')
   const field = page.getByLabel('Diameter in mm', { exact: true })
   await field.fill('')
   await field.pressSequentially('28.5')
@@ -1423,7 +1407,6 @@ test('takes an exact typed dimension', async ({ page }) => {
 })
 
 test('clamps a dimension typed past its limit', async ({ page }) => {
-  await pickSize(page, 'Custom')
   await page.getByLabel('Diameter in mm', { exact: true }).fill('999')
   await page.getByLabel('Diameter in mm', { exact: true }).blur()
   await settled(page)
@@ -1431,7 +1414,6 @@ test('clamps a dimension typed past its limit', async ({ page }) => {
 })
 
 test('scrubs a dimension from the empty reset space after its label', async ({ page }) => {
-  await pickSize(page, 'Custom')
   const field = page.getByLabel('Diameter in mm', { exact: true })
   const before = await triangles(page)
   const label = page.getByText('Diameter', { exact: true })
@@ -1499,10 +1481,8 @@ test('moves the controls into a drawer on a phone', { tag: '@ci' }, async ({ pag
 
   await page.getByRole('button', { name: 'Base settings' }).click()
   await expect.poll(async () => (await page.locator('[data-slot="sheet-content"]').boundingBox())?.width).toBe(331.5)
-  await pickSize(page, 'Custom')
   const before = await triangles(page)
-  await page.getByLabel('Diameter in mm', { exact: true }).fill('60')
-  await page.getByLabel('Diameter in mm', { exact: true }).press('Enter')
+  await setDimension(page, 'Diameter in mm', '60', { exact: true })
   await rebuilt(page, before)
   await expect(across(page)).toHaveText('Ø60')
 })

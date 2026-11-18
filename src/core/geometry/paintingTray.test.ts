@@ -1,5 +1,5 @@
-import type { Mesh } from 'manifold-3d'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { bounds, openEdges } from './geometry.test.utils'
 import { loadManifold } from './manifold'
 import {
   buildPaintingHandle,
@@ -23,19 +23,6 @@ let wasm: Awaited<ReturnType<typeof loadManifold>>
 beforeAll(async () => {
   wasm = await loadManifold()
 })
-
-function bounds(mesh: Mesh) {
-  const { numProp, vertProperties } = mesh
-  const min = [Infinity, Infinity, Infinity]
-  const max = [-Infinity, -Infinity, -Infinity]
-  for (let index = 0; index < vertProperties.length; index += numProp) {
-    for (let axis = 0; axis < 3; axis++) {
-      min[axis] = Math.min(min[axis], vertProperties[index + axis])
-      max[axis] = Math.max(max[axis], vertProperties[index + axis])
-    }
-  }
-  return { min, size: max.map((value, axis) => value - min[axis]) }
-}
 
 describe('painting tray', () => {
   it('places intermediate pockets diagonally between the default four-by-four grid', () => {
@@ -66,7 +53,7 @@ describe('painting tray', () => {
       }
     }
 
-    expect(result.stats.solid).toBe(true)
+    expect(openEdges(result.mesh)).toBe(0)
     expect(measured.min[2]).toBeCloseTo(0, 5)
     expect(measured.size).toEqual([24, 24, 3])
     expect(paintingTrayMagnetPocketCount(config)).toBe(1)
@@ -139,7 +126,7 @@ describe('painting tray', () => {
     const result = buildPaintingHandle(wasm, paintingHandleConfig({ ...config, handle: { ...config.handle, shape } }))
     const measured = bounds(result.mesh)
 
-    expect(result.stats.solid).toBe(true)
+    expect(openEdges(result.mesh)).toBe(0)
     expect(measured.min[2]).toBeCloseTo(0, 5)
     expect(measured.size[2]).toBeCloseTo(config.handle.length, 1)
   })

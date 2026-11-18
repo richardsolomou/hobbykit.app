@@ -1,10 +1,9 @@
-import type { Manifold, ManifoldToplevel } from 'manifold-3d'
-import type { BuildResult } from './base'
+import type { ManifoldToplevel } from 'manifold-3d'
+import { buildResult, withOwner, type BuildResult } from './build'
 import { trimNumber } from './outline'
 import { previewSegmentsFor } from './quality'
 import type { FlightStemConfig } from './types'
 
-const PLA_DENSITY = 1.24e-3
 const JOIN_OVERLAP = 0.05
 
 export const CLASSIC_STEM_HEIGHTS = [15, 20, 30, 35] as const
@@ -39,13 +38,7 @@ export const stemMaximumDiameter = (config: FlightStemConfig): number =>
 
 export function buildFlightStem(wasm: ManifoldToplevel, config: FlightStemConfig): BuildResult {
   const { Manifold } = wasm
-  const trash: Manifold[] = []
-  const own = (value: Manifold) => {
-    trash.push(value)
-    return value
-  }
-
-  try {
+  return withOwner((own) => {
     if (config.bodyHeight < 2) throw new Error('Flying-stem body must be at least 2 mm tall')
     const neckDiameter = stemNeckDiameter(config)
     if (config.bodyDiameter < neckDiameter) {
@@ -77,14 +70,6 @@ export function buildFlightStem(wasm: ManifoldToplevel, config: FlightStemConfig
               config.bodyHeight + config.ballDiameter / 2 - JOIN_OVERLAP,
             ]),
           )
-    const solid = own(Manifold.union([body, connection]))
-    const volume = solid.volume()
-    const triangles = solid.numTri()
-    return {
-      mesh: solid.getMesh(),
-      stats: { triangles, volume, grams: volume * PLA_DENSITY, solid: volume > 0 && triangles > 0 },
-    }
-  } finally {
-    for (const value of trash) value.delete()
-  }
+    return buildResult(own(Manifold.union([body, connection])))
+  })
 }
