@@ -1,3 +1,4 @@
+import { posthog } from 'posthog-js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PartConfig } from '@/core/geometry/types'
 import type { MeshData, WorkerReply, WorkerRequest } from '@/worker/protocol'
@@ -7,23 +8,31 @@ import type { MeshData, WorkerReply, WorkerRequest } from '@/worker/protocol'
  * only ever renders the newest config, and every reply is a finished preview, so
  * nothing here reports a pending state.
  */
+/** A preview slower than this is reported, once per part a visit, so slow geometry shows up without a report per drag step. */
+const SLOW_PREVIEW_MS = 2000
+
 export function useGenerator(config: PartConfig) {
   const worker = useRef<Worker>(null)
   const nextId = useRef(0)
   const building = useRef(false)
   const queued = useRef<PartConfig>(undefined)
   const sent = useRef<PartConfig>(undefined)
+  const sentAt = useRef(0)
+  const reportedSlow = useRef(new Set<string>())
 
   const [preview, setPreview] = useState<MeshData>()
   /** The config the preview was built from, which lags the one on screen until its build lands. */
   const [built, setBuilt] = useState<PartConfig>()
   const [grams, setGrams] = useState<number>()
   const [error, setError] = useState<string>()
+  /** How long the newest reply took to build, in milliseconds. */
+  const [buildMs, setBuildMs] = useState<number>()
 
   /** Sends one config and remembers it is the one whose reply matters. */
   const send = useCallback((next: PartConfig) => {
     const id = ++nextId.current
     sent.current = next
+    sentAt.current = performance.now()
     building.current = true
     worker.current?.postMessage({ id, config: next } satisfies WorkerRequest)
   }, [])
@@ -42,6 +51,13 @@ export function useGenerator(config: PartConfig) {
     instance.onmessage = (event: MessageEvent<WorkerReply>) => {
       const reply = event.data
       if (reply.id !== nextId.current) return // a newer config is already in flight
+      const ms = Math.round(performance.now() - sentAt.current)
+      const part = sent.current?.kind ?? 'base'
+      setBuildMs(ms)
+      if (ms > SLOW_PREVIEW_MS && !reportedSlow.current.has(part)) {
+        reportedSlow.current.add(part)
+        posthog.capture('preview_slow', { build_ms: ms })
+      }
       if (reply.kind === 'error') {
         setError(reply.message)
       } else {
@@ -61,5 +77,5 @@ export function useGenerator(config: PartConfig) {
     else send(config)
   }, [config, send])
 
-  return { preview, built, grams, error }
+  return { preview, built, grams, error, buildMs }
 }

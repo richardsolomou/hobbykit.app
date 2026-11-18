@@ -33,12 +33,18 @@ function seo(): Plugin {
         return pageHtml(html, PAGES.find((page) => page.href === path) ?? PAGES[0])
       },
     },
-    generateBundle() {
+    generateBundle(_options, bundle) {
       const guides = new Map(PAGES.map((page) => [page, guide(page)]))
+      const guideEntry = Object.values(bundle).find((chunk) => chunk.type === 'chunk' && chunk.isEntry && chunk.name === 'guide')!
+      /** Guide pages carry no app; they load the guide entry so PostHog still counts them. */
+      const withAnalytics = (html: string) =>
+        html.replace('</head>', `  <script type="module" crossorigin src="/${guideEntry.fileName}"></script>\n  </head>`)
       const files = {
         ...Object.fromEntries(PAGES.slice(1).map((page) => [`${page.href.slice(1)}.html`, pageHtml(template, page)])),
-        ...Object.fromEntries(PAGES.map((page) => [`${guidePath(page).slice(1)}.html`, guidePageHtml(template, page, guides.get(page)!)])),
-        'guides.html': guidesHtml(template),
+        ...Object.fromEntries(
+          PAGES.map((page) => [`${guidePath(page).slice(1)}.html`, withAnalytics(guidePageHtml(template, page, guides.get(page)!))]),
+        ),
+        'guides.html': withAnalytics(guidesHtml(template)),
         ...Object.fromEntries(PAGES.map((page) => [markdownPath(page).slice(1), pageMarkdown(page, guides.get(page)!)])),
         '404.html': notFoundHtml(template),
         'robots.txt': robotsTxt(),
@@ -57,6 +63,7 @@ export default defineConfig(({ mode }) => {
     assetsInclude: ['**/*.woff'],
     resolve: { tsconfigPaths: true },
     plugins: [viteReact(), tailwindcss(), sourceMaps?.client, seo()],
+    build: { rolldownOptions: { input: { index: 'index.html', guide: 'src/guide.ts' } } },
     ...(sourceMaps ? { worker: { plugins: () => [sourceMaps.worker()] } } : {}),
   }
 })

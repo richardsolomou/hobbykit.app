@@ -58,7 +58,7 @@ import { batchBaseConfig, batchName } from '@/lib/batch'
 import { useExport } from '@/lib/useExport'
 import { useGenerator } from '@/lib/useGenerator'
 import { useMediaQuery } from '@/lib/useMediaQuery'
-import { PAGES } from '@/lib/pages'
+import { generatorForPath, PAGES } from '@/lib/pages'
 import { posthog } from 'posthog-js'
 import { applyBase } from '@/lib/baseLink'
 import { shareLink, type SharedLink } from '@/lib/shareLink'
@@ -77,7 +77,7 @@ type Generator = (typeof PAGES)[number]['value']
 /** A caddy is as deep as it is tall, and its near edges loom past a frame fitted to its largest side. */
 const COUNTER_FRAMING_SCALE = 1.4
 
-const modelForPath = (): Generator => PAGES.find((item) => item.href === window.location.pathname)?.value ?? 'base'
+const modelForPath = (): Generator => generatorForPath(window.location.pathname)
 
 const SHARE_NOTICE_MS = 5000
 
@@ -144,8 +144,8 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
     }
   }
   useEffect(() => {
-    if (sharedLink && 'base' in sharedLink) posthog.capture('base_link_opened', { shape: sharedLink.base.shape })
-  }, [sharedLink])
+    if (sharedLink) posthog.capture('share_link_opened', { kind: 'base' in sharedLink ? 'base' : 'setup', generator: opened.model })
+  }, [sharedLink, opened])
   const dropTokenImage = useEffectEvent((file: File) => void addTokenImage(file))
   useEffect(() => {
     if (model !== 'token') return
@@ -179,7 +179,13 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
                 ? token
                 : counter
   const previewConfig = explodable ? { ...partConfig, exploded } : partConfig
-  const { preview, built, grams, error } = useGenerator(previewConfig)
+  const { preview, built, grams, error, buildMs } = useGenerator(previewConfig)
+  const reportBlocked = useEffectEvent((message: string) => posthog.capture('preview_blocked', { message, build_ms: buildMs }))
+  useEffect(() => {
+    if (error) reportBlocked(error)
+  }, [error])
+  // Every event says which generator was on screen, so settings, tours and colours split by part without repeating it.
+  useEffect(() => posthog.register({ generator: model }), [model])
   const reached = useTourProgress(model)
   const unfinished = reached !== undefined && reached !== TOUR_DONE
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -210,9 +216,10 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
     const { url, imageOmitted } = shareLink(`${window.location.origin}${page.href}`, workspace, page.part)
     try {
       await navigator.clipboard.writeText(url)
-      posthog.capture('share_link_copied', { generator: model, image_omitted: imageOmitted })
+      posthog.capture('share_link_copied', { image_omitted: imageOmitted })
       setShareNotice({ text: imageOmitted ? 'Link copied without the image, which would make it too long to share' : 'Link copied' })
     } catch {
+      posthog.capture('share_link_copy_failed')
       setShareNotice({ text: 'The browser blocked copying the link' })
     }
   }
@@ -236,7 +243,7 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
 
   const changeModel = (next: Generator) => {
     if (next === model) return
-    posthog.capture('generator_selected', { generator: next })
+    posthog.capture('generator_selected', { generator: next, from: model })
     window.history.pushState(null, '', PAGES.find((item) => item.value === next)!.href)
     setModel(next)
   }
@@ -504,6 +511,7 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
                 onOpenChange={(open) => {
                   // A click on the tour's popover lands outside the drawer; the tour opens and closes it itself.
                   if (touring()) return
+                  if (open) posthog.capture('settings_drawer_opened')
                   drawerState.current = { ...drawerState.current, open }
                   setDrawerOpen(open)
                 }}
@@ -614,7 +622,10 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
                   variant="outline"
                   size="sm"
                   pressed={exploded}
-                  onPressedChange={setExploded}
+                  onPressedChange={(next) => {
+                    setExploded(next)
+                    posthog.capture('explode_toggled', { exploded: next })
+                  }}
                   data-tour="explode"
                   className="bg-card/90 backdrop-blur-sm aria-pressed:border-measure/50 aria-pressed:text-measure"
                 >

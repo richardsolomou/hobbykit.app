@@ -4,6 +4,7 @@ import type { FilamentColours } from '@/core/geometry/filaments'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { trimNumber } from '@/core/geometry/outline'
 import { cn } from 'cn'
+import { posthog } from 'posthog-js'
 import type { MeshData } from '@/worker/protocol'
 
 const FIELD_OF_VIEW = 38
@@ -202,7 +203,9 @@ export function Viewer({
     // Until the viewer touches the camera it stays framed on the reference
     // footprint, which is what makes a window resize or a phone rotating do the
     // sensible thing. After that the view is theirs and nothing moves it.
-    const holdCamera = () => {
+    const holdCamera = (event: { type: string }) => {
+      // Sent once per generator, the first time the viewer turns or zooms it, to see whether the preview gets explored.
+      if (!held.current) posthog.capture('preview_moved', { how: event.type === 'wheel' ? 'zoom' : 'drag' })
       held.current = true
     }
     const publishCamera = () => {

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { useTextSettingChanged } from '@/lib/analytics'
 import { trimNumber } from '@/core/geometry/outline'
 import { defaultTokenConfig, maxTokenEdgeSize, MIN_TOKEN_TEXT_HEIGHT } from '@/core/geometry/token'
 import type { TokenConfig, TokenShape } from '@/core/geometry/types'
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, resets }: Props) {
+  const textReport = useTextSettingChanged('Text', 'Text')
   const tokenImageInput = useRef<HTMLInputElement>(null)
 
   return (
@@ -107,6 +109,7 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
             maxLength={40}
             placeholder="Oath of Moment"
             onChange={(e) => patchToken({ text: e.currentTarget.value })}
+            {...textReport}
             className="readout"
           />
         </Field>

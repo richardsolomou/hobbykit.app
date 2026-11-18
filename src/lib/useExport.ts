@@ -12,6 +12,7 @@ import { counterLayout, counterParts, counterTileLayout } from '@/core/geometry/
 import type { BaseConfig, CounterConfig, PaintingTrayConfig, PartConfig } from '@/core/geometry/types'
 import type { FilamentColours } from '@/core/geometry/filaments'
 import { posthog } from 'posthog-js'
+import { designProperties } from './analytics'
 import { batchFileName } from './batch'
 import { buildMesh } from './buildMesh'
 import { counterProject } from './counterProject'
@@ -49,7 +50,8 @@ export function useExport({ model, config, name, filaments, width, length, batch
     format: ExportFormat,
     operation: () => Promise<void>,
     event = `${model}_exported`,
-    properties: Record<string, number> = {
+    properties: Record<string, string | number | boolean> = {
+      ...designProperties(config),
       width,
       length,
       height:
@@ -66,9 +68,10 @@ export function useExport({ model, config, name, filaments, width, length, batch
   ) => {
     setExporting(format)
     setError(undefined)
+    const started = performance.now()
     try {
       await operation()
-      posthog.capture(event, { format, ...properties })
+      posthog.capture(event, { format, ...properties, duration_ms: Math.round(performance.now() - started) })
     } catch (failure) {
       posthog.captureException(failure, { export_format: format, model })
       setError(failure instanceof Error ? failure.message : String(failure))

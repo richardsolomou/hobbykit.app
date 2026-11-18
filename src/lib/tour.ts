@@ -1,4 +1,5 @@
 import { driver } from 'driver.js'
+import { posthog } from 'posthog-js'
 import { createContext, useContext, useSyncExternalStore } from 'react'
 import type { Page } from './pages'
 
@@ -201,6 +202,8 @@ export async function runTour(generator: Generator, mode: 'first' | 'resume' | '
   const place = async (index: number) => {
     if (drawer && steps[index].inDrawer !== drawer.isOpen()) await drawer.setOpen(steps[index].inDrawer)
   }
+  /** The furthest step shown, so a tour closed early reports where it was left. */
+  let furthest = start
   const go = async (index: number) => {
     if (index >= steps.length) return tour.destroy()
     if (index < 0) return
@@ -221,17 +224,25 @@ export async function runTour(generator: Generator, mode: 'first' | 'resume' | '
     onPrevClick: () => void go((tour.getActiveIndex() ?? 0) - 1),
     onHighlightStarted: (_element, step, { index }) => {
       const title = step.popover?.title ?? TOUR_DONE
+      furthest = Math.max(furthest, index ?? 0)
       // Reaching the last step counts as finishing, however the tour is then closed.
       record(generator, index === steps.length - 1 ? TOUR_DONE : title)
       if (SHARED_TITLES.has(title) && !progress.shared[title]) save({ ...progress, shared: { ...progress.shared, [title]: generator } })
     },
     onDestroyed: () => {
       active = undefined
+      const finished = furthest === steps.length - 1
+      posthog.capture(finished ? 'tour_finished' : 'tour_closed', {
+        mode,
+        steps: steps.length,
+        ...(finished ? {} : { step: steps[furthest]?.title, step_number: furthest + 1 }),
+      })
       // The tour scrolls the panel down section by section; it ends with the panel back where it starts.
       find(sections[0]?.target ?? '')?.scrollIntoView({ block: 'nearest' })
     },
   })
   active = tour
+  posthog.capture('tour_started', { mode, steps: steps.length, from_step: start + 1, drawer: drawer !== undefined })
   record(generator, steps[start]?.title ?? TOUR_DONE)
   await place(start)
   tour.drive(start)

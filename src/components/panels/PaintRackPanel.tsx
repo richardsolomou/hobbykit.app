@@ -53,12 +53,12 @@ export function PaintRackPanel({ paintRack, setPaintRack, exporting, exportPiece
         <ol aria-label="Pieces from left to right" className="flex flex-col">
           {layout.pieces.map((piece, index) => {
             const item = piece.item === undefined ? undefined : paintRack.items[piece.item]
-            const remove = () =>
-              piece.kind === 'left-end'
-                ? patch({ leftEnd: false })
-                : piece.kind === 'right-end'
-                  ? patch({ rightEnd: false })
-                  : patch({ items: paintRack.items.filter((entry) => entry !== item) })
+            const remove = () => {
+              posthog.capture('paint_rack_piece_removed', { kind: piece.kind })
+              if (piece.kind === 'left-end') patch({ leftEnd: false })
+              else if (piece.kind === 'right-end') patch({ rightEnd: false })
+              else patch({ items: paintRack.items.filter((entry) => entry !== item) })
+            }
             return (
               <li key={item?.id ?? piece.kind} className="flex items-center gap-2 border-b border-border py-1.5">
                 <span className="readout w-5 text-xs text-muted-foreground">{index + 1}</span>

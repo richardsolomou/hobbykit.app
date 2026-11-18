@@ -4,7 +4,6 @@ import { FieldDescription } from '@/components/ui/field'
 import { trimNumber } from '@/core/geometry/outline'
 import { CLASSIC_STEM_HEIGHTS, defaultFlightStemConfig, stemNeckDiameter, stemOverallHeight } from '@/core/geometry/stem'
 import type { FlightStemConfig } from '@/core/geometry/types'
-import { posthog } from 'posthog-js'
 import { Panel, type ResetAction } from './shared'
 
 const STEM_DEFAULTS = defaultFlightStemConfig()
@@ -34,10 +33,7 @@ export function StemPanel({ stem, setStem, resets }: Props) {
           defaultValue={STEM_DEFAULTS.bodyHeight}
           options={STEM_HEIGHTS}
           columns={4}
-          onChange={(bodyHeight) => {
-            posthog.capture('flight_stem_height_selected', { body_height: bodyHeight })
-            setStem({ ...stem, bodyHeight })
-          }}
+          onChange={(bodyHeight) => setStem({ ...stem, bodyHeight })}
         />
         <Dimension
           label="Body diameter"
@@ -66,7 +62,6 @@ export function StemPanel({ stem, setStem, resets }: Props) {
           defaultValue={STEM_DEFAULTS.connection}
           options={STEM_CONNECTIONS}
           onChange={(connection) => {
-            posthog.capture('flight_stem_connection_selected', { connection })
             const next = { ...stem, connection }
             setStem({ ...next, bodyDiameter: Math.max(next.bodyDiameter, stemNeckDiameter(next)) })
           }}
