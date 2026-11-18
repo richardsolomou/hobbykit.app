@@ -37,14 +37,16 @@ label_size = 0; // [0:0.1:12]
 /* [Construction] */
 // 0 picks 4mm, or 4.5mm from 65mm up.
 base_height = 0; // [0:0.25:12]
+// Fill the recess, leaving only the magnet pockets, and engrave the label instead.
+solid = false;
 wall_thickness = 2; // [1:0.1:6]
-// Material between the recess and the face the model is glued to. 0 picks 1mm, or 1.5mm from 65mm up.
+// Material between the recess and the face the model is glued to, when not solid. 0 picks 1mm, or 1.5mm from 65mm up.
 top_thickness = 0; // [0:0.1:6]
 bottom_edge = "taper"; // [taper:Taper, bevel:Bevel, round:Round, straight:Straight]
 edge_size = 1; // [0:0.1:3]
 
 /* [Internal Supports] */
-// Auto puts a support through every magnet pocket.
+// Auto puts a support through every magnet pocket. A solid base has none.
 number_of_supports = "auto"; // [auto:Auto, 0, 2, 3, 4, 5, 6, 8]
 support_thickness = 1.6; // [0.8:0.1:4]
 support_height = 1.2; // [0.4:0.1:10]
@@ -62,6 +64,7 @@ LABEL_MARGIN = 0.8;
 LABEL_MAX_LENGTH = 20;
 MAX_MAGNETS = 8;
 MIN_PROFILE_WALL = 0.4;
+MIN_POCKET_ROOF = 0.8;
 EXPORT_CURVE_TOLERANCE = 0.001;
 // The rest of the hull is exact; each loft slice is this thin.
 SLICE = 0.001;
@@ -393,8 +396,8 @@ WELL_HALF =
   : [WIDTH / 2 - wall_thickness, LENGTH / 2 - wall_thickness];
 // Checked here, before anything is built from the well.
 WELL_REACH =
-  assert(WELL_DEPTH >= 0.2, "No room left for a well — thin the top")
-  assert(wall_thickness - inset_at(STEPS, FLOOR) >= MIN_PROFILE_WALL - 1e-6, "Edge profile leaves too little wall at the well floor — reduce the edge size")
+  assert(solid || WELL_DEPTH >= 0.2, "No room left for a well — thin the top")
+  assert(solid || wall_thickness - inset_at(STEPS, FLOOR) >= MIN_PROFILE_WALL - 1e-6, "Edge profile leaves too little wall at the well floor — reduce the edge size")
   assert(WELL_HALF[0] > 0 && WELL_HALF[1] > 0, "Walls leave no room inside — thin the wall")
   norm(WELL_HALF);
 
@@ -437,7 +440,10 @@ RIB_COUNT =
 
 POCKET_RADIUS = (magnet_diameter + magnet_diameter_clearance) / 2;
 BOSS_RADIUS = POCKET_RADIUS + wall_around_pocket;
-POCKET_DEPTH = min(magnet_thickness + magnet_depth_clearance, WELL_DEPTH);
+POCKET_DEPTH =
+  let(depth = min(magnet_thickness + magnet_depth_clearance, solid ? HEIGHT : WELL_DEPTH))
+  assert(!solid || MAGNET_COUNT == 0 || HEIGHT - depth >= MIN_POCKET_ROOF - 1e-6, "Magnet pockets leave too little behind them — raise the base or use thinner magnets")
+  depth;
 
 // Magnet centres: a ring on round-ish footprints, a row down the long axis otherwise.
 function magnet_positions(count, hw, hl, clear, elliptical_row, five_cross) =
@@ -464,7 +470,7 @@ function rib_angles(count, bosses) =
   : let(missed = [for (phase = bosses) let(arranged = spokes(count, phase))
                     sum([for (b = bosses) min([for (s = arranged) angle_between(s, b)])])])
     spokes(count, bosses[search(min(missed), missed)[0]]);
-RIBS = rib_angles(RIB_COUNT, BOSS_BEARINGS);
+RIBS = solid ? [] : rib_angles(RIB_COUNT, BOSS_BEARINGS);
 
 // A stable sort: items in the order `before` gives, keeping ties in their original order.
 function ordered(items, before) =
@@ -598,7 +604,12 @@ module label() {
 }
 
 module base() {
-  difference() {
+  if (solid) difference() {
+    body();
+    if (!is_undef(LABEL_FIT)) translate([0, 0, HEIGHT - label_emboss]) linear_extrude(label_emboss + 1) label();
+    for (m = MAGNETS) translate([m[0], m[1], HEIGHT - POCKET_DEPTH]) cylinder(r = POCKET_RADIUS, h = POCKET_DEPTH + 1.001, $fn = SEGMENTS);
+  }
+  else difference() {
     union() {
       difference() {
         body();

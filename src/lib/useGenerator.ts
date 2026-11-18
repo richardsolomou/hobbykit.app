@@ -13,8 +13,11 @@ export function useGenerator(config: PartConfig) {
   const latestPreview = useRef(0)
   const building = useRef(false)
   const queued = useRef<PartConfig>(undefined)
+  const sent = useRef<PartConfig>(undefined)
 
   const [preview, setPreview] = useState<MeshData>()
+  /** The config the preview was built from, which lags the one on screen until its build lands. */
+  const [built, setBuilt] = useState<PartConfig>()
   const [grams, setGrams] = useState<number>()
   const [error, setError] = useState<string>()
 
@@ -22,6 +25,7 @@ export function useGenerator(config: PartConfig) {
   const send = useCallback((next: PartConfig) => {
     const id = ++nextId.current
     latestPreview.current = id
+    sent.current = next
     building.current = true
     worker.current?.postMessage({ id, config: next } satisfies WorkerRequest)
   }, [])
@@ -44,6 +48,7 @@ export function useGenerator(config: PartConfig) {
         setError(reply.message)
       } else {
         setPreview(reply.mesh)
+        setBuilt(sent.current)
         setGrams(reply.grams)
         setError(undefined)
       }
@@ -60,5 +65,5 @@ export function useGenerator(config: PartConfig) {
     else send(config)
   }, [config, send])
 
-  return { preview, grams, error }
+  return { preview, built, grams, error }
 }

@@ -8,7 +8,7 @@ import {
 import { supportsFivePocketCross } from '../core/geometry/base'
 import { defaultPaintRackConfig } from '../core/geometry/paintRack'
 import { defaultTokenConfig } from '../core/geometry/token'
-import { TEXTURE_PATTERNS } from '../core/geometry/texture'
+import { isRelief, TEXTURE_PATTERNS } from '../core/geometry/texture'
 import { automaticMagnetCount, DEFAULT_PRESET, fitToSize, footprintKey, presetFor, sizeDefaults } from '../core/geometry/presets'
 import { defaultFlightStemConfig } from '../core/geometry/stem'
 import { DEFAULT_FILAMENTS, isPlaBasicColour, type FilamentColours } from '../core/geometry/filaments'
@@ -31,7 +31,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 27
+const WORKSPACE_VERSION = 28
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -219,6 +219,7 @@ const MIGRATIONS = [
   migrateWorkspaceV24,
   migrateWorkspaceV25,
   migrateWorkspaceV26,
+  migrateWorkspaceV27,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -297,6 +298,15 @@ export function applyWorkspaceSetup(
   const kept = Object.entries(workspace.shared.magnetCounts).filter(([footprint]) => !replaced.includes(footprint))
   const magnetCounts = { ...Object.fromEntries(kept), ...candidate.shared.magnetCounts }
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
+}
+
+/** Bases could be left solid or hollow; every saved one stays as it was, which was solid only under relief. */
+function migrateWorkspaceV27(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  const base = workspace.base as Partial<BaseConfig> | undefined
+  if (typeof base !== 'object' || base === null) return value
+  return { ...workspace, base: { ...base, solid: base.texture !== undefined && isRelief(base.texture.pattern) } }
 }
 
 /**

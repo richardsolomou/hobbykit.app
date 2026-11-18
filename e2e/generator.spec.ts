@@ -232,6 +232,22 @@ test('hides advanced settings until they are changed', async ({ page }) => {
   await expect(page.getByRole('switch', { name: 'Advanced settings' })).not.toBeChecked()
 })
 
+test('makes a relief base solid unless told otherwise', async ({ page }) => {
+  const solid = page.getByRole('switch', { name: 'Solid', exact: true })
+  await pickChoice(page, 'Pattern', 'Flagstone')
+  await expect(solid).not.toBeChecked()
+  await pickChoice(page, 'Pattern', 'Rock')
+  await expect(solid).toBeChecked()
+  await expect(page.getByLabel('Top thickness in mm')).toHaveCount(0)
+
+  const before = await triangles(page)
+  await solid.click()
+  await rebuilt(page, before)
+  await expect(page.getByLabel('Top thickness in mm')).toBeVisible()
+  await pickChoice(page, 'Pattern', 'Snow')
+  await expect(solid).not.toBeChecked()
+})
+
 test('lets size-driven values follow the size without looking changed', async ({ page }) => {
   const labelSize = page.getByLabel('Label size in mm')
   await pickSize(page, '28.5')

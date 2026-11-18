@@ -295,6 +295,27 @@ describe('workspace state', () => {
     expect([loaded.base.pinned, loaded.counter.pinned]).toEqual([['height'], ['click']])
   })
 
+  it('keeps a saved textured base hollow, the way it was saved', () => {
+    const saved = defaultWorkspace()
+    const { solid: _solid, ...base } = { ...saved.base, texture: { ...saved.base.texture, pattern: 'flagstone' as const } }
+    const storage = memoryStorage()
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 27, workspace: { ...saved, base } }))
+
+    const loaded = loadWorkspace(storage).base
+
+    expect([loaded.texture.pattern, loaded.solid]).toEqual(['flagstone', false])
+  })
+
+  it('keeps a saved relief base solid, the way it was saved', () => {
+    const saved = defaultWorkspace()
+    const { solid: _solid, ...base } = { ...saved.base, texture: { ...saved.base.texture, pattern: 'rock' as const } }
+    const storage = memoryStorage()
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 27, workspace: { ...saved, base } }))
+    const loaded = loadWorkspace(storage).base
+
+    expect([loaded.texture.pattern, loaded.solid]).toEqual(['rock', true])
+  })
+
   it('lowers a counter click past what the barb can give', () => {
     const workspace = defaultWorkspace()
     const counter = { ...workspace.counter, clearance: 0.6, click: 1.8, pinned: ['click' as const] }

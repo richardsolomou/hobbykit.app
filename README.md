@@ -64,7 +64,7 @@ Track wounds, victory points, or command points from 00 to 99 on two dials that 
 ## Designed for one job 🎯
 
 - Round, oval, pill, rectangle, and regular polygon bases.
-- Hollow undersides with automatic ribs and magnet layouts.
+- Hollow undersides with automatic ribs and magnet layouts, or solid ones with only the magnet pockets.
 - Printable 15, 20, 30, and 35mm flying stems with adjustable peg or ball-joint connections.
 - Round, square, and hex tokens with wrapped text and traced image silhouettes, raised in a second colour or engraved.
 - Stepped honeycomb paint racks for dropper bottles and pots.

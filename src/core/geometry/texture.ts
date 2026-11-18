@@ -1,7 +1,7 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d'
 import type { BaseConfig, TexturePattern, TextureSpec } from './types'
 
-/** Material kept between a joint's apex and the well above it. */
+/** Material kept between a joint's apex and the well, pockets or label above it. */
 export const MIN_TEXTURE_FLOOR = 0.4
 /** The cut starts this far below the plate face, so it leaves no skin on it. */
 const OVERCUT = 0.5
@@ -63,9 +63,25 @@ export function withPattern(texture: TextureSpec, pattern: TexturePattern): Text
   return { pattern, seed: texture.seed, scale: carried('scale'), depth: carried('depth'), irregularity: carried('irregularity') }
 }
 
-/** Joints must stop short of the recess; relief rises from a solid body and has no such limit. */
-export const maxTextureDepth = (config: Pick<BaseConfig, 'floorThickness' | 'texture'>) =>
-  isRelief(config.texture.pattern) ? MAX_RELIEF : Math.max(0, config.floorThickness - MIN_TEXTURE_FLOOR)
+/**
+ * Carries the solid setting across a pattern switch the way `withPattern` carries values: one the user changed stays,
+ * otherwise it takes the new pattern's default, solid only for relief, whose hollow well would bridge over the plate.
+ */
+export function solidWithPattern(solid: boolean, from: TexturePattern, to: TexturePattern): boolean {
+  return solid === isRelief(from) ? isRelief(to) : solid
+}
+
+/**
+ * Joints must stop short of the recess, or on a solid base of the pockets and label cut into the other face; relief
+ * rises from the body and has no such limit.
+ */
+export function maxTextureDepth(config: Pick<BaseConfig, 'floorThickness' | 'height' | 'magnets' | 'label' | 'solid' | 'texture'>) {
+  if (isRelief(config.texture.pattern)) return MAX_RELIEF
+  if (!config.solid) return Math.max(0, config.floorThickness - MIN_TEXTURE_FLOOR)
+  const pockets = config.magnets.count > 0 ? config.magnets.thickness + config.magnets.depthClearance : 0
+  const label = config.label.enabled ? config.label.emboss : 0
+  return Math.max(0, config.height - Math.max(pockets, label) - MIN_TEXTURE_FLOOR)
+}
 
 /** A fixed hash, so the same footprint always gets the same pattern. */
 export function noise(i: number, j: number, k: number): number {
@@ -317,7 +333,12 @@ export function textureCut(
   const { Manifold } = wasm
   const { pattern, depth } = config.texture
   if (pattern === 'none' || isRelief(pattern) || depth <= 0) return undefined
-  if (depth > maxTextureDepth(config) + 1e-6) throw new Error('Texture cuts too close to the recess — make it shallower or thicken the top')
+  if (depth > maxTextureDepth(config) + 1e-6)
+    throw new Error(
+      config.solid
+        ? 'Texture cuts too close to the magnet pockets — make it shallower or raise the base'
+        : 'Texture cuts too close to the recess — make it shallower or thicken the top',
+    )
 
   // The slab reaches past the wall, so no face of it meets the body except its top.
   const top = depth - APEX

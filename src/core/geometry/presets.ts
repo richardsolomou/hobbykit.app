@@ -285,6 +285,7 @@ export function presetFor(preset: SizePreset, maxMagnets = 8, patternVersion: Ma
     profile: 'taper',
     profileSize: 1,
     wallThickness: 2,
+    solid: false,
     floorThickness: floor,
     magnets: {
       count: magnetCount,

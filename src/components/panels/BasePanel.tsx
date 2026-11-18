@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supportsFivePocketCross } from '@/core/geometry/base'
 import { labelText } from '@/core/geometry/label'
-import { DEFAULT_TEXTURE, isRegular, isRelief, MAX_SEED, withPattern } from '@/core/geometry/texture'
+import { DEFAULT_TEXTURE, isRegular, isRelief, MAX_SEED, solidWithPattern, withPattern } from '@/core/geometry/texture'
 import { defaultLabel, footprint, isElongated, trimNumber } from '@/core/geometry/outline'
 import {
   automaticMagnetCount,
@@ -125,6 +125,7 @@ export function BasePanel({
   const { width, length } = footprint(config)
   const elongated = isElongated(config.shape)
   const faceUp = isRelief(config.texture.pattern)
+  const hollow = !config.solid
   const sizes = SIZES_BY_SHAPE[config.shape]
   const standard = sizes.find((size) => size.width === width && (size.length ?? size.width) === length)
   /** What each size-driven setting gives for this footprint; a value matching it follows the size, one set apart stays put. */
@@ -328,12 +329,17 @@ export function BasePanel({
             columns={4}
             onChange={(pattern) => {
               posthog.capture('base_texture_selected', { pattern })
-              patch({ texture: withPattern(config.texture, pattern) })
+              patch({
+                texture: withPattern(config.texture, pattern),
+                solid: solidWithPattern(config.solid, config.texture.pattern, pattern),
+              })
             }}
           />
           {config.texture.pattern !== 'none' &&
             (safeTextureDepth(config) < MIN_TEXTURE_DEPTH ? (
-              <FieldDescription>Thicken the top to make room for the joints.</FieldDescription>
+              <FieldDescription>
+                {config.solid ? 'Raise the base to make room for the joints.' : 'Thicken the top to make room for the joints.'}
+              </FieldDescription>
             ) : (
               <>
                 <Dimension
@@ -388,7 +394,9 @@ export function BasePanel({
                 )}
                 {faceUp && (
                   <FieldDescription>
-                    Prints model face up as a solid base. Magnet pockets open underneath, and the label is engraved there.
+                    {hollow
+                      ? 'Prints model face up, so the hollow underside opens onto the plate and its roof has to bridge. Supports stand on the plate to shorten the bridges.'
+                      : 'Prints model face up. Magnet pockets open underneath, and the label is engraved there.'}
                   </FieldDescription>
                 )}
               </>
@@ -406,7 +414,16 @@ export function BasePanel({
             automatic={follows('height')}
             onChange={(height) => setSized('height', height, { height })}
           />
-          {!faceUp && (
+          <ToggleSetting
+            label="Solid"
+            checked={config.solid}
+            defaultChecked={faceUp}
+            onChange={(solid) => {
+              posthog.capture('base_solid_toggled', { solid })
+              patch({ solid })
+            }}
+          />
+          {hollow && (
             <Dimension
               label="Top thickness"
               advanced
@@ -477,7 +494,7 @@ export function BasePanel({
           )}
         </Section>
 
-        {!faceUp && (
+        {hollow && (
           <Section
             title="Internal Supports"
             aside={
@@ -520,16 +537,18 @@ export function BasePanel({
                   defaultValue={BASE_DEFAULTS.ribs.thickness}
                   onChange={(thickness) => patch({ ribs: { ...config.ribs, thickness } })}
                 />
-                <Dimension
-                  label="Support height"
-                  advanced
-                  value={config.ribs.height}
-                  min={0.4}
-                  max={Math.max(0.5, config.height - config.floorThickness)}
-                  step={0.1}
-                  defaultValue={BASE_DEFAULTS.ribs.height}
-                  onChange={(height) => patch({ ribs: { ...config.ribs, height } })}
-                />
+                {!faceUp && (
+                  <Dimension
+                    label="Support height"
+                    advanced
+                    value={config.ribs.height}
+                    min={0.4}
+                    max={Math.max(0.5, config.height - config.floorThickness)}
+                    step={0.1}
+                    defaultValue={BASE_DEFAULTS.ribs.height}
+                    onChange={(height) => patch({ ribs: { ...config.ribs, height } })}
+                  />
+                )}
               </>
             )}
           </Section>

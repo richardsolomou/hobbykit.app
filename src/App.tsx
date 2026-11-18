@@ -189,7 +189,7 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               : model === 'token'
                 ? token
                 : { ...counter, exploded }
-  const { preview, grams, error } = useGenerator(partConfig)
+  const { preview, built, grams, error } = useGenerator(partConfig)
   const reached = useTourProgress(model)
   const unfinished = reached !== undefined && reached !== TOUR_DONE
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -620,7 +620,8 @@ export function App({ sharedSetup }: { sharedSetup?: unknown }) {
               fitToPart={model !== 'base'}
               framingScale={model === 'counter' ? COUNTER_FRAMING_SCALE : undefined}
               leaders={!(explodable && exploded)}
-              flipped={model === 'base' && config.texture.pattern !== 'none' && !isRelief(config.texture.pattern)}
+              // Taken from the config the mesh was built from, so the old mesh never turns over before the new one lands.
+              flipped={built !== undefined && 'texture' in built && built.texture.pattern !== 'none' && !isRelief(built.texture.pattern)}
             />
             <div className="absolute bottom-8 left-8 flex gap-2 max-sm:top-4 max-sm:bottom-auto max-sm:left-4">
               {explodable && (
