@@ -9,6 +9,7 @@ import { baseOutline, defaultLabel, trimNumber } from './outline'
 import { maxProfileSize, profileSteps } from './profile'
 import {
   automaticMagnetCount,
+  fitToSize,
   MAGNET_CHOICES,
   OVAL_SIZES,
   PILL_SIZES,
@@ -201,6 +202,12 @@ describe('buildBase', () => {
   it('keeps an engraved label from cutting through the floor', () => {
     const config = { ...preset(standardSize('round', '40')), floorThickness: 0.8 }
     expect(() => build({ ...config, label: { ...config.label, style: 'engraved' } })).toThrow(/thicken the top/)
+  })
+
+  it('blocks an engraved label the thinnest top leaves no room for, rather than dropping it', () => {
+    const base = preset(standardSize('round', '40'))
+    const config = fitToSize({ ...base, floorThickness: 0.4, pinned: ['floorThickness'], label: { ...base.label, style: 'engraved' } })
+    expect(() => build(config)).toThrow(/No room to engrave/)
   })
 
   it('welds an engraved label cleanly', () => {

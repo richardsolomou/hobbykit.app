@@ -124,7 +124,7 @@ function JointPicture({ pattern }: { pattern: JointPattern }) {
         <polygon key={points} points={points} fill="currentColor" fillOpacity={0.45} stroke="none" />
       ))}
       {nails.map(([x, y]) => (
-        <circle key={`${x},${y}`} cx={x} cy={y} r={0.4} {...accent} />
+        <circle key={`${x},${y}`} cx={x} cy={y} r={0.45} strokeWidth={0.3} />
       ))}
     </Picture>
   )
@@ -392,7 +392,7 @@ export const LABEL_STYLE_PICTURES: Record<LabelStyle, ReactNode> = {
     <Picture>
       <rect x={4} y={16} width={32} height={8} {...body} />
       {[9, 17.5, 26].map((x) => (
-        <rect key={x} x={x} y={12} width={5} height={4} {...accent} />
+        <rect key={x} x={x} y={12} width={5} height={4} {...body} />
       ))}
     </Picture>
   ),

@@ -257,8 +257,11 @@ export function buildBase(wasm: ManifoldToplevel, config: BaseConfig, font?: Fon
       // Raised letters on a solid base stand in a recess this far round them, so the face stays flat.
       const plaque = !hollow && !engraved ? LABEL_PLAQUE : 0
       if (polys.length > 0) {
-        if (hollow && !faceUp && engraved && config.floorThickness - config.label.emboss - textureDepth < MIN_TEXTURE_FLOOR - 1e-6) {
-          throw new Error('Engraved label cuts too far into the top — make it thinner or thicken the top')
+        if (hollow && !faceUp && engraved) {
+          if (config.label.emboss < 1e-6) throw new Error('No room to engrave the label — thicken the top or raise the letters')
+          if (config.floorThickness - config.label.emboss - textureDepth < MIN_TEXTURE_FLOOR - 1e-6) {
+            throw new Error('Engraved label cuts too far into the top — make it thinner or thicken the top')
+          }
         }
         const room = own(wellOutline.offset(-LABEL_MARGIN, 'Miter', 2, config.segments))
         const contours = room.toPolygons()

@@ -636,7 +636,7 @@ module label_mark() {
 
 // Each mouth flares at 45° so a magnet finds its pocket when pressed in, opening at z = 0.
 module pocket(chamfer) {
-  rotate_extrude($fn = SEGMENTS)
+  rotate_extrude(angle = 360, $fn = SEGMENTS)
     polygon([[0, -POCKET_DEPTH], [POCKET_RADIUS, -POCKET_DEPTH], [POCKET_RADIUS, -chamfer], [POCKET_RADIUS + chamfer + 1, 1], [0, 1]]);
 }
 
