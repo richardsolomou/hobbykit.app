@@ -36,6 +36,8 @@ interface Listing {
   variants: View[]
   /** Applied to every view that sets none. */
   zoom?: number
+  /** Leaders that a grid cell is too short to show, hidden there along with the height. */
+  gridHide?: string
 }
 
 const base = (shape: ShapeKind, label: string) => (w: WorkspaceState) => ({
@@ -171,19 +173,23 @@ const LISTINGS: Listing[] = [
   {
     name: 'counter',
     part: 'counter',
-    zoom: 1.7,
+    zoom: 2,
+    gridHide: ', #dim-across, #ext-across, #label-across',
     title: 'Dial counters',
     facts: [
-      ['Counts', '00 to 99'],
+      ['Counts', '00–99 or any run'],
       ['Detent', 'Printed clicks'],
       ['Hardware', 'None'],
     ],
-    hero: { caption: 'Assembled' },
+    hero: { caption: '00 to 99' },
     variants: [
-      { caption: 'Parts', explode: true },
-      { caption: 'Engraved digits', edit: patch('counter', { digits: 'engraved' }) },
-      { caption: '32mm wheels', edit: patch('counter', { drumDiameter: 32 }) },
-      { caption: '40mm wheels, parts', edit: patch('counter', { drumDiameter: 40 }), explode: true },
+      { caption: 'Parts', explode: true, zoom: 1.3 },
+      { caption: 'One dial, 1 to 16', edit: patch('counter', { dials: 1, faces: 16, first: 1 }) },
+      { caption: 'Three dials', edit: patch('counter', { dials: 3 }) },
+      {
+        caption: 'Text on a plate',
+        edit: (w) => ({ ...w, counter: { ...w.counter, right: { ...w.counter.right, text: 'Life' } } }),
+      },
     ],
   },
 ]
@@ -206,7 +212,7 @@ async function capture(browser: Browser, listing: Listing, view: View, width: nu
     await tab.locator('[data-triangles]').waitFor()
     if (view.explode) await tab.getByRole('button', { name: 'Explode' }).click()
     await tab.addStyleTag({
-      content: `header, main > footer, main > button, main span.size-5${hide} { display: none !important }
+      content: `header, main > footer, main > button, main span.size-5, [data-tour=explode]${hide} { display: none !important }
         html, body, body *:not(canvas) { background: transparent !important }`,
     })
     // The shadow map and the first damped camera frames settle after the mesh lands.
@@ -345,7 +351,13 @@ try {
     const cells: string[] = []
     for (const view of listing.variants.slice(0, 4)) {
       cells.push(
-        await part(browser, listing, view, { left: 0, top: 0, width: 360, height: 270 }, ', #dim-height, #ext-height, #label-height'),
+        await part(
+          browser,
+          listing,
+          view,
+          { left: 0, top: 0, width: 360, height: 270 },
+          `, #dim-height, #ext-height, #label-height${listing.gridHide ?? ''}`,
+        ),
       )
     }
     write(

@@ -1,4 +1,3 @@
-import { automaticCounterClick, maximumCounterClick } from '../core/geometry/counter'
 import { describe, expect, it } from 'vitest'
 import { holderSlotMagnetCenters } from '../core/geometry/holder'
 import { footprintKey, pinned, resized, sizeDefaults } from '../core/geometry/presets'
@@ -229,7 +228,7 @@ describe('workspace state', () => {
     expect(loadWorkspace(storage).counter).toEqual(defaultWorkspace().counter)
   })
 
-  it('upgrades a saved small printed-digit counter to the full-size tile default and keeps its colours', () => {
+  it('replaces a saved counter with the default and keeps its colours', () => {
     const saved = defaultWorkspace()
     const workspace = {
       ...saved,
@@ -241,26 +240,12 @@ describe('workspace state', () => {
     expect([loadWorkspace(storage).counter, loadWorkspace(storage).filaments.body]).toEqual([defaultWorkspace().counter, '#C12E1F'])
   })
 
-  it('gives a counter saved before layouts the side pieces and a grip, keeping its other settings', () => {
+  it('replaces a counter saved before the redesign with the default', () => {
     const saved = defaultWorkspace()
-    const { layout: _layout, grip: _grip, ...counter } = { ...saved.counter, clearance: 0.3 }
-    const storage = { getItem: () => JSON.stringify({ version: 20, workspace: { ...saved, counter } }), setItem: () => undefined }
+    const counter = { ...saved.counter, drumDiameter: 24, layout: 'knobs', digits: 'tiles', click: 0.5, pinned: ['click'] }
+    const storage = { getItem: () => JSON.stringify({ version: 29, workspace: { ...saved, counter } }), setItem: () => undefined }
 
-    expect(loadWorkspace(storage).counter).toEqual({ ...saved.counter, clearance: 0.3 })
-  })
-
-  it('lets the counter click follow the wheel size until it is set by hand', () => {
-    const workspace = defaultWorkspace()
-    const counter = synchronizeWorkspace({ ...workspace, counter: { ...workspace.counter, drumDiameter: 24 } }).counter
-
-    expect(counter.click).toBe(automaticCounterClick({ drumDiameter: 24 }))
-  })
-
-  it('keeps a counter click set by hand when the wheel size changes', () => {
-    const workspace = defaultWorkspace()
-    const counter = { ...workspace.counter, drumDiameter: 24, click: 0.5, pinned: ['click' as const] }
-
-    expect(synchronizeWorkspace({ ...workspace, counter }).counter.click).toBe(0.5)
+    expect(loadWorkspace(storage).counter).toEqual(saved.counter)
   })
 
   it('refits every size-driven base setting nobody set by hand to a new footprint', () => {
@@ -287,12 +272,10 @@ describe('workspace state', () => {
   it('pins the size-driven settings a saved workspace had moved away from its size, and no others', () => {
     const saved = defaultWorkspace()
     const { pinned: _pinned, ...base } = { ...saved.base, height: 6 }
-    const { pinned: _counterPinned, ...counter } = { ...saved.counter, click: 1 }
     const storage = memoryStorage()
-    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 26, workspace: { ...saved, base, counter } }))
-    const loaded = loadWorkspace(storage)
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 26, workspace: { ...saved, base } }))
 
-    expect([loaded.base.pinned, loaded.counter.pinned]).toEqual([['height'], ['click']])
+    expect(loadWorkspace(storage).base.pinned).toEqual(['height'])
   })
 
   it('keeps a saved textured base hollow, the way it was saved', () => {
@@ -337,28 +320,6 @@ describe('workspace state', () => {
     storage.setItem('mini-bases.workspace', JSON.stringify({ version: 28, workspace: { ...saved, base } }))
 
     expect(loadWorkspace(storage).base.rotation).toBe(0)
-  })
-
-  it('lowers a counter click past what the barb can give', () => {
-    const workspace = defaultWorkspace()
-    const counter = { ...workspace.counter, clearance: 0.6, click: 1.8, pinned: ['click' as const] }
-
-    expect(synchronizeWorkspace({ ...workspace, counter }).counter.click).toBeCloseTo(maximumCounterClick(counter), 9)
-  })
-
-  it('enlarges counter wheels too small for their digits', () => {
-    const workspace = defaultWorkspace()
-    const counter = { ...workspace.counter, drumDiameter: 8, click: 0.1 }
-
-    expect(synchronizeWorkspace({ ...workspace, counter }).counter.drumDiameter).toBeGreaterThan(8)
-  })
-
-  it('keeps a saved counter wheel diameter', () => {
-    const storage = memoryStorage()
-    const workspace = defaultWorkspace()
-    saveWorkspace(storage, { ...workspace, counter: { ...workspace.counter, drumDiameter: 24 } })
-
-    expect(loadWorkspace(storage).counter.drumDiameter).toBe(24)
   })
 
   it('drops the removed adapter generator from a version 11 workspace', () => {
@@ -646,7 +607,7 @@ function customizedWorkspace() {
   state.paintRack = { ...state.paintRack, leftEnd: true, rise: 20 }
   state.stem = { ...state.stem, bodyDiameter: 6 }
   state.token = { ...state.token, text: 'A', shape: 'hex', size: 32 }
-  state.counter = { ...state.counter, drumDiameter: 24, insertClearance: 0.1 }
+  state.counter = { ...state.counter, segments: 512 }
   state.shared = { ...state.shared, labelsEnabled: false, magnets: { ...state.shared.magnets, diameter: 6 } }
   state.batch = [{ shape: 'round', width: 40, length: 40, quantity: 3 }]
   return synchronizeWorkspace(state)
@@ -662,7 +623,7 @@ describe('resetting settings', () => {
     ['paintRack', (state: WorkspaceState) => state.paintRack],
     ['stem', (state: WorkspaceState) => state.stem],
     ['token', (state: WorkspaceState) => state.token],
-    ['counter', (state: WorkspaceState) => [state.counter.drumDiameter, state.counter.insertClearance]],
+    ['counter', (state: WorkspaceState) => state.counter],
   ] as const)('restores the %s settings to their defaults', (part, read) => {
     expect(read(resetGenerator(customizedWorkspace(), part))).toEqual(read(defaultWorkspace()))
   })

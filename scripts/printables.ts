@@ -107,9 +107,12 @@ for (const text of ['Objective', 'Battle shocked']) {
   write('token', `${tokenName(config)}-text`, inserts)
 }
 
-const counter = defaultCounterConfig()
-for (const { part, name } of counterParts(counter)) {
-  const { mesh, inserts } = buildCounter(wasm, forExport({ ...counter, part }), font)
-  write('counter', `${counterName(counter)}-${name}`, mesh)
-  if (inserts) write('counter', `${counterName(counter)}-${name}-marks`, inserts)
+// The two set counters the listings offer: 00 to 99 on two dials, and 1 to 16 on one.
+for (const changes of [{}, { dials: 1, faces: 16, first: 1 }]) {
+  const counter = { ...defaultCounterConfig(), ...changes }
+  for (const { part, name, dial } of counterParts(counter)) {
+    const { mesh, inserts } = buildCounter(wasm, forExport({ ...counter, part, dial }), font)
+    write('counter', `${counterName(counter)}-${name}`, mesh)
+    if (inserts) write('counter', `${counterName(counter)}-${name}-colour`, inserts)
+  }
 }

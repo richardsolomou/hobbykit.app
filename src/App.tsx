@@ -104,6 +104,7 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
   const stem = workspace.stem
   const token = workspace.token
   const counter = workspace.counter
+  const setCounter = (next: CounterConfig) => setWorkspace((current) => ({ ...current, counter: next }))
   const setWorkspace = (next: WorkspaceState | ((current: WorkspaceState) => WorkspaceState)) =>
     setWorkspaceState((current) => synchronizeWorkspace(typeof next === 'function' ? next(current) : next))
   const setConfig = (next: BaseConfig | ((current: BaseConfig) => BaseConfig)) =>
@@ -112,7 +113,6 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
   const setPaintingTray = (next: PaintingTrayConfig) => setWorkspace((current) => ({ ...current, paintingTray: next }))
   const setPaintRack = (next: PaintRackConfig) => setWorkspace((current) => ({ ...current, paintRack: next }))
   const setStem = (next: FlightStemConfig) => setWorkspace((current) => ({ ...current, stem: next }))
-  const setCounter = (next: CounterConfig) => setWorkspace((current) => ({ ...current, counter: next }))
   const setFilaments = (filaments: FilamentColours) => setWorkspace((current) => ({ ...current, filaments }))
   const patchToken = (changes: Partial<TokenConfig>) =>
     setWorkspace((current) => {
@@ -146,6 +146,17 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
   useEffect(() => {
     if (sharedLink) posthog.capture('share_link_opened', { kind: 'base' in sharedLink ? 'base' : 'setup', generator: opened.model })
   }, [sharedLink, opened])
+  const [plateImageError, setPlateImageError] = useState<{ side: 'left' | 'right'; message: string }>()
+  const addPlateImage = async (side: 'left' | 'right', file: File) => {
+    setPlateImageError(undefined)
+    try {
+      const image = await loadTokenImage(file)
+      posthog.capture('counter_image_added', { side, width: image.width, height: image.height, type: file.type })
+      setWorkspace((current) => ({ ...current, counter: { ...current.counter, [side]: { ...current.counter[side], image } } }))
+    } catch (failure) {
+      setPlateImageError({ side, message: failure instanceof Error ? failure.message : String(failure) })
+    }
+  }
   const dropTokenImage = useEffectEvent((file: File) => void addTokenImage(file))
   useEffect(() => {
     if (model !== 'token') return
@@ -486,7 +497,14 @@ export function App({ sharedLink }: { sharedLink?: SharedLink }) {
     ) : model === 'stem' ? (
       <StemPanel stem={stem} setStem={setStem} resets={[resetPart(false)]} />
     ) : model === 'counter' ? (
-      <CounterPanel counter={counter} setCounter={setCounter} filaments={workspace.filaments} resets={[resetPart(false)]} />
+      <CounterPanel
+        counter={counter}
+        setCounter={setCounter}
+        filaments={workspace.filaments}
+        addPlateImage={addPlateImage}
+        plateImageError={plateImageError}
+        resets={[resetPart(false)]}
+      />
     ) : (
       <TokenPanel
         token={token}

@@ -89,6 +89,17 @@ describe('share links', () => {
     expect(shareLink(PAGE, sender, 'token')).toMatchObject({ imageOmitted: true })
   })
 
+  it('leaves out counter plate images that would make the link too long, keeping their text', () => {
+    const sender = defaultWorkspace()
+    sender.counter.right = { ...sender.counter.right, text: 'Life', image: image((i) => (i * 2654435761) >>> 24) }
+    const { url, imageOmitted } = shareLink(PAGE, sender, 'counter')
+
+    expect([imageOmitted, opened({ ...sender, counter: sender.counter }, 'counter') && url.length <= MAX_SHARE_URL_LENGTH]).toEqual([
+      true,
+      true,
+    ])
+  })
+
   it('keeps a link without its image under the length cap', () => {
     const sender = defaultWorkspace()
     sender.token.image = image((i) => (i * 2654435761) >>> 24)

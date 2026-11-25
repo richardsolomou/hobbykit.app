@@ -13,11 +13,14 @@ import { automaticMagnetCount, DEFAULT_PRESET, fitToSize, footprintKey, presetFo
 import { defaultFlightStemConfig } from '../core/geometry/stem'
 import { DEFAULT_FILAMENTS, isPlaBasicColour, type FilamentColours } from '../core/geometry/filaments'
 import {
-  automaticCounterClick,
+  COUNTER_FACES,
+  COUNTER_RANGES,
   defaultCounterConfig,
-  maximumCounterClick,
-  MIN_COUNTER_CLICK,
-  MINIMUM_COUNTER_DRUM_DIAMETER,
+  MAX_COUNTER_DIALS,
+  MAX_COUNTER_SIZE,
+  MAX_COUNTER_VALUE,
+  maximumCounterRelief,
+  MIN_COUNTER_SIZE,
 } from '../core/geometry/counter'
 import type {
   BaseConfig,
@@ -31,7 +34,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 29
+const WORKSPACE_VERSION = 30
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -155,14 +158,24 @@ export function synchronizeWorkspace(state: WorkspaceState): WorkspaceState {
   }
 }
 
-/** The wheel grown to fit its digits and arms, and its click following its size unless set by hand, which is capped at what the arms can flex. */
+/** Every counter setting kept within what its controls allow. */
 function fittedCounter(counter: CounterConfig): CounterConfig {
-  const drumDiameter = atLeast(counter.drumDiameter, MINIMUM_COUNTER_DRUM_DIAMETER)
-  const sized = { ...counter, drumDiameter }
-  const click = counter.pinned.includes('click')
-    ? Math.min(counter.click, Math.max(maximumCounterClick(sized), MIN_COUNTER_CLICK))
-    : automaticCounterClick(sized)
-  return { ...sized, click, grip: Math.max(0, counter.grip) }
+  const within = (value: number, [min, max]: readonly [number, number]) => Math.min(Math.max(value, min), max)
+  const size = within(counter.size, [MIN_COUNTER_SIZE, MAX_COUNTER_SIZE])
+  const faces = Math.round(within(counter.faces, COUNTER_FACES))
+  return {
+    ...counter,
+    size,
+    dials: Math.round(within(counter.dials, [1, MAX_COUNTER_DIALS])),
+    faces,
+    first: Math.round(within(counter.first, [0, MAX_COUNTER_VALUE + 1 - faces])),
+    relief: within(counter.relief, [COUNTER_RANGES.relief[0], maximumCounterRelief({ ...counter, size })]),
+    inlay: within(counter.inlay, COUNTER_RANGES.inlay),
+    pressFit: within(counter.pressFit, COUNTER_RANGES.pressFit),
+    dialClearance: within(counter.dialClearance, COUNTER_RANGES.dialClearance),
+    click: within(counter.click, COUNTER_RANGES.click),
+    leadIn: within(counter.leadIn, COUNTER_RANGES.leadIn),
+  }
 }
 
 export function defaultWorkspace(): WorkspaceState {
@@ -221,6 +234,7 @@ const MIGRATIONS = [
   migrateWorkspaceV26,
   migrateWorkspaceV27,
   migrateWorkspaceV28,
+  migrateWorkspaceV29,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -301,6 +315,12 @@ export function applyWorkspaceSetup(
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
 }
 
+/** Counters were redesigned, sharing no settings with the dials they replaced. */
+function migrateWorkspaceV29(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  return { ...(value as Record<string, unknown>), counter: defaultCounterConfig() }
+}
+
 /**
  * Polygon bases could turn, and labels could be raised or engraved anywhere; every saved base keeps its letters as
  * they were, raised on a hollow base and engraved into a solid one. A hollow relief base engraves whatever its style.
@@ -324,14 +344,13 @@ function migrateWorkspaceV27(value: unknown): unknown {
 
 /**
  * Size-driven settings learnt whether they follow the footprint. One saved away from what its size gives was set by
- * hand, so it stays pinned; the rest follow the size from now on. The counter's click likewise.
+ * hand, so it stays pinned; the rest follow the size from now on.
  */
 function migrateWorkspaceV26(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) return value
   const workspace = value as Record<string, unknown>
   const base = workspace.base as BaseConfig | undefined
-  const counter = workspace.counter as CounterConfig | undefined
-  if (typeof base !== 'object' || base === null || typeof counter !== 'object' || counter === null) return value
+  if (typeof base !== 'object' || base === null) return value
   const auto = sizeDefaults(base)
   const saved = {
     height: base.height,
@@ -343,54 +362,37 @@ function migrateWorkspaceV26(value: unknown): unknown {
   const pinned = (Object.keys(saved) as (keyof typeof saved)[]).filter(
     (key) => typeof saved[key] === 'number' && Math.abs(saved[key] - auto[key]) > 1e-9,
   )
-  const clickPinned = typeof counter.click === 'number' && Math.abs(counter.click - automaticCounterClick(counter)) > 1e-9
-  return { ...workspace, base: { ...base, pinned }, counter: { ...counter, pinned: clickPinned ? ['click'] : [] } }
+  return { ...workspace, base: { ...base, pinned } }
 }
 
-/** The enclosure became the default counter layout. */
+/** Version 25 only changed the counter, which version 30 replaced. */
 function migrateWorkspaceV25(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  const workspace = value as Record<string, unknown>
-  return { ...workspace, counter: { ...(workspace.counter as object), layout: 'enclosure' } }
+  return value
 }
 
-/** Side pieces went, and the frame layout lost its stand, so its frame is always held at the ends. */
+/** Version 24 only changed the counter, which version 30 replaced. */
 function migrateWorkspaceV24(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  const workspace = value as Record<string, unknown>
-  const { frameHold: _frameHold, ...counter } = workspace.counter as Record<string, unknown>
-  return { ...workspace, counter: { ...counter, layout: counter.layout === 'sides' ? 'knobs' : counter.layout } }
+  return value
 }
 
-/** Hubs with side knobs became the default counter layout. */
+/** Version 23 only changed the counter, which version 30 replaced. */
 function migrateWorkspaceV23(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  const workspace = value as Record<string, unknown>
-  return { ...workspace, counter: { ...(workspace.counter as object), layout: 'knobs' } }
+  return value
 }
 
-/** A centre stand's frame could be held at the ends, which became the default. */
+/** Version 22 only changed the counter, which version 30 replaced. */
 function migrateWorkspaceV22(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  const workspace = value as Record<string, unknown>
-  return { ...workspace, counter: { ...(workspace.counter as object), frameHold: 'ends' } }
+  return value
 }
 
-/** The centre stand became the default counter layout, with no side pieces. */
+/** Version 21 only changed the counter, which version 30 replaced. */
 function migrateWorkspaceV21(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  const workspace = value as Record<string, unknown>
-  return { ...workspace, counter: { ...(workspace.counter as object), layout: 'centre' } }
+  return value
 }
 
-/** Counters gained a layout and a grip on each dial, and their dials lost their second-colour ribs. */
+/** Version 20 only changed the counter, which version 30 replaced. */
 function migrateWorkspaceV20(value: unknown): unknown {
-  if (typeof value !== 'object' || value === null) return value
-  const workspace = value as Record<string, unknown>
-  return {
-    ...workspace,
-    counter: { ...defaultCounterConfig(), ...(workspace.counter as object), layout: 'sides', grip: defaultCounterConfig().grip },
-  }
+  return value
 }
 
 /** Counters went back to full-size dials with press-in tiles, which flush far less than digits printed in the dial. */
@@ -585,10 +587,12 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
     isTokenImage(workspace.token.image) &&
     workspace.paintingTray.kind === 'painting-tray' &&
     workspace.counter.kind === 'counter' &&
-    ['centre', 'hubs', 'knobs', 'enclosure'].includes(workspace.counter.layout) &&
-    ['tiles', 'printed', 'engraved'].includes(workspace.counter.digits) &&
+    ['inlaid', 'engraved', 'raised'].includes(workspace.counter.digits) &&
+    ['bar', 'pointer', 'none'].includes(workspace.counter.mark) &&
+    [1, 3].includes(workspace.counter.plateFilament) &&
+    isTokenImage(workspace.counter.left.image) &&
+    isTokenImage(workspace.counter.right.image) &&
     workspace.base.pinned.every((key) => ['height', 'floorThickness', 'cornerRadius', 'labelHeight', 'ribs'].includes(key)) &&
-    workspace.counter.pinned.every((key) => key === 'click') &&
     Object.values(workspace.filaments).every(isPlaBasicColour) &&
     workspace.paintRack.kind === 'paint-rack' &&
     workspace.paintRack.items.length > 0 &&

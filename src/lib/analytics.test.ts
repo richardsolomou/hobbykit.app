@@ -86,7 +86,18 @@ describe('designProperties', () => {
     expect(Object.values(designProperties({ ...workspace.token, text: 'Oath of Moment' }))).not.toContain('Oath of Moment')
   })
 
-  it('reports a counter layout', () => {
-    expect(designProperties(workspace.counter).layout).toBe(workspace.counter.layout)
+  it('reports what a counter counts and how it looks, never its text', () => {
+    expect(designProperties({ ...workspace.counter, left: { ...workspace.counter.left, text: 'Life' } })).toEqual({
+      size: 34.95,
+      digits: 'inlaid',
+      dials: 2,
+      faces: 10,
+      first: 0,
+      count_down: false,
+      mark: 'bar',
+      plate_filament: 1,
+      plate_text: true,
+      plate_image: false,
+    })
   })
 })

@@ -9,7 +9,7 @@ import { reliefSample } from '@/core/geometry/relief'
 import { DEFAULT_TEXTURE, isRelief, nailHoles, textureCells, type JointPattern } from '@/core/geometry/texture'
 import type {
   CounterDigits,
-  CounterLayout,
+  CounterMark,
   EdgeProfile,
   LabelStyle,
   PaintingHandleShape,
@@ -175,101 +175,6 @@ export function texturePicture(pattern: TexturePattern): ReactNode {
   return isRelief(pattern) ? <ReliefPicture pattern={pattern} /> : <JointPicture pattern={pattern} />
 }
 
-const DIAL_TOP = 8
-const DIAL_BOTTOM = 22
-
-/** A dial seen from the front, its top digit's tile showing, `x` its left edge. */
-function Dial({ x }: { x: number }) {
-  return (
-    <>
-      <rect x={x} y={DIAL_TOP} width={7} height={DIAL_BOTTOM - DIAL_TOP} rx={1} {...body} />
-      <line x1={x + 1} y1={DIAL_TOP + 2} x2={x + 6} y2={DIAL_TOP + 2} />
-      <line x1={x + 1} y1={(DIAL_TOP + DIAL_BOTTOM) / 2} x2={x + 6} y2={(DIAL_TOP + DIAL_BOTTOM) / 2} />
-    </>
-  )
-}
-
-/** A ribbed knob seen edge on. */
-function Knob({ x }: { x: number }) {
-  return (
-    <>
-      <rect x={x} y={8} width={3} height={14} rx={0.8} {...body} />
-      {[10.5, 13.5, 16.5, 19.5].map((y) => (
-        <line key={y} x1={x} y1={y} x2={x + 3} y2={y} />
-      ))}
-    </>
-  )
-}
-
-export const COUNTER_LAYOUT_PICTURES: Record<CounterLayout, ReactNode> = {
-  enclosure: (
-    <Picture>
-      <rect x={6} y={6} width={28} height={18} rx={2} {...body} />
-      <rect x={11} y={6} width={18} height={2.2} {...accent} />
-      <Knob x={2} />
-      <Knob x={35} />
-    </Picture>
-  ),
-  knobs: (
-    <Picture>
-      <Dial x={12.5} />
-      <Dial x={20.5} />
-      <rect x={9} y={7} width={2.5} height={16} {...body} />
-      <rect x={28.5} y={7} width={2.5} height={16} {...body} />
-      <rect x={9} y={7} width={2.5} height={1.5} {...accent} />
-      <rect x={28.5} y={7} width={2.5} height={1.5} {...accent} />
-      <Knob x={5} />
-      <Knob x={32} />
-    </Picture>
-  ),
-  hubs: (
-    <Picture>
-      <Dial x={12.5} />
-      <Dial x={20.5} />
-      <path d="M9 7 h2.5 v13 l2 5 h-6.5 l2 -5 z" {...body} />
-      <path d="M28.5 7 h2.5 v13 l2 5 h-6.5 l2 -5 z" {...body} />
-      <rect x={9} y={7} width={2.5} height={1.5} {...accent} />
-      <rect x={28.5} y={7} width={2.5} height={1.5} {...accent} />
-    </Picture>
-  ),
-  centre: (
-    <Picture>
-      <Dial x={12.5} />
-      <Dial x={20.5} />
-      <rect x={6} y={24} width={28} height={2.5} {...body} />
-      <rect x={9} y={5} width={2} height={19} {...accent} />
-      <rect x={29} y={5} width={2} height={19} {...accent} />
-      <rect x={9} y={5} width={22} height={1.5} {...accent} />
-    </Picture>
-  ),
-}
-
-const SEVEN = 'M15 9 h9 l-5 13'
-
-export const COUNTER_DIGIT_PICTURES: Record<CounterDigits, ReactNode> = {
-  tiles: (
-    <Picture>
-      <rect x={3} y={6} width={17} height={19} rx={1.5} {...body} />
-      <rect x={6} y={9} width={11} height={13} strokeDasharray="1.2 1" />
-      <rect x={23} y={9} width={13} height={14} rx={0.5} {...body} />
-      <path d="M26 12 h7 l-4 9" strokeWidth={2} />
-      <path d="M21.5 16 h-2.5 m1 -1.2 l-1 1.2 l1 1.2" strokeWidth={0.8} />
-    </Picture>
-  ),
-  printed: (
-    <Picture>
-      <rect x={9} y={5} width={22} height={21} rx={1.5} {...body} />
-      <path d={SEVEN} transform="translate(0.5 0)" strokeWidth={2.4} />
-    </Picture>
-  ),
-  engraved: (
-    <Picture>
-      <rect x={9} y={5} width={22} height={21} rx={1.5} {...body} />
-      <path d={SEVEN} transform="translate(0.5 0)" strokeWidth={2.4} strokeOpacity={0.45} strokeDasharray="1.2 1" />
-    </Picture>
-  ),
-}
-
 /** A stem from the side: a foot, a column `height` tall in mm, and what holds the miniature on top. */
 function Stem({ height, top = 'peg' }: { height: number; top?: 'peg' | 'ball' }) {
   const column = 4 + (height / 35) * 18
@@ -311,19 +216,79 @@ export const GRIP_PICTURES: Record<PaintingHandleShape, ReactNode> = {
   pistol: <Grip outline="M15 5.5 h8 c0 6 2 13 7 20 l-5 2 c-6 -6 -10 -13 -10 -22 z" />,
 }
 
-/** A dial seen end on, its size in proportion to the largest, `diameter` across its corners. */
-export function counterSizePicture(diameter: number): ReactNode {
-  const radius = 4 + (diameter / 40) * 9.5
+/** A dial seen end on, in proportion to the largest, `size` across its flats. */
+export function counterSizePicture(size: number, largest: number): ReactNode {
+  const flat = 4 + (size / largest) * 9
   const corners = Array.from({ length: 10 }, (_corner, i) => {
-    const angle = Math.PI / 2 + Math.PI / 10 + (2 * Math.PI * i) / 10
+    const angle = Math.PI / 10 + (2 * Math.PI * i) / 10
+    const radius = flat / Math.cos(Math.PI / 10)
     return `${20 + radius * Math.cos(angle)},${15 - radius * Math.sin(angle)}`
   }).join(' ')
   return (
     <Picture>
       <polygon points={corners} {...body} />
-      <circle cx={20} cy={15} r={radius * 0.3} />
+      <circle cx={20} cy={15} r={flat * 0.6} />
     </Picture>
   )
+}
+
+/** A dial's face cut through a digit: the digit sunk and filled, sunk and empty, or standing on the face. */
+const NOTCHED_FACE = 'M4 12 H14 V15 H26 V12 H36 V24 H4 Z'
+export const COUNTER_DIGIT_PICTURES: Record<CounterDigits, ReactNode> = {
+  inlaid: (
+    <Picture>
+      <path d={NOTCHED_FACE} {...body} />
+      <rect x={14} y={15} width={12} height={4} {...accent} />
+    </Picture>
+  ),
+  engraved: (
+    <Picture>
+      <path d={NOTCHED_FACE} {...body} />
+    </Picture>
+  ),
+  raised: (
+    <Picture>
+      <rect x={4} y={12} width={32} height={12} {...body} />
+      <rect x={14} y={9} width={12} height={3} {...accent} />
+    </Picture>
+  ),
+}
+
+/** The counter from the front: a plate at each end and `dials` dials between them. */
+function Dials({ dials }: { dials: number }) {
+  const width = 6
+  const left = 20 - (dials * width + 4) / 2
+  return (
+    <Picture>
+      <rect x={left - 2} y={6} width={2} height={18} rx={0.5} {...body} />
+      {Array.from({ length: dials }, (_dial, i) => (
+        <rect key={i} x={left + 1 + i * width} y={8} width={width - 1} height={14} rx={0.8} {...body} />
+      ))}
+      <rect x={left + dials * width + 2} y={6} width={2} height={18} rx={0.5} {...body} />
+    </Picture>
+  )
+}
+export const COUNTER_DIAL_PICTURES: ReactNode[] = [1, 2, 3, 4].map((dials) => <Dials key={dials} dials={dials} />)
+
+/** A plate from outside, with what marks the top row above it. */
+export const COUNTER_MARK_PICTURES: Record<CounterMark, ReactNode> = {
+  bar: (
+    <Picture>
+      <circle cx={20} cy={17} r={10} {...body} />
+      <path d="M15.5 6.4 A11.5 11.5 0 0 1 24.5 6.4 L24.1 7.9 A10 10 0 0 0 15.9 7.9 Z" {...accent} />
+    </Picture>
+  ),
+  pointer: (
+    <Picture>
+      <circle cx={20} cy={17} r={10} {...body} />
+      <path d="M17 7.5 L20 4.5 L23 7.5 Z" {...accent} />
+    </Picture>
+  ),
+  none: (
+    <Picture>
+      <circle cx={20} cy={17} r={10} {...body} />
+    </Picture>
+  ),
 }
 
 /** A tile in a filament's own colour, so the choice shows the colour it prints in. */
@@ -331,7 +296,6 @@ export function filamentPicture(colour: string): ReactNode {
   return (
     <Picture>
       <rect x={10} y={4} width={20} height={22} rx={1.5} style={{ fill: colour }} />
-      <path d="M16 9 h8 l-4.5 12" strokeWidth={2.2} style={{ stroke: 'var(--background)' }} />
     </Picture>
   )
 }

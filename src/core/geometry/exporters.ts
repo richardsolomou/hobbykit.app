@@ -60,6 +60,8 @@ export interface ExportPart {
   filament?: 2 | 3
   secondFilament?: { mesh: MeshLike; name: string }
   thirdFilament?: { mesh: MeshLike; name: string }
+  /** Bambu Studio settings for this object alone, by their project keys. */
+  settings?: Record<string, string>
 }
 
 /** Each filament takes the nozzle it would in a typical project: the body on one, the colours on the other, so the two rarely need a swap. */
@@ -286,8 +288,13 @@ export function needsBrim(part: ExportPart): boolean {
   return (top - bottom) / Math.sqrt(contact) > BRIM_SLENDERNESS
 }
 
-const brimMetadata = (part: ExportPart) =>
-  needsBrim(part) ? `<metadata key="brim_type" value="outer_only"/><metadata key="brim_width" value="${BRIM_WIDTH}"/>` : ''
+const objectSettings = (part: ExportPart) =>
+  Object.entries({
+    ...(needsBrim(part) ? { brim_type: 'outer_only', brim_width: String(BRIM_WIDTH) } : {}),
+    ...part.settings,
+  })
+    .map(([key, value]) => `<metadata key="${key}" value="${value}"/>`)
+    .join('')
 
 const filamentCount = (meshes: ExportPart[]) =>
   meshes.some(({ thirdFilament, filament }) => thirdFilament || filament === 3)
@@ -303,7 +310,7 @@ function plateSettingsXml(meshes: ExportPart[], plates: Plate[]): string {
       const { mesh, name, filament } = volumes[volume]
       return `<part id="${partId}" subtype="normal_part"><metadata key="name" value="${name}"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="extruder" value="${filament}"/><mesh_stat face_count="${mesh.triVerts.length / 3}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part>`
     })
-    return `<object id="${(index + 1) * 2}"><metadata key="name" value="${part.name}"/><metadata key="extruder" value="1"/>${brimMetadata(part)}${parts.join('')}</object>`
+    return `<object id="${(index + 1) * 2}"><metadata key="name" value="${part.name}"/><metadata key="extruder" value="1"/>${objectSettings(part)}${parts.join('')}</object>`
   })
   const placed = placeItems(meshes, plates)
   const instances = placed.map(

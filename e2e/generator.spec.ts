@@ -576,104 +576,57 @@ test('builds a matching printable flying stem', async ({ page }) => {
   await expect(footer(page)).toContainText('Ø4 mm')
 })
 
-test('builds a dial counter and downloads each part with its tiles', async ({ page }) => {
+test('builds the dial counter and downloads each part with its colour', async ({ page }) => {
   await visit(page, 'Counters')
-
-  await expect(tall(page)).toHaveText('43.56')
-  await expect(footer(page)).toContainText('counter-39.6mm')
-
-  // Resizing scales every face without adding triangles, so the footer's name shows the rebuild.
-  await setDimension(page, 'Wheel diameter in mm', '24')
-  await expect(footer(page)).toContainText('counter-24mm')
+  await expect(tall(page)).toHaveText('36.58')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
   const saved = await pending
-  expect(saved.suggestedFilename()).toBe('counter-24mm.zip')
+  expect(saved.suggestedFilename()).toBe('counter-34.95mm.zip')
   const path = await saved.path()
   if (!path) throw new Error('download has no local path')
   expect(Object.keys(unzipSync(await readFile(path))).sort()).toEqual([
-    'counter-24mm-inserts-marks.stl',
-    'counter-24mm-inserts.stl',
-    'counter-24mm-left-case.stl',
-    'counter-24mm-left-knob.stl',
-    'counter-24mm-right-case.stl',
-    'counter-24mm-right-knob.stl',
-    'counter-24mm-tens-wheel.stl',
-    'counter-24mm-units-wheel.stl',
+    'counter-34.95mm-axle.stl',
+    'counter-34.95mm-dial-1-marks.stl',
+    'counter-34.95mm-dial-1.stl',
+    'counter-34.95mm-dial-2-marks.stl',
+    'counter-34.95mm-dial-2.stl',
+    'counter-34.95mm-left-plate-marks.stl',
+    'counter-34.95mm-left-plate.stl',
+    'counter-34.95mm-right-plate-marks.stl',
+    'counter-34.95mm-right-plate.stl',
   ])
 })
 
-test('downloads a dial counter in a frame on a base', async ({ page }) => {
+test('scales the dial counter and engraves its digits for paint in one filament', async ({ page }) => {
   await visit(page, 'Counters')
-  await pickChoice(page, 'Layout', 'Frame and base')
+  await expect(tall(page)).toHaveText('36.58')
+
+  await pickChoice(page, 'Size', 'Large')
+  await expect(footer(page)).toContainText('counter-42mm')
   await pickChoice(page, 'Digits', 'Engraved for paint')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download STL' }).click()
   const path = await (await pending).path()
   if (!path) throw new Error('download has no local path')
-  expect(Object.keys(unzipSync(await readFile(path))).sort()).toEqual([
-    'counter-39.6mm-base.stl',
-    'counter-39.6mm-frame.stl',
-    'counter-39.6mm-tens-wheel.stl',
-    'counter-39.6mm-tube.stl',
-    'counter-39.6mm-units-wheel.stl',
-  ])
+  expect(Object.keys(unzipSync(await readFile(path))).filter((file) => file.endsWith('-marks.stl'))).toEqual([])
 })
 
-test('prints the dial counter tiles on their own plate, changing filament once', async ({ page }) => {
+test("prints the dial counter digits and marks in the second filament, with the axle's own settings", async ({ page }) => {
   await visit(page, 'Counters')
-  await expect(tall(page)).toHaveText('43.56')
-
-  const pending = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Download 3MF' }).click()
-  const path = await (await pending).path()
-  if (!path) throw new Error('download has no local path')
-  const archive = unzipSync(await readFile(path))
-  const text = (file: string) => new TextDecoder().decode(archive[file])
-  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(2)
-  expect(text('Metadata/model_settings.config')).toContain('value="counter-39.6mm-tile-units-7"')
-  expect(text('Metadata/model_settings.config')).toMatch(
-    /value="counter-39.6mm-tile-units-7-mark"\/>.*?<metadata key="extruder" value="2"\/>/,
-  )
-})
-
-test('prints the dial counter brackets with the tiles, changing filament at the same height', async ({ page }) => {
-  await visit(page, 'Counters')
-  await pickChoice(page, 'Layout', 'Hubs and knobs')
+  await expect(tall(page)).toHaveText('36.58')
 
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download 3MF' }).click()
   const path = await (await pending).path()
   if (!path) throw new Error('download has no local path')
   const settings = new TextDecoder().decode(unzipSync(await readFile(path))['Metadata/model_settings.config'])
-  expect(settings).toMatch(/value="counter-39.6mm-left-bracket-marks"\/>.*?<metadata key="extruder" value="2"\/>/)
-  const bracket = settings.match(/<object id="(\d+)"><metadata key="name" value="counter-39.6mm-right-bracket"\/>/)![1]
-  expect(settings.split('<plate>').at(-1)).toContain(`key="object_id" value="${bracket}"`)
-  expect(settings).not.toContain('-hub-marks')
-})
-
-test('prints the dial counter digits into the dials in a third filament', async ({ page }) => {
-  await visit(page, 'Counters')
-  await expect(page.getByRole('radiogroup', { name: 'Digits' }).getByRole('radio', { name: 'Press-in tiles' })).toBeChecked()
-  await expect(page.getByRole('button', { name: /^Third colour/ })).toHaveCount(0)
-  await pickChoice(page, 'Digits', 'Printed in the dial')
-  await pickChoice(page, 'Digit filament', 'Third colour')
-  await expect(page.getByRole('button', { name: /^Third colour/ })).toBeVisible()
-  await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
-
-  const pending = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Download 3MF' }).click()
-  const path = await (await pending).path()
-  if (!path) throw new Error('download has no local path')
-  const archive = unzipSync(await readFile(path))
-  const text = (file: string) => new TextDecoder().decode(archive[file])
-  expect(JSON.parse(text('Metadata/project_settings.config')).filament_colour).toHaveLength(3)
-  expect(text('Metadata/model_settings.config')).toMatch(
-    /value="counter-39.6mm-units-wheel-digits"\/>.*?<metadata key="extruder" value="3"\/>/,
+  expect(settings).toMatch(/value="counter-34.95mm-dial-1-marks"\/>.*?<metadata key="extruder" value="2"\/>/)
+  expect(settings).toMatch(
+    /value="counter-34.95mm-axle"\/><metadata key="extruder" value="1"\/>(<metadata [^>]*\/>)*<metadata key="elefant_foot_compensation" value="0.3"\/>/,
   )
-  expect(text('Metadata/model_settings.config')).not.toContain('-tile-')
 })
 
 test('saves one set of colours and writes them into every 3MF', async ({ page }) => {
@@ -704,35 +657,6 @@ test('keeps every dropdown label clear of its check mark', async ({ page }) => {
         .map((option) => option.textContent),
     )
   expect(overruns).toEqual([])
-})
-
-test('engraves the dial counter without inserts', async ({ page }) => {
-  await visit(page, 'Counters')
-  const inserted = await triangles(page)
-
-  await pickChoice(page, 'Digits', 'Engraved for paint')
-  await rebuilt(page, inserted)
-  await expect(page.getByLabel('Insert clearance in mm')).toHaveCount(0)
-  expect(await triangles(page)).toBeLessThan(inserted)
-})
-
-test('scales the whole dial counter from the size choice', async ({ page }) => {
-  await visit(page, 'Counters')
-
-  await pickChoice(page, 'Size', 'Small')
-  await expect(footer(page)).toContainText('counter-24mm')
-  await expect(footer(page)).toContainText('4.6 mm tall')
-  await expect(page.getByLabel('Wheel diameter in mm')).toHaveValue('24.0')
-})
-
-test('caps the dial counter click at what its wheels can lift', async ({ page }) => {
-  await visit(page, 'Counters')
-
-  await expect(page.getByLabel('Click in mm')).toHaveAttribute('max', '1.55')
-  await setDimension(page, 'Wheel diameter in mm', '18')
-  await expect(page.getByLabel('Click in mm')).toHaveAttribute('max', '0.7')
-  await setDimension(page, 'Wheel diameter in mm', '30')
-  await expect(page.getByLabel('Click in mm')).toHaveAttribute('max', '1.15')
 })
 
 const SHIELD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="120" viewBox="0 0 100 120">
@@ -1469,7 +1393,7 @@ test('fits a phone screen with every generator in reach', async ({ page }) => {
   const single = await header()
   await visit(page, 'Counters')
   await page.getByRole('button', { name: 'Dial counter settings' }).click()
-  await pickChoice(page, 'Digit filament', 'Third colour')
+  await pickChoice(page, 'Plate colour', 'Third colour')
   await page.keyboard.press('Escape')
   expect(await header()).toBe(single)
 })

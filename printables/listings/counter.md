@@ -2,65 +2,72 @@
 
 - **Category:** Toys & Games › Board Games (or Tabletop Miniatures › Miniature Gaming Accessories)
 - **Licence:** Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)
-- **Tags:** dial counter, wound counter, wound caddy, battle tracker, life counter, score counter, counter, wargaming, tabletop, board game, mtg, warhammer, parametric, openscad, no supports
+- **Tags:** dial counter, life counter, wound counter, score counter, battle tracker, counter, mtg, commander, wargaming, warhammer, tabletop, board game, parametric, openscad, no supports
 
 ## Summary
 
-Slim dial counters that click from 00 to 99, with no hardware. Two ribbed dials turn on a fluted tube, about 44mm wide.
+Dial counters that click from number to number with no hardware: 00 to 99 on two dials, or 1 to 16 on one.
 
 ## Description
 
-Two ten-sided wheels turn on a fluted tube pressed between two side pieces. Two spring arms cut into each wheel click it into place at every count and centre it so it does not rock, with no glue or hardware. An optional shield shows only the current count. It stands on its own foot.
+An axle presses into a plate at each end, and the dials turn on it between them. A spring arm inside each dial clicks it into place at every number, so it stays where you leave it. The count is the top row, between the marks on the two plates.
 
-The digits are press-in tiles in a second colour. They print on their own plate, so the whole set costs one filament change instead of dozens. The STLs are the default caddy, with 39.6mm wheels: the two wheels, the frame, the cap, and the tiles as two files, one for the tile bases and one for the raised digits that go on them.
+There are two ready-made counters here: 00 to 99 on two dials, and 1 to 16 on one. The digits and the top-row marks are inlaid in a second colour, as separate files. To print them in two colours, load each part with its colour file as one object with multiple parts, which most slicers offer when you load several files at once, and give the colour part your second filament.
 
-To print the tiles in two colours, select both tile files and load them as one object with multiple parts. Most slicers offer that when you load several files at once; if yours doesn't, right-click the tiles and add the digits file as a part. Then give the digits part your second filament.
-
-For other sizes, or engraved digits you can paint instead of tiles, open `counter.scad` in OpenSCAD and use the Customizer panel (Window › Customizer). It needs a recent development snapshot of OpenSCAD (2024 or later), because the 2021.01 release is too old.
+For anything else, open `counter.scad` in OpenSCAD and use the Customizer panel (Window › Customizer). It needs a recent development snapshot of OpenSCAD (2024 or later), because the 2021.01 release is too old.
 
 What you can change in the .scad:
 
-- Part: everything on one plate, or each wheel, each side, the tube or the tiles on their own
-- Tiles: every tile, or one digit on its own, to reprint one that failed
-- Wheel diameter
-- Fit: the clearance around the tube
-- Click: raise it if the wheels turn too easily
-- Digits: press-in tiles, printed into the dial or engraved, and the tile clearance
+- Dials: one to four
+- Numbers on each dial, from 6 to 20, and the number they start from
+- Count down, so rolling a dial forwards takes one off
+- Size, which scales the whole counter while the fits stay the same
+- Digits: inlaid, engraved for paint, or raised, and how deep
+- The mark over the top row: a bar, a pointer or none
+- Text on each plate's outer face
+- Fit: the axle's press fit, the dials' play, how firmly they click, and a lead-in that starts the press fit
+- Export: everything, or one part, its body or its second colour
 
-This is part of HobbyKit, a free generator I made. hobbykit.app does all of this in a browser, and can also give you a 3MF with the tiles already set to a second filament.
+This is part of HobbyKit, a free generator I made. hobbykit.app does all of this in a browser, and can also put an image on the plates, print them in a third colour, and give you a 3MF with the colours already set.
 
 ## Print settings
 
-- Each side lies flat, each wheel stands on its outer face and the tube stands on one end, as the STLs load
+- The axle stands on one end, the plates lie flat and each dial stands on its narrow end, as the STLs load
 - No supports
-- 0.2mm layers, 0.12mm for sharper digits
-- Tiles: one filament for the bases and another for the raised digits
+- 0.2mm layers
+- For two colours, give each colour file a second filament
 
 ## Assembly
 
-1. Press the tiles into their pockets: 0 to 9 round each wheel.
-2. Press the tube into one side and push the tens wheel on.
-3. Push the units wheel on, then press the other side on to the tube.
+1. Press the axle into one plate.
+2. Slide the dials on, with the rib on each outer dial's wider end facing out.
+3. Press the other plate on to the axle.
 
 ## Files
 
-- `counter-39.6mm-units-wheel.stl`: the units wheel
-- `counter-39.6mm-tens-wheel.stl`: the tens wheel
-- `counter-39.6mm-axle.stl`: the fluted tube the wheels turn on
-- `counter-39.6mm-left-side.stl`: one side piece
-- `counter-39.6mm-right-side.stl`: the other side piece
-- `counter-39.6mm-left-side-marks.stl`, `counter-39.6mm-right-side-marks.stl`: the top-row brackets, in a second colour
-- `counter-39.6mm-inserts.stl`: the tile bases, 0 to 9 for each wheel
-- `counter-39.6mm-inserts-marks.stl`: the raised digits, to print on the tile bases in a second colour
-- `counter.scad`: the OpenSCAD source for other sizes, engraved digits and single tiles
+00 to 99 on two dials:
+
+- `counter-34.95mm-axle.stl`: the axle the dials turn on
+- `counter-34.95mm-left-plate.stl`, `counter-34.95mm-right-plate.stl`: the plates at each end
+- `counter-34.95mm-left-plate-colour.stl`, `counter-34.95mm-right-plate-colour.stl`: each plate's top-row mark, in a second colour
+- `counter-34.95mm-dial-1.stl`, `counter-34.95mm-dial-2.stl`: the tens and units dials
+- `counter-34.95mm-dial-1-colour.stl`, `counter-34.95mm-dial-2-colour.stl`: their digits, in a second colour
+
+1 to 16 on one dial:
+
+- `counter-1-16-34.95mm-axle.stl`: the axle
+- `counter-1-16-34.95mm-left-plate.stl`, `counter-1-16-34.95mm-right-plate.stl`: the plates
+- `counter-1-16-34.95mm-left-plate-colour.stl`, `counter-1-16-34.95mm-right-plate-colour.stl`: their marks, in a second colour
+- `counter-1-16-34.95mm-dial.stl`: the dial
+- `counter-1-16-34.95mm-dial-colour.stl`: its numbers, in a second colour
+
+- `counter.scad`: the OpenSCAD source for other counts, sizes, digits and plate text
 
 ## Images
 
 In upload order, from `makerworld/images`:
 
 1. `counter-cover-4x3.png` (cover, matching MakerWorld)
-2. `photos/counter-photo-cover-4x3.jpg`
-3. `photos/counter-photo-2.jpg`
-4. `photos/counter-photo-3.jpg`
-5. `counter-options.png`
-6. `counter-render.png`
+2. Real photos, once taken
+3. `counter-options.png`
+4. `counter-render.png`

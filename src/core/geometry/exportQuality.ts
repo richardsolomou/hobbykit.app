@@ -1,3 +1,4 @@
+import { counterExportSize } from './counter'
 import { holderLayout, holderPlan } from './holder'
 import { footprint } from './outline'
 import { paintingHandleDimensions, paintingTrayLayout } from './paintingTray'
@@ -33,7 +34,7 @@ function exportSize(config: BuildConfig): number {
     case 'token':
       return tokenFootprint(config).width
     case 'counter':
-      return config.drumDiameter
+      return counterExportSize(config)
     default: {
       const { width, length } = footprint(config)
       return Math.max(width, length)

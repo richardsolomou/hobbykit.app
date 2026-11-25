@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import type { Mesh } from 'manifold-3d'
+import type { TokenImage } from './types'
 import { parse } from 'opentype.js'
 
 const bytes = readFileSync('src/assets/fonts/oswald-700.woff')
@@ -69,4 +70,16 @@ export function overhangs(mesh: Mesh): string[] {
     if (area > 1e-3 && nz < -Math.SQRT1_2 - 3e-3 && z > 1e-6) found.add(nz < -0.999 ? `flat at ${z.toFixed(2)}` : 'slope')
   }
   return [...found].sort()
+}
+
+/** A dark disc on white, optionally with a hole in it, as an uploaded image is stored. */
+export function discImage(size = 64, blank = false, hole = 0): TokenImage {
+  const pixels = new Uint8Array(size * size)
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const r = Math.hypot(x - size / 2, y - size / 2)
+      pixels[y * size + x] = !blank && r < size / 3 && r >= hole ? 0 : 255
+    }
+  }
+  return { name: 'shield.png', width: size, height: size, luminance: Buffer.from(pixels).toString('base64') }
 }
