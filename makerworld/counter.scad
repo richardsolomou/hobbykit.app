@@ -2,7 +2,7 @@
 // A port of src/core/geometry/counter.ts, plate text only: change both together, then run `just makerworld check counter`.
 // An axle presses into a plate at each end, and dials turn on it between them, each clicking on a spring arm whose
 // bulb drops between the axle's lobes. Each part is built in a frame of its own, as the app builds it, then laid on the
-// plate the way it prints: the axle on an end, each plate flat with its socket up, each dial on its narrow end.
+// plate the way it prints: the axle on an end, each plate flat with its socket up, each dial with its rib up.
 // Licensed under CC BY-SA 4.0, unlike the AGPL-3.0-only app, because MakerWorld offers no GPL licence.
 
 /* [Numbers] */
@@ -81,6 +81,9 @@ DIAL_RINGS = [[-4.25, 16.394545], [-3.055968, 17.47501], [5.25, 16.64349]];
 DIAL_BODY = DIAL_RINGS[2][0] - DIAL_RINGS[0][0];
 DRAFT = atan((DIAL_RINGS[1][1] - DIAL_RINGS[2][1]) / (DIAL_RINGS[2][0] - DIAL_RINGS[1][0]));
 FACE_MIDDLE = DIAL_RINGS[2][1] + tan(DRAFT) * DIAL_RINGS[2][0];
+// A dial with an outer dial or another middle one on both sides is straight, flush with the outer dials' narrow ends.
+STRAIGHT_RINGS = [[DIAL_RINGS[0][0], DIAL_RINGS[2][1]], [DIAL_RINGS[2][0], DIAL_RINGS[2][1]]];
+STRAIGHT_MIDDLE = (DIAL_RINGS[0][0] + DIAL_RINGS[2][0]) / 2;
 ARM_INNER = 10.8;
 ARM_OUTER = 11.6;
 ARM_MIDDLE = (ARM_INNER + ARM_OUTER) / 2;
@@ -551,9 +554,11 @@ NUMBER_SCALE = min(1,
   NUMBER_ACROSS * WIDTH_RATIO / max([for (r = RAW) let(e = extent(r, 0)) e[1] - e[0]]));
 NUMBERS = [for (i = [0:F - 1]) [VALUES[i][1], [for (r = RAW[i]) [for (p = r) p * NUMBER_SCALE]]]];
 
-// The face at `angle` of a dial whose narrow end is towards `side` along Z: across it, along it, out of it, and its number's middle.
-function face_frame(side, angle) =
-  let(tilt = side * DRAFT,
+// The face at `angle` of a dial whose narrow end is towards `side` along Z, or 0 for a straight one: across it, along it, out of it, and its number's middle.
+function face_frame(side, angle) = side == 0
+  ? [[-sin(angle), cos(angle), 0], [0, 0, 1], [cos(angle), sin(angle), 0],
+     [(STRAIGHT_RINGS[0][1] + SHIFT) * cos(angle), (STRAIGHT_RINGS[0][1] + SHIFT) * sin(angle), STRAIGHT_MIDDLE]]
+  : let(tilt = side * DRAFT,
       normal = [cos(tilt) * cos(angle), cos(tilt) * sin(angle), sin(tilt)],
       across = [-sin(angle), cos(angle), 0],
       up = [-sin(tilt) * cos(angle), -sin(tilt) * sin(angle), cos(tilt)],
@@ -569,7 +574,7 @@ function frame_matrix(f) = [
 // How far a dial reaches below the axle, turned as assembled, by its corners or the tops of raised digits.
 TURN = 180 - BULB_ANGLE;
 CORNERS = [for (i = [0:F - 1]) polar(corner(DIAL_RINGS[1][1]), FIRST_FACE + PITCH / 2 + i * PITCH)];
-RAISED_TOPS = digits != "raised" ? [] : [for (side = [1, -1]) for (n = NUMBERS) let(f = face_frame(side, n[0]))
+RAISED_TOPS = digits != "raised" ? [] : [for (side = [1, -1, 0]) for (n = NUMBERS) let(f = face_frame(side, n[0]))
   for (r = n[1]) for (p = r) let(q = f[3] + p[0] * f[0] + p[1] * f[1] + RELIEF * f[2]) [q[0], q[1]]];
 REACH_DOWN = max([for (p = concat(CORNERS, RAISED_TOPS)) p[0] * cos(TURN) - p[1] * sin(TURN)]);
 TIP = max(FOOT_TIP + SHIFT, REACH_DOWN + TABLE_CLEARANCE);
@@ -767,15 +772,15 @@ module bore() difference() {
   }
   arm();
 }
-// The ten-or-more-sided frustum through its three rings, which is its own convex hull.
-module dial_hull() {
-  points = [for (r = DIAL_RINGS) for (i = [0:F - 1]) let(p = polar(corner(r[1]), FIRST_FACE + PITCH / 2 + i * PITCH)) [p[0], p[1], r[0]]];
-  hull() polyhedron(points, [[for (i = [0:F - 1]) i], [for (i = [0:F - 1]) F + i], [for (i = [0:F - 1]) 2 * F + i]]);
+// The ten-or-more-sided frustum through its rings, which is its own convex hull.
+module dial_hull(rings) {
+  points = [for (r = rings) for (i = [0:F - 1]) let(p = polar(corner(r[1]), FIRST_FACE + PITCH / 2 + i * PITCH)) [p[0], p[1], r[0]]];
+  hull() polyhedron(points, [for (k = [0:len(rings) - 1]) [for (i = [0:F - 1]) k * F + i]]);
 }
 module rib() rotate_extrude($fn = seg(2 * (RIB_RADIUS + SHIFT), 48))
   polygon([[RIB_RADIUS + SHIFT, -DIAL_HALF], [RIB_RADIUS + SHIFT + RIB, -DIAL_HALF + RIB], [RIB_RADIUS + SHIFT + RIB, -DIAL_HALF + RIB + OVERCUT], [RIB_RADIUS + SHIFT, -DIAL_HALF + RIB + OVERCUT]]);
-module dial_shape(ribbed) difference() {
-  union() { dial_hull(); if (ribbed) rib(); }
+module dial_shape(rings, ribbed) difference() {
+  union() { dial_hull(rings); if (ribbed) rib(); }
   prism(-DIAL_HALF - 1, DIAL_HALF + 1) bore();
 }
 // Every number on its face, from `from` to `to` along the face's normal.
@@ -785,12 +790,14 @@ module numbers(side, from, to) for (n = NUMBERS) {
   multmatrix(frame_matrix(face_frame(side, n[0]))) prism(from, to)
     polygon([for (r = rings) each r], [for (i = [0:len(rings) - 1]) [for (j = [0:len(rings[i]) - 1]) starts[i] + j]]);
 }
-function dial_side(i) = dials > 1 && i == dials - 1 ? -1 : 1;
+// The two outer dials lean in to meet, and any between them, or a lone dial, is straight, with its rib on its left end alone.
+function dial_side(i) = dials > 1 && i == dials - 1 ? -1 : dials > 1 && i == 0 ? 1 : 0;
 function dial_ribbed(i) = i == 0 || (dials > 1 && i == dials - 1);
 module dial(i) {
   side = dial_side(i);
+  rings = side == 0 ? STRAIGHT_RINGS : DIAL_RINGS;
   difference() {
-    if (side > 0) dial_shape(dial_ribbed(i)); else mirror([0, 0, 1]) dial_shape(dial_ribbed(i));
+    if (side >= 0) dial_shape(rings, dial_ribbed(i)); else mirror([0, 0, 1]) dial_shape(rings, dial_ribbed(i));
     if (digits == "engraved") numbers(side, -RELIEF, OVERCUT);
     if (digits == "inlaid") numbers(side, -RELIEF - INLAY, OVERCUT);
   }
@@ -811,7 +818,7 @@ MARK_POINTS = top_row_mark == "none" ? []
   : top_row_mark == "pointer" ? [[-MARK_RADIUS_, 0]]
   : [for (p = circle_points(MARK_RADIUS_, seg(2 * MARK_RADIUS_, 24))) if (p[0] < 0 && abs(p[1]) <= MARK_HALF_) p];
 PLATE_CENTRE = [(min([for (p = concat(DISC_POINTS, COLOURED ? [] : MARK_POINTS)) p[0]]) + TIP) / 2, 0];
-DIAL_CENTRE = box_centre([for (i = [0:F - 1]) polar(corner(DIAL_RINGS[1][1]), FIRST_FACE + PITCH / 2 + i * PITCH)]);
+function dial_centre(apothem) = box_centre([for (i = [0:F - 1]) polar(corner(apothem), FIRST_FACE + PITCH / 2 + i * PITCH)]);
 module laid(centre, z, upside_down = false)
   scale(SCALE) translate([-centre[0], upside_down ? centre[1] : -centre[1], z]) if (upside_down) mirror([0, 0, 1]) mirror([0, 1, 0]) children(); else children();
 
@@ -823,7 +830,7 @@ module piece(name, colour) {
   } else {
     i = ord(name[5]) - ord("1");
     assert(i < dials, str("The counter has no dial ", i + 1));
-    laid(DIAL_CENTRE, DIAL_HALF, dial_side(i) > 0) if (colour) dial_colour(i); else dial(i);
+    laid(dial_centre(dial_side(i) == 0 ? STRAIGHT_RINGS[0][1] : DIAL_RINGS[1][1]), DIAL_HALF, dial_side(i) >= 0) if (colour) dial_colour(i); else dial(i);
   }
 }
 module both(name) {

@@ -32,7 +32,7 @@ This is part of HobbyKit, a free generator I made. hobbykit.app does all of this
 
 ## Print settings
 
-- The axle stands on one end, the plates lie flat and each dial stands on its narrow end, as the STLs load
+- The axle stands on one end, the plates lie flat and each dial stands with its rib up, as the STLs load
 - No supports
 - 0.2mm layers
 - For two colours, give each colour file a second filament
@@ -40,7 +40,7 @@ This is part of HobbyKit, a free generator I made. hobbykit.app does all of this
 ## Assembly
 
 1. Press the axle into one plate.
-2. Slide the dials on, with the rib on each outer dial's wider end facing out.
+2. Slide the dials on, with the rib on each outer dial facing out.
 3. Press the other plate on to the axle.
 
 ## Files

@@ -12,4 +12,4 @@ The digits are inlaid by default: engraved into the dials and filled underneath 
 
 The fit settings are advanced too. Axle press fit opens the plates' sockets, which are otherwise exactly the axle's size: raise it if the axle will not go in. Dial play is the gap between each dial and the axle. Click moves each spring arm's tip further into the axle's ridges: raise it if the dials turn too easily, and lower it if they are hard to turn. Lead-in chamfers the ends of the axle and the mouths of the sockets so the press fit starts more easily. The 3MF tells Bambu Studio to keep the axle's first layer from spreading, since that end presses into a plate.
 
-Every part prints without supports: the axle on its end, the plates flat, and each dial on its narrow end. Pick the colours from the swatches at the top of the page: they apply to every generator, are saved in your browser, and go into the 3MF.
+Every part prints without supports: the axle on its end, the plates flat, and each dial with its rib up. Pick the colours from the swatches at the top of the page: they apply to every generator, are saved in your browser, and go into the 3MF.

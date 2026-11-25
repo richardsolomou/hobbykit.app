@@ -50,6 +50,13 @@ export const cases: Case[] = [
   ),
   ...custom('three', { dials: 3 }, { dials: 3 }, ['axle', 'dial_2'], ['dial_2']),
   ...custom(
+    'three-raised',
+    { dials: 3, digits: 'raised', relief: 0.7 },
+    { dials: 3, digits: 'raised', digit_depth: 0.7 },
+    ['dial_2'],
+    ['dial_2'],
+  ),
+  ...custom(
     'four-of-six',
     { dials: 4, faces: 6, first: 1 },
     { dials: 4, numbers_per_dial: 6, first_number: 1 },

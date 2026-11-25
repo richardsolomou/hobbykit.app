@@ -64,6 +64,12 @@ const DIAL_RINGS: [number, number][] = [
   [5.25, 16.64349],
 ]
 const DIAL_BODY = DIAL_RINGS[2][0] - DIAL_RINGS[0][0]
+/** A dial with an outer dial or another middle one on both sides is straight, flush with the outer dials' narrow ends. */
+const STRAIGHT_RINGS: [number, number][] = [
+  [DIAL_RINGS[0][0], DIAL_RINGS[2][1]],
+  [DIAL_RINGS[2][0], DIAL_RINGS[2][1]],
+]
+const STRAIGHT_MIDDLE = (DIAL_RINGS[0][0] + DIAL_RINGS[2][0]) / 2
 /** How far a face leans in towards the narrow end, as a slope off the axle. */
 const DRAFT = Math.atan((DIAL_RINGS[1][1] - DIAL_RINGS[2][1]) / (DIAL_RINGS[2][0] - DIAL_RINGS[1][0]))
 /** A face's apothem where the dial's frame crosses its middle height. */
@@ -189,9 +195,21 @@ function dialNumbers(config: Pick<CounterConfig, 'faces' | 'first' | 'countDown'
   }))
 }
 
+/** Which way a dial's narrow end points along Z, or 0 for a straight dial. */
+type DialSide = 1 | -1 | 0
+
 /** The face at `angle`, for a dial whose narrow end is towards `side` along Z: across it, along it towards the narrow end, out of it, and the middle of its number. */
-function faceFrame(side: 1 | -1, angle: number, shift: number) {
+function faceFrame(side: DialSide, angle: number, shift: number) {
   const face = degrees(angle)
+  if (side === 0) {
+    const middle = STRAIGHT_RINGS[0][1] + shift
+    return {
+      across: [-Math.sin(face), Math.cos(face), 0] as Vec3,
+      along: [0, 0, 1] as Vec3,
+      normal: [Math.cos(face), Math.sin(face), 0] as Vec3,
+      origin: [middle * Math.cos(face), middle * Math.sin(face), STRAIGHT_MIDDLE] as Vec3,
+    }
+  }
   const tilt = side * DRAFT
   const normal: Vec3 = [Math.cos(tilt) * Math.cos(face), Math.cos(tilt) * Math.sin(face), Math.sin(tilt)]
   const across: Vec3 = [-Math.sin(face), Math.cos(face), 0]
@@ -215,7 +233,7 @@ function dialReach(config: ReachConfig) {
   })
   if (config.digits === 'raised') {
     const height = config.relief / counterScale(config)
-    for (const side of [1, -1] as const) {
+    for (const side of [1, -1, 0] as const) {
       for (const { angle, rings } of dialNumbers(config)) {
         const { across, along, normal, origin } = faceFrame(side, angle, geometry.shift)
         for (const [u, v] of rings.flat()) {
@@ -235,14 +253,18 @@ function dialReach(config: ReachConfig) {
 /** Where the counter stands: the feet's tips, far enough out that no dial reaches the table. */
 const footTip = (config: ReachConfig) => Math.max(FOOT_TIP + faceGeometry(config.faces).shift, dialReach(config).down + TABLE_CLEARANCE)
 
-/** Between the plates' inner faces, and each dial's position: its left end, which way its narrow end points, and whether it has a rib to run in a plate's groove. */
+/**
+ * Between the plates' inner faces, and each dial's position: its left end, which way its narrow end points, and
+ * whether it has a rib to run in a plate's groove. The two outer dials lean in to meet, and any between them, or a lone
+ * dial, is straight; a lone dial's rib is on its left end alone, since a rib on both ends would leave it nothing flat to print on.
+ */
 function arrangement({ dials }: Pick<CounterConfig, 'dials'>) {
   const span = dials * DIAL_BODY + 2 * SEAT_GAP + 2 * SEAT_GAP * (dials - 1)
   const axleLength = span + 2 * SOCKET_DEPTH
   const placed = Array.from({ length: dials }, (_dial, i) => {
     const last = dials > 1 && i === dials - 1
     const left = -span / 2 + SEAT_GAP + i * (DIAL_BODY + 2 * SEAT_GAP)
-    const side: 1 | -1 = last ? -1 : 1
+    const side: DialSide = last ? -1 : i === 0 && dials > 1 ? 1 : 0
     return {
       left,
       side,
@@ -547,16 +569,15 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
       [RIB_RADIUS + shift + RIB, -DIAL_HALF + RIB + OVERCUT],
       [RIB_RADIUS + shift, -DIAL_HALF + RIB + OVERCUT],
     ])
-    const hull = own(Manifold.hull(DIAL_RINGS.flatMap(ring)))
     const boreCut = prism(bore, -DIAL_HALF - 1, DIAL_HALF + 1)
-    const dialBodies = {
-      ribbed: own(own(Manifold.union([hull, rib])).subtract(boreCut)),
-      plain: own(hull.subtract(boreCut)),
+    const dialBody = (rings: [number, number][], ribbed: boolean) => {
+      const hull = own(Manifold.hull(rings.flatMap(ring)))
+      return own((ribbed ? own(Manifold.union([hull, rib])) : hull).subtract(boreCut))
     }
 
     const numbers = dialNumbers(config)
     /** Every number on its face, as a solid from `from` to `to` along the face's normal, for a dial whose narrow end is towards `side` along Z. */
-    const engraved = (side: 1 | -1, from: number, to: number) =>
+    const engraved = (side: DialSide, from: number, to: number) =>
       own(
         Manifold.union(
           numbers.map(({ angle, rings }) => {
@@ -567,9 +588,9 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
         ),
       )
     /** Inlaid numbers are engraved and filled below by the second filament; engraved ones are left for paint; raised ones stand on the faces in the second filament. */
-    const dial = ({ side, rib: ribbed }: { side: 1 | -1; rib: boolean }) => {
-      const shape = ribbed ? dialBodies.ribbed : dialBodies.plain
-      const body = side > 0 ? shape : own(shape.mirror([0, 0, 1]))
+    const dial = ({ side, rib: ribbed }: { side: DialSide; rib: boolean }) => {
+      const shape = dialBody(side === 0 ? STRAIGHT_RINGS : DIAL_RINGS, ribbed)
+      const body = side < 0 ? own(shape.mirror([0, 0, 1])) : shape
       if (config.digits === 'raised') return { body, colour: engraved(side, 0, relief) }
       if (config.digits === 'engraved') return { body: own(body.subtract(engraved(side, -relief, OVERCUT))) }
       return {
@@ -587,8 +608,8 @@ export function buildCounter(wasm: ManifoldToplevel, config: CounterConfig, font
         config.part === 'axle'
           ? { body: axle, colour: undefined, printed: asBuilt }
           : config.part === 'dial'
-            ? // Each dial prints on its narrow end, so its faces lean out no more than their draft.
-              { ...dial(dials[index]), printed: dials[index].side > 0 ? upsideDown : asBuilt }
+            ? // Each dial prints with its rib on top, so a leaning dial stands on its narrow end and its faces lean out no more than their draft.
+              { ...dial(dials[index]), printed: dials[index].side < 0 ? asBuilt : upsideDown }
             : { ...plates[config.part], printed: asBuilt }
       const laid = own(body.transform(printed))
       const { min, max } = laid.boundingBox()
