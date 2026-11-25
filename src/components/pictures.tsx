@@ -6,11 +6,12 @@
 import { useId, useMemo, type ReactNode } from 'react'
 import { profileSteps } from '@/core/geometry/profile'
 import { reliefSample } from '@/core/geometry/relief'
-import { DEFAULT_TEXTURE, isRelief, textureCells, type JointPattern } from '@/core/geometry/texture'
+import { DEFAULT_TEXTURE, isRelief, nailHoles, textureCells, type JointPattern } from '@/core/geometry/texture'
 import type {
   CounterDigits,
   CounterLayout,
   EdgeProfile,
+  LabelStyle,
   PaintingHandleShape,
   ShapeKind,
   TexturePattern,
@@ -105,20 +106,25 @@ export const PROFILE_PICTURES: Record<EdgeProfile, ReactNode> = {
   straight: <ProfilePicture profile="straight" />,
 }
 
-/** Each stone or tile shrunk toward its middle, so the joints between them show. */
+/** Each stone or tile shrunk toward its middle, so the joints between them show, with a plank's nails. */
 function JointPicture({ pattern }: { pattern: JointPattern }) {
-  const cells = useMemo(
-    () =>
-      textureCells({ pattern, seed: 1, ...DEFAULT_TEXTURE[pattern] }, 20, 15).map((cell) => {
+  const { cells, nails } = useMemo(() => {
+    const layout = textureCells({ pattern, seed: 1, ...DEFAULT_TEXTURE[pattern] }, 20, 15)
+    return {
+      cells: layout.map((cell) => {
         const [cx, cy] = [cell.reduce((sum, [x]) => sum + x, 0) / cell.length, cell.reduce((sum, [, y]) => sum + y, 0) / cell.length]
         return cell.map(([x, y]) => `${cx + 0.86 * (x - cx)},${cy + 0.86 * (y - cy)}`).join(' ')
       }),
-    [pattern],
-  )
+      nails: pattern === 'plank' ? nailHoles(layout, DEFAULT_TEXTURE.plank.depth) : [],
+    }
+  }, [pattern])
   return (
     <Picture viewBox="-20 -15 40 30">
       {cells.map((points) => (
         <polygon key={points} points={points} fill="currentColor" fillOpacity={0.45} stroke="none" />
+      ))}
+      {nails.map(([x, y]) => (
+        <circle key={`${x},${y}`} cx={x} cy={y} r={0.4} {...accent} />
       ))}
     </Picture>
   )
@@ -378,6 +384,23 @@ export function ribPicture(count: number): ReactNode {
       })}
     </Picture>
   )
+}
+
+/** A slab cut through a label: letters standing proud of it, or cut down into it. */
+export const LABEL_STYLE_PICTURES: Record<LabelStyle, ReactNode> = {
+  raised: (
+    <Picture>
+      <rect x={4} y={16} width={32} height={8} {...body} />
+      {[9, 17.5, 26].map((x) => (
+        <rect key={x} x={x} y={12} width={5} height={4} {...accent} />
+      ))}
+    </Picture>
+  ),
+  engraved: (
+    <Picture>
+      <path d="M4 12 h5 v4 h5 v-4 h3.5 v4 h5 v-4 h3.5 v4 h5 v-4 h5 v12 h-32 z" {...body} />
+    </Picture>
+  ),
 }
 
 /** A holder module from above with three slots, its labels in the slots or along its front edge. */

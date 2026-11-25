@@ -3,9 +3,9 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { duplicateVertices, overhangs } from './geometry.test.utils'
 import { buildBase } from './base'
 import { loadManifold } from './manifold'
-import { fitToSize, OVAL_SIZES, POLYGON_SIZES, presetFor, RECT_SIZES, resized, ROUND_SIZES, type SizePreset } from './presets'
+import { fitToSize, presetFor, resized, standardSize, type SizePreset } from './presets'
 import { exportSegmentsFor } from './quality'
-import { DEFAULT_TEXTURE, isRegular, maxTextureDepth, solidWithPattern, textureCells, withPattern } from './texture'
+import { DEFAULT_TEXTURE, isRegular, maxTextureDepth, nailHoles, solidWithPattern, textureCells, withPattern } from './texture'
 import type { BaseConfig, TexturePattern } from './types'
 
 let wasm: Awaited<ReturnType<typeof loadManifold>>
@@ -14,10 +14,17 @@ beforeAll(async () => {
   wasm = await loadManifold()
 })
 
-const ROUND_32 = ROUND_SIZES[2]
-const SIZES = [ROUND_SIZES[0], ROUND_32, ROUND_SIZES[9], OVAL_SIZES[0], RECT_SIZES[3], POLYGON_SIZES[1]]
+const ROUND_32 = standardSize('round', '32')
+const SIZES = [
+  standardSize('round', '25'),
+  ROUND_32,
+  standardSize('round', '120'),
+  standardSize('oval', '60×35.5'),
+  standardSize('rect', '25×50'),
+  standardSize('polygon', '32'),
+]
 
-const PATTERNS = ['flagstone', 'cobblestone', 'hex', 'tile', 'plank', 'plate', 'herringbone', 'diamond'] as const
+const PATTERNS = ['flagstone', 'cobblestone', 'hex', 'tile', 'plank', 'plate', 'brick', 'herringbone', 'diamond'] as const
 const IRREGULAR = PATTERNS.filter((pattern) => !isRegular(pattern))
 const CASES = PATTERNS.flatMap((pattern) => SIZES.map((size) => ({ pattern, size, label: `${pattern} ${size.label}` })))
 
@@ -78,6 +85,54 @@ describe('joint textures', () => {
     expect(across).toEqual([])
   })
 
+  it('lays bricks twice as long as their course when tidy', () => {
+    const cells = textureCells({ pattern: 'brick', seed: 1, scale: 3, irregularity: 0 }, 20, 20)
+    const lengths = new Set(cells.map(([a, b]) => (b[0] - a[0]).toFixed(6)))
+    expect([...lengths]).toEqual(['6.000000'])
+  })
+
+  it('varies brick lengths with irregularity', () => {
+    const cells = textureCells({ pattern: 'brick', seed: 1, scale: 3, irregularity: 100 }, 20, 20)
+    expect(new Set(cells.map(([a, b]) => (b[0] - a[0]).toFixed(6))).size).toBeGreaterThan(1)
+  })
+
+  it('staggers each course of bricks by half a brick', () => {
+    const cells = textureCells({ pattern: 'brick', seed: 1, scale: 3, irregularity: 0 }, 20, 20)
+    const firstJoint = (v: number) => Math.min(...cells.filter(([a]) => Math.abs(a[1] - v) < 1e-9).map(([a]) => a[0]))
+    expect(Math.abs(firstJoint(-1.5) - firstJoint(1.5)) % 6).toBeCloseTo(3, 6)
+  })
+
+  it('nails each plank near its four corners', () => {
+    const plank = [
+      [0, 0],
+      [20, 0],
+      [20, 5],
+      [0, 5],
+    ] as [number, number][]
+    expect(nailHoles([plank], 0.5)).toHaveLength(4)
+  })
+
+  it('leaves the nails out of a plank too narrow to keep them clear of its joints', () => {
+    const plank = [
+      [0, 0],
+      [20, 0],
+      [20, 3],
+      [0, 3],
+    ] as [number, number][]
+    expect(nailHoles([plank], 0.5)).toEqual([])
+  })
+
+  it('drills nail holes into a plank base, each narrowing to a point', () => {
+    const config = textured(ROUND_32, false, 'plank')
+    const planks = textureCells({ ...config.texture, pattern: 'plank' }, 17, 17)
+    const [x, y] = nailHoles(planks, config.texture.depth).find(([nx, ny]) => Math.hypot(nx, ny) < 10)!
+    const { numProp, vertProperties: v } = build(config).mesh
+    const apex = Array.from({ length: v.length / numProp }, (_, i) => i * numProp).some(
+      (i) => Math.hypot(v[i] - x, v[i + 1] - y) < 1e-3 && Math.abs(v[i + 2] - 0.4) < 1e-3,
+    )
+    expect(apex).toBe(true)
+  })
+
   it('rejects joints that cut too close to the recess', () => {
     const config = textured(ROUND_32)
     expect(() => build({ ...config, texture: { ...config.texture, depth: maxTextureDepth(config) + 0.1 } })).toThrow(
@@ -86,7 +141,7 @@ describe('joint textures', () => {
   })
 
   it('makes the joints shallower when a resize thins the top', () => {
-    const large = presetFor(ROUND_SIZES[6])
+    const large = presetFor(standardSize('round', '80'))
     const config = { ...large, texture: { ...textured(ROUND_32).texture, depth: 1 } }
     expect(resized(config, 32, 32).texture.depth).toBeCloseTo(maxTextureDepth({ ...resized(config, 32, 32), floorThickness: 1 }))
   })

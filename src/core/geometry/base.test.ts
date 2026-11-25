@@ -1,7 +1,7 @@
 import type { Mesh } from 'manifold-3d'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { bounds, duplicateVertices, font, openEdges } from './geometry.test.utils'
-import { buildBase, magnetPositions, ribAngles } from './base'
+import { bounds, duplicateVertices, font, openEdges, overhangs } from './geometry.test.utils'
+import { buildBase, magnetPositions, POCKET_CHAMFER, ribAngles } from './base'
 import { toStl } from './exporters'
 import { LABEL_CHARACTERS, LABEL_MARGIN, LABEL_MAX_LENGTH, labelText, pointInContours } from './label'
 import { loadManifold } from './manifold'
@@ -32,7 +32,7 @@ beforeAll(async () => {
   wasm = await loadManifold()
 })
 
-/** Measures the bore around a magnet centre: solid material contributes no vertices there. */
+/** Measures the bore and its flared mouth around a magnet centre: solid material contributes no vertices there. */
 function pocketAt(mesh: Mesh, cx: number, cy: number, pocketRadius: number) {
   const { numProp, vertProperties: v } = mesh
   let vertices = 0
@@ -41,7 +41,7 @@ function pocketAt(mesh: Mesh, cx: number, cy: number, pocketRadius: number) {
   let maxRadius = 0
   for (let i = 0; i < v.length; i += numProp) {
     const r = Math.hypot(v[i] - cx, v[i + 1] - cy)
-    if (r > pocketRadius + 0.05) continue
+    if (r > pocketRadius + POCKET_CHAMFER + 0.05) continue
     vertices++
     minZ = Math.min(minZ, v[i + 2])
     maxZ = Math.max(maxZ, v[i + 2])
@@ -121,7 +121,7 @@ describe('buildBase', () => {
       // so the magnet can finish flush without bottoming out.
       expect(pocket.minZ, `pocket ${i} floor`).toBeCloseTo(config.height - config.magnets.thickness - config.magnets.depthClearance, 5)
       expect(pocket.maxZ, `pocket ${i} opening`).toBeCloseTo(config.height, 5)
-      expect(pocket.maxRadius, `pocket ${i} bore`).toBeCloseTo(pocketRadius, 2)
+      expect(pocket.maxRadius, `pocket ${i} mouth`).toBeCloseTo(pocketRadius + POCKET_CHAMFER, 2)
     }
   })
 
@@ -182,6 +182,32 @@ describe('buildBase', () => {
     ])
   })
 
+  it('starts a round bottom edge at 45° on the plate, so its first layers do not overhang', () => {
+    const config = { ...preset(standardSize('round', '40')), profile: 'round' as const, profileSize: 2, segments: exportSegmentsFor(40) }
+    expect(overhangs(build(config).mesh)).toEqual([])
+  })
+
+  it('turns a polygon base by its rotation', () => {
+    const hex = preset(standardSize('polygon', '40'))
+    expect(bounds(build({ ...hex, rotation: 30 }).mesh).size[0]).toBeCloseTo(40 * Math.cos(Math.PI / 6), 2)
+  })
+
+  it('engraves the label into the well floor when asked', () => {
+    const config = preset(standardSize('round', '40'))
+    const plain = build({ ...config, label: { ...config.label, enabled: false } }).stats.volume
+    expect(build({ ...config, label: { ...config.label, style: 'engraved' } }).stats.volume).toBeLessThan(plain)
+  })
+
+  it('keeps an engraved label from cutting through the floor', () => {
+    const config = { ...preset(standardSize('round', '40')), floorThickness: 0.8 }
+    expect(() => build({ ...config, label: { ...config.label, style: 'engraved' } })).toThrow(/thicken the top/)
+  })
+
+  it('welds an engraved label cleanly', () => {
+    const config = { ...preset(standardSize('round', '40')), segments: exportSegmentsFor(40) }
+    expect(duplicateVertices(build({ ...config, label: { ...config.label, style: 'engraved' } }).mesh)).toBe(0)
+  })
+
   it('drills the legacy 170 × 109 oval cross on both axes', () => {
     const base = presetFor({ shape: 'oval', width: 170, length: 109, label: '170×109', use: '' }, 8, 1)
     const config = {
@@ -201,7 +227,7 @@ describe('buildBase', () => {
     ]
     for (const [x, y] of centers) {
       const pocket = pocketAt(mesh, x, y, 3.1)
-      expect(pocket.maxRadius).toBeCloseTo(3.1, 1)
+      expect(pocket.maxRadius).toBeCloseTo(3.1 + POCKET_CHAMFER, 1)
       expect(pocket.minZ).toBeCloseTo(config.height - config.magnets.thickness - config.magnets.depthClearance, 5)
       expect(pocket.maxZ).toBeCloseTo(config.height, 5)
     }
@@ -676,7 +702,7 @@ describe('scaling with the footprint', () => {
 })
 
 describe('solid bases', () => {
-  const solid = (config: BaseConfig): BaseConfig => ({ ...config, solid: true })
+  const solid = (config: BaseConfig): BaseConfig => ({ ...config, solid: true, label: { ...config.label, style: 'engraved' } })
   const bare = (config: BaseConfig): BaseConfig => ({
     ...config,
     magnets: { ...config.magnets, count: 0 },
@@ -720,6 +746,23 @@ describe('solid bases', () => {
     const config = solid(preset(standardSize('round', '40')))
     const plain = { ...config, label: { ...config.label, enabled: false } }
     expect(build(config).stats.volume).toBeLessThan(build(plain).stats.volume)
+  })
+
+  it('sets raised letters in a recess, so the tray face stays flat', () => {
+    const config = solid(preset(standardSize('round', '40')))
+    const raised = { ...config, label: { ...config.label, style: 'raised' as const } }
+    expect(bounds(build(raised).mesh).max[2]).toBeCloseTo(config.height, 5)
+  })
+
+  it('cuts more round raised letters than engraved ones take', () => {
+    const config = solid(preset(standardSize('round', '40')))
+    const raised = { ...config, label: { ...config.label, style: 'raised' as const } }
+    expect(build(raised).stats.volume).toBeLessThan(build(config).stats.volume)
+  })
+
+  it('welds raised letters in their recess cleanly', () => {
+    const config = { ...solid(preset(standardSize('round', '40'))), segments: exportSegmentsFor(40) }
+    expect(duplicateVertices(build({ ...config, label: { ...config.label, style: 'raised' } }).mesh)).toBe(0)
   })
 
   it('keeps the label inside the tray face', () => {

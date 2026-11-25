@@ -316,6 +316,29 @@ describe('workspace state', () => {
     expect([loaded.texture.pattern, loaded.solid]).toEqual(['rock', true])
   })
 
+  it.for([
+    { solid: false, pattern: 'none', style: 'raised' },
+    { solid: true, pattern: 'none', style: 'engraved' },
+    { solid: false, pattern: 'rock', style: 'raised' },
+  ] as const)('keeps the letters of a saved $pattern base with solid $solid $style', ({ solid, pattern, style }) => {
+    const saved = defaultWorkspace()
+    const { rotation: _rotation, ...base } = { ...saved.base, solid, texture: { ...saved.base.texture, pattern } }
+    const { style: _style, ...label } = base.label
+    const storage = memoryStorage()
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 28, workspace: { ...saved, base: { ...base, label } } }))
+
+    expect(loadWorkspace(storage).base.label.style).toBe(style)
+  })
+
+  it('leaves a saved polygon base unturned', () => {
+    const saved = defaultWorkspace()
+    const { rotation: _rotation, ...base } = { ...saved.base, shape: 'polygon' as const }
+    const storage = memoryStorage()
+    storage.setItem('mini-bases.workspace', JSON.stringify({ version: 28, workspace: { ...saved, base } }))
+
+    expect(loadWorkspace(storage).base.rotation).toBe(0)
+  })
+
   it('lowers a counter click past what the barb can give', () => {
     const workspace = defaultWorkspace()
     const counter = { ...workspace.counter, clearance: 0.6, click: 1.8, pinned: ['click' as const] }

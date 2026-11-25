@@ -6,7 +6,7 @@
 
 /* [Size & Shape] */
 // Pick a standard size, or Custom to use the shape and dimensions below.
-standard_size = "round-32"; // [custom:Custom, round-25:Round 25mm - Guardsmen & Gretchin & Kabalite Warriors, round-28.5:Round 28.5mm - Guardians & Kasrkin & Freeguild Fusiliers, round-32:Round 32mm - Intercessors & Necron Warriors & Ork Boyz, round-40:Round 40mm - Terminators & Custodian Guard & Captains, round-50:Round 50mm - Centurions & Obliterators & Kroxigor, round-60:Round 60mm - Dreadnoughts & Daemon Princes & Stormfiends, round-80:Round 80mm - Avatar of Khaine & Ghazghkull & Slann, round-90:Round 90mm - Redemptor and Brutalis Dreadnoughts, round-100:Round 100mm - Armiger Knights & Repulsor & Greater Daemons, round-120:Round 120mm - Wazdakka Gutsmek, round-130:Round 130mm - Great Unclean One & Onager & Nagash, round-160:Round 160mm - Monolith & Defilers & Archaon, oval-60x35.5:Oval 60×35.5mm - Rough Riders & Flesh Hounds & Hexwraiths, oval-75x42:Oval 75×42mm - Chaos Bikers & Vertus Praetors & Blood Knights, oval-90x52.5:Oval 90×52.5mm - Outriders & Bloodcrushers & Dracothian Guard, oval-105x70:Oval 105×70mm - Land Speeder & Carnifexes & Treelord, oval-120x92:Oval 120×92mm - Riptide & Wraithknight & Bloodthirster, oval-150x95:Oval 150×95mm - Ork buggies & Knight Destrier, oval-170x105:Oval 170×105mm - Stardrake & Black Coach & Mortek Crawler, oval-170x109:Oval 170×109mm - Imperial and Chaos Knights & Stormsurge, pill-50x25:Pill 50×25mm - Saga and Bolt Action cavalry, pill-60x35.5:Pill 60×35.5mm - In place of the matching GW oval, pill-75x42:Pill 75×42mm - In place of the matching GW oval, pill-90x52.5:Pill 90×52.5mm - In place of the matching GW oval, pill-105x70:Pill 105×70mm - In place of the matching GW oval, rect-20x20:Rectangle 20×20mm - Kings of War Infantry, rect-25x25:Rectangle 25×25mm - Old World infantry & KoW Heavy Infantry, rect-30x30:Rectangle 30×30mm - Old World Orcs & Chaos Warriors & Saurus, rect-25x50:Rectangle 25×50mm - Old World light cavalry & KoW Cavalry, rect-30x60:Rectangle 30×60mm - Old World knights and cavalry, rect-40x40:Rectangle 40×40mm - Ogres & Trolls & KoW Large Infantry, rect-40x60:Rectangle 40×60mm - Old World Pegasus Knights, rect-50x50:Rectangle 50×50mm - Minotaurs & KoW Large Cavalry and Monsters, rect-50x75:Rectangle 50×75mm - Old World Demigryphs and cannons, rect-50x100:Rectangle 50×100mm - Old World and KoW chariots, rect-60x100:Rectangle 60×100mm - Old World Steam Tank & Griffons & Dragons, rect-75x75:Rectangle 75×75mm - Kings of War Titans, rect-100x150:Rectangle 100×150mm - Old World Terrorgheist & Zombie Dragon, polygon-25:Hex 25mm - Fits a Ø25 round, polygon-32:Hex 32mm - Fits a Ø32 round, polygon-40:Hex 40mm - Fits a Ø40 round, polygon-50:Hex 50mm - Fits a Ø50 round, polygon-60:Hex 60mm - Fits a Ø60 round]
+standard_size = "round-32"; // [custom:Custom, round-25:Round 25mm - Guardsmen & Gretchin & Kabalite Warriors, round-25.4:Round 25.4mm - One inch for Small and Medium RPG creatures, round-28.5:Round 28.5mm - Guardians & Kasrkin & Freeguild Fusiliers, round-32:Round 32mm - Intercessors & Necron Warriors & Ork Boyz, round-40:Round 40mm - Terminators & Custodian Guard & Captains, round-50:Round 50mm - Centurions & Obliterators & Kroxigor, round-50.8:Round 50.8mm - Two inches for Large RPG creatures, round-60:Round 60mm - Dreadnoughts & Daemon Princes & Stormfiends, round-76.2:Round 76.2mm - Three inches for Huge RPG creatures, round-80:Round 80mm - Avatar of Khaine & Ghazghkull & Slann, round-90:Round 90mm - Redemptor and Brutalis Dreadnoughts, round-100:Round 100mm - Armiger Knights & Repulsor & Greater Daemons, round-101.6:Round 101.6mm - Four inches for Gargantuan RPG creatures, round-120:Round 120mm - Wazdakka Gutsmek, round-130:Round 130mm - Great Unclean One & Onager & Nagash, round-160:Round 160mm - Monolith & Defilers & Archaon, oval-60x35.5:Oval 60×35.5mm - Rough Riders & Flesh Hounds & Hexwraiths, oval-75x42:Oval 75×42mm - Chaos Bikers & Vertus Praetors & Blood Knights, oval-90x52.5:Oval 90×52.5mm - Outriders & Bloodcrushers & Dracothian Guard, oval-105x70:Oval 105×70mm - Land Speeder & Carnifexes & Treelord, oval-120x92:Oval 120×92mm - Riptide & Wraithknight & Bloodthirster, oval-150x95:Oval 150×95mm - Ork buggies & Knight Destrier, oval-170x105:Oval 170×105mm - Stardrake & Black Coach & Mortek Crawler, oval-170x109:Oval 170×109mm - Imperial and Chaos Knights & Stormsurge, pill-50x25:Pill 50×25mm - Saga and Bolt Action cavalry, pill-60x35.5:Pill 60×35.5mm - In place of the matching GW oval, pill-75x42:Pill 75×42mm - In place of the matching GW oval, pill-90x52.5:Pill 90×52.5mm - In place of the matching GW oval, pill-105x70:Pill 105×70mm - In place of the matching GW oval, rect-20x20:Rectangle 20×20mm - Kings of War Infantry, rect-25x25:Rectangle 25×25mm - Old World infantry & KoW Heavy Infantry, rect-25.4x25.4:Rectangle 25.4×25.4mm - One inch for Small and Medium RPG creatures, rect-30x30:Rectangle 30×30mm - Old World Orcs & Chaos Warriors & Saurus, rect-25x50:Rectangle 25×50mm - Old World light cavalry & KoW Cavalry, rect-30x60:Rectangle 30×60mm - Old World knights and cavalry, rect-40x40:Rectangle 40×40mm - Ogres & Trolls & KoW Large Infantry, rect-40x60:Rectangle 40×60mm - Old World Pegasus Knights, rect-50x50:Rectangle 50×50mm - Minotaurs & KoW Large Cavalry and Monsters, rect-50.8x50.8:Rectangle 50.8×50.8mm - Two inches for Large RPG creatures, rect-50x75:Rectangle 50×75mm - Old World Demigryphs and cannons, rect-50x100:Rectangle 50×100mm - Old World and KoW chariots, rect-60x100:Rectangle 60×100mm - Old World Steam Tank & Griffons & Dragons, rect-75x75:Rectangle 75×75mm - Kings of War Titans, rect-76.2x76.2:Rectangle 76.2×76.2mm - Three inches for Huge RPG creatures, rect-101.6x101.6:Rectangle 101.6×101.6mm - Four inches for Gargantuan RPG creatures, rect-100x150:Rectangle 100×150mm - Old World Terrorgheist & Zombie Dragon, polygon-25:Hex 25mm - Fits a Ø25 round, polygon-32:Hex 32mm - Fits a Ø32 round, polygon-40:Hex 40mm - Fits a Ø40 round, polygon-50:Hex 50mm - Fits a Ø50 round, polygon-60:Hex 60mm - Fits a Ø60 round]
 // Used only with a custom size.
 shape = "round"; // [round:Round, oval:Oval, pill:Pill, rect:Rectangle, polygon:Hex]
 // Custom size: the diameter of a round, the overall width otherwise. Hex sizes run across the corners.
@@ -17,6 +17,8 @@ depth = 32; // [15:0.5:180]
 corner_radius = 0; // [0:0.5:12]
 // Sides of a hex base, so 8 makes an octagon.
 sides = 6; // [3:1:12]
+// Turns a hex base anticlockwise, in degrees.
+rotation = 0; // [0:1:180]
 
 /* [Magnets] */
 magnet_diameter = 5; // [2:0.5:8]
@@ -29,8 +31,10 @@ pocket_layout = "balanced"; // [balanced:Balanced, five-cross:Five-pocket cross]
 /* [Label] */
 // Emboss a label inside the base.
 labels = true;
-// Leave empty to emboss the base size.
+// Leave empty to label the base size.
 label_text = "";
+// Auto raises the letters on a hollow base and engraves them into a solid one.
+label_style = "auto"; // [auto:Auto, raised:Raised, engraved:Engraved]
 // Cap height in mm. 0 picks it from the size.
 label_size = 0; // [0:0.1:12]
 
@@ -65,6 +69,9 @@ LABEL_MAX_LENGTH = 20;
 MAX_MAGNETS = 8;
 MIN_PROFILE_WALL = 0.4;
 MIN_POCKET_ROOF = 0.8;
+MIN_TEXTURE_FLOOR = 0.4;
+POCKET_CHAMFER = 0.4;
+LABEL_PLAQUE = 0.8;
 EXPORT_CURVE_TOLERANCE = 0.001;
 // The rest of the hull is exact; each loft slice is this thin.
 SLICE = 0.001;
@@ -80,14 +87,18 @@ DEFAULT_MAGNET_STRENGTH = 5 ^ 2 * 2;
 // [key, shape, width, length]
 SIZES = [
   ["round-25", "round", 25, 25],
+  ["round-25.4", "round", 25.4, 25.4],
   ["round-28.5", "round", 28.5, 28.5],
   ["round-32", "round", 32, 32],
   ["round-40", "round", 40, 40],
   ["round-50", "round", 50, 50],
+  ["round-50.8", "round", 50.8, 50.8],
   ["round-60", "round", 60, 60],
+  ["round-76.2", "round", 76.2, 76.2],
   ["round-80", "round", 80, 80],
   ["round-90", "round", 90, 90],
   ["round-100", "round", 100, 100],
+  ["round-101.6", "round", 101.6, 101.6],
   ["round-120", "round", 120, 120],
   ["round-130", "round", 130, 130],
   ["round-160", "round", 160, 160],
@@ -106,16 +117,20 @@ SIZES = [
   ["pill-105x70", "pill", 105, 70],
   ["rect-20x20", "rect", 20, 20],
   ["rect-25x25", "rect", 25, 25],
+  ["rect-25.4x25.4", "rect", 25.4, 25.4],
   ["rect-30x30", "rect", 30, 30],
   ["rect-25x50", "rect", 25, 50],
   ["rect-30x60", "rect", 30, 60],
   ["rect-40x40", "rect", 40, 40],
   ["rect-40x60", "rect", 40, 60],
   ["rect-50x50", "rect", 50, 50],
+  ["rect-50.8x50.8", "rect", 50.8, 50.8],
   ["rect-50x75", "rect", 50, 75],
   ["rect-50x100", "rect", 50, 100],
   ["rect-60x100", "rect", 60, 100],
   ["rect-75x75", "rect", 75, 75],
+  ["rect-76.2x76.2", "rect", 76.2, 76.2],
+  ["rect-101.6x101.6", "rect", 101.6, 101.6],
   ["rect-100x150", "rect", 100, 150],
   ["polygon-25", "polygon", 25, 25],
   ["polygon-32", "polygon", 32, 32],
@@ -346,8 +361,9 @@ function profile_steps(height, profile, size, tolerance) =
   profile == "straight" || s <= 0 ? [[0, 0], [0, height]]
   : profile == "taper" ? [[s, 0], [0, height]]
   : profile == "bevel" ? [[s, 0], [0, s], [0, height]]
-  : let(steps = max(3, ceil(segments_for_tolerance(2 * s, tolerance) / 4)))
-    concat([for (i = [0:steps]) let(a = 90 * i / steps) [s - s * sin(a), s - s * cos(a)]], [[0, height]]);
+  // A quarter-round would start nearly flat on the plate, so its lower half is a 45° chamfer tangent to the rest.
+  : let(steps = max(3, ceil(segments_for_tolerance(2 * s, tolerance) / 4)), half = max(2, ceil(steps / 2)))
+    concat([[2 * s * (1 - cos(45)), 0]], [for (i = [0:half]) let(a = 45 * (1 + i / half)) [s - s * sin(a), s - s * cos(a)]], [[0, height]]);
 
 function inset_at(steps, z, i = 1) =
   z <= steps[0][1] ? steps[0][0]
@@ -379,7 +395,7 @@ POLYGON_SIDES = max(3, round(sides));
 OUTLINE =
   SHAPE == "round" ? circle_points(WIDTH / 2, SEGMENTS)
   : SHAPE == "oval" ? [for (p = circle_points(1, SEGMENTS)) [p[0] * WIDTH / 2, p[1] * LENGTH / 2]]
-  : SHAPE == "polygon" ? circle_points(WIDTH / 2, POLYGON_SIDES)
+  : SHAPE == "polygon" ? [for (p = circle_points(WIDTH / 2, POLYGON_SIDES)) [p[0] * cos(rotation) - p[1] * sin(rotation), p[0] * sin(rotation) + p[1] * cos(rotation)]]
   : SHAPE == "pill" ? (PILL_STRAIGHT <= 0 ? circle_points(SHORT / 2, SEGMENTS) : pill_points(SHORT / 2, PILL_STRAIGHT, SEGMENTS))
   : rect_points(WIDTH, LENGTH, max(0, min(CORNER_RADIUS, SHORT / 2 - 0.01)), SEGMENTS);
 
@@ -387,12 +403,12 @@ OUTLINE =
 EDGES = [for (i = [0:len(OUTLINE) - 1]) let(a = OUTLINE[i], e = OUTLINE[(i + 1) % len(OUTLINE)] - a, n = [-e[1], e[0]] / norm(e)) [n, n * a]];
 
 // Half extents of the well, the outline offset inwards by the wall.
-function regular_half_extents(r, n, inset) =
-  let(reach = r - inset / cos(180 / n), angles = [for (i = [0:n - 1]) 360 * i / n])
+function regular_half_extents(r, n, inset, turn = 0) =
+  let(reach = r - inset / cos(180 / n), angles = [for (i = [0:n - 1]) 360 * i / n + turn])
   [reach * max([for (a = angles) cos(a)]), reach * max([for (a = angles) sin(a)])];
 WELL_HALF =
   SHAPE == "round" || (SHAPE == "pill" && PILL_STRAIGHT <= 0) ? regular_half_extents(SHORT / 2, SEGMENTS, wall_thickness)
-  : SHAPE == "polygon" ? regular_half_extents(WIDTH / 2, POLYGON_SIDES, wall_thickness)
+  : SHAPE == "polygon" ? regular_half_extents(WIDTH / 2, POLYGON_SIDES, wall_thickness, rotation)
   : [WIDTH / 2 - wall_thickness, LENGTH / 2 - wall_thickness];
 // Checked here, before anything is built from the well.
 WELL_REACH =
@@ -554,6 +570,9 @@ function trim(text, from = 0, to = -1) =
   : from > end ? "" : chr([for (i = [from:end]) ord(text[i])]);
 function glyph(ch) = [for (g = GLYPHS) if (g[0] == ch) g][0];
 
+ENGRAVED = label_style == "engraved" || (label_style == "auto" && solid);
+// Raised letters on a solid base stand in a recess this far round them, so the face stays flat.
+PLAQUE = solid && !ENGRAVED ? LABEL_PLAQUE : 0;
 CUSTOM_LABEL = trim(label_text);
 LABEL = CUSTOM_LABEL != "" ? CUSTOM_LABEL : ELONGATED ? str(trim_number(WIDTH), "x", trim_number(LENGTH)) : trim_number(WIDTH);
 LABEL_GLYPHS =
@@ -572,17 +591,19 @@ LABEL_INK = len(LABEL_INKED) == 0 ? undef : [
 ];
 // Millimetres per font unit, so the label's ink is exactly the label height tall.
 LABEL_UNIT = is_undef(LABEL_INK) ? 0 : LABEL_HEIGHT / (LABEL_INK[3] - LABEL_INK[2]);
+LABEL_WIDTH = is_undef(LABEL_INK) ? 0 : (LABEL_INK[1] - LABEL_INK[0]) * LABEL_UNIT;
 // A size label that cannot be placed is left out, but text someone typed must fit or the build fails.
 LABEL_FIT =
   let(fit = is_undef(LABEL_INK) ? undef : fit_label(
-    (LABEL_INK[1] - LABEL_INK[0]) * LABEL_UNIT,
-    LABEL_HEIGHT,
+    LABEL_WIDTH + 2 * PLAQUE,
+    LABEL_HEIGHT + 2 * PLAQUE,
     WELL_REACH,
     wall_thickness + LABEL_MARGIN,
     concat([for (m = MAGNETS) [m[0], m[1], BOSS_RADIUS]], rib_obstacles(RIBS, WELL_REACH, support_thickness)),
     label_angles(concat(RIBS, BOSS_BEARINGS))
   ))
   assert(CUSTOM_LABEL == "" || !labels || !is_undef(fit), "Label text does not fit this base — shorten it or reduce the label size")
+  assert(solid || !ENGRAVED || is_undef(fit) || FLOOR - label_emboss >= MIN_TEXTURE_FLOOR - 1e-6, "Engraved label cuts too far into the top — make it thinner or thicken the top")
   fit;
 
 module outline(inset = 0) {
@@ -603,11 +624,32 @@ module label() {
         text(LABEL[i], size = 0.72 * UNITS_PER_EM, font = LABEL_FONT, halign = "left", valign = "baseline", $fn = 8);
 }
 
+// The label as cut or raised: its letters, or on a solid base with raised letters the recess round them.
+module label_mark() {
+  if (PLAQUE > 0) difference() {
+    translate([LABEL_FIT[1], LABEL_FIT[2]])
+      offset(r = PLAQUE * LABEL_FIT[0], $fn = SEGMENTS) square([LABEL_WIDTH * LABEL_FIT[0], LABEL_HEIGHT * LABEL_FIT[0]], center = true);
+    label();
+  }
+  else label();
+}
+
+// Each mouth flares at 45° so a magnet finds its pocket when pressed in, opening at z = 0.
+module pocket(chamfer) {
+  rotate_extrude($fn = SEGMENTS)
+    polygon([[0, -POCKET_DEPTH], [POCKET_RADIUS, -POCKET_DEPTH], [POCKET_RADIUS, -chamfer], [POCKET_RADIUS + chamfer + 1, 1], [0, 1]]);
+}
+
+module pockets() {
+  chamfer = min(POCKET_CHAMFER, POCKET_DEPTH / 2, solid ? POCKET_CHAMFER : wall_around_pocket / 2);
+  for (m = MAGNETS) translate([m[0], m[1], HEIGHT]) pocket(chamfer);
+}
+
 module base() {
   if (solid) difference() {
     body();
-    if (!is_undef(LABEL_FIT)) translate([0, 0, HEIGHT - label_emboss]) linear_extrude(label_emboss + 1) label();
-    for (m = MAGNETS) translate([m[0], m[1], HEIGHT - POCKET_DEPTH]) cylinder(r = POCKET_RADIUS, h = POCKET_DEPTH + 1.001, $fn = SEGMENTS);
+    if (!is_undef(LABEL_FIT)) translate([0, 0, HEIGHT - label_emboss]) linear_extrude(label_emboss + 1) label_mark();
+    pockets();
   }
   else difference() {
     union() {
@@ -625,9 +667,11 @@ module base() {
           offset(delta = min(0.4, wall_thickness / 2)) outline(wall_thickness);
         }
       }
-      if (!is_undef(LABEL_FIT)) translate([0, 0, FLOOR]) linear_extrude(min(label_emboss, WELL_DEPTH)) label();
+      if (!is_undef(LABEL_FIT) && !ENGRAVED) translate([0, 0, FLOOR]) linear_extrude(min(label_emboss, WELL_DEPTH)) label();
     }
-    for (m = MAGNETS) translate([m[0], m[1], HEIGHT - POCKET_DEPTH]) cylinder(r = POCKET_RADIUS, h = POCKET_DEPTH + 1.001, $fn = SEGMENTS);
+    // Clear of every rib and boss, so the cut can run on up through the well.
+    if (!is_undef(LABEL_FIT) && ENGRAVED) translate([0, 0, FLOOR - label_emboss]) linear_extrude(label_emboss + 1) label();
+    pockets();
   }
 }
 

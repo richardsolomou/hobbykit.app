@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { duplicateVertices, font, overhangs } from './geometry.test.utils'
 import { buildBase } from './base'
 import { loadManifold } from './manifold'
-import { OVAL_SIZES, POLYGON_SIZES, presetFor, RECT_SIZES, ROUND_SIZES, type SizePreset } from './presets'
+import { presetFor, standardSize, type SizePreset } from './presets'
 import { exportSegmentsFor } from './quality'
 import { DEFAULT_TEXTURE } from './texture'
 import type { BaseConfig } from './types'
@@ -14,9 +14,9 @@ beforeAll(async () => {
   wasm = await loadManifold()
 })
 
-const ROUND_32 = ROUND_SIZES[2]
+const ROUND_32 = standardSize('round', '32')
 const PATTERNS = ['rock', 'earth', 'rubble', 'sand', 'cracked', 'snow', 'roots'] as const
-const SIZES = [ROUND_32, OVAL_SIZES[0], RECT_SIZES[3], POLYGON_SIZES[1]]
+const SIZES = [ROUND_32, standardSize('oval', '60×35.5'), standardSize('rect', '25×50'), standardSize('polygon', '32')]
 const CASES = PATTERNS.flatMap((pattern) => SIZES.map((size) => ({ pattern, size, label: `${pattern} ${size.label}` })))
 
 function relief(size: SizePreset, pattern: (typeof PATTERNS)[number] = 'rock', exported = false): BaseConfig {
@@ -24,6 +24,7 @@ function relief(size: SizePreset, pattern: (typeof PATTERNS)[number] = 'rock', e
   return {
     ...config,
     solid: true,
+    label: { ...config.label, style: 'engraved' },
     texture: { pattern, seed: 1, ...DEFAULT_TEXTURE[pattern] },
     segments: exported ? exportSegmentsFor(Math.max(config.width, config.length)) : config.segments,
   }
@@ -120,9 +121,16 @@ describe('relief textures', () => {
   })
 
   it('engraves the size label into the plate face on a cramped base', () => {
-    const config = relief(RECT_SIZES[0])
+    const config = relief(standardSize('rect', '20×20'))
     const plain = build({ ...config, label: { ...config.label, enabled: false } })
     expect(build(config).stats.volume).toBeLessThan(plain.stats.volume)
+  })
+
+  it('roofs raised letters on the plate face only over their recess', () => {
+    const config = relief(ROUND_32, 'rock', true)
+    const raised = { ...config, label: { ...config.label, style: 'raised' as const } }
+    const ceilings = [config.label.emboss, pocketDepth(config)].map((z) => `flat at ${z.toFixed(2)}`)
+    expect(overhangs(build(raised).mesh)).toEqual(ceilings.sort())
   })
 
   it('rises higher than a thin top would allow a joint to cut', () => {
@@ -177,8 +185,14 @@ describe('hollow relief bases', () => {
     expect(duplicateVertices(build(hollow(size, 'rock', true)).mesh)).toBe(0)
   })
 
+  it('engraves the well ceiling even when raised letters were asked for, since they would hang from it', () => {
+    const config = hollow(standardSize('round', '50'))
+    const raised = { ...config, label: { ...config.label, style: 'raised' as const } }
+    expect(build(raised).stats.volume).toBe(build(config).stats.volume)
+  })
+
   it('engraves the size label into the well ceiling', () => {
-    const config = hollow(ROUND_SIZES[4])
+    const config = hollow(standardSize('round', '50'))
     const plain = build({ ...config, label: { ...config.label, enabled: false } })
     expect(build(config).stats.volume).toBeLessThan(plain.stats.volume)
   })

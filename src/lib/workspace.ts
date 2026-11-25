@@ -31,7 +31,7 @@ import type {
 } from '../core/geometry/types'
 
 const WORKSPACE_KEY = 'mini-bases.workspace'
-const WORKSPACE_VERSION = 28
+const WORKSPACE_VERSION = 29
 
 const SHAPES = new Set<string>(['round', 'oval', 'pill', 'rect', 'polygon'])
 
@@ -220,6 +220,7 @@ const MIGRATIONS = [
   migrateWorkspaceV25,
   migrateWorkspaceV26,
   migrateWorkspaceV27,
+  migrateWorkspaceV28,
 ]
 
 function migrateWorkspace(version: unknown, value: unknown): unknown {
@@ -298,6 +299,18 @@ export function applyWorkspaceSetup(
   const kept = Object.entries(workspace.shared.magnetCounts).filter(([footprint]) => !replaced.includes(footprint))
   const magnetCounts = { ...Object.fromEntries(kept), ...candidate.shared.magnetCounts }
   return { workspace: synchronizeWorkspace({ ...candidate, shared: { ...candidate.shared, magnetCounts } }), part: key }
+}
+
+/**
+ * Polygon bases could turn, and labels could be raised or engraved anywhere; every saved base keeps its letters as
+ * they were, raised on a hollow base and engraved into a solid one. A hollow relief base engraves whatever its style.
+ */
+function migrateWorkspaceV28(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const workspace = value as Record<string, unknown>
+  const base = workspace.base as Partial<BaseConfig> | undefined
+  if (typeof base !== 'object' || base === null || typeof base.label !== 'object' || base.label === null) return value
+  return { ...workspace, base: { ...base, rotation: 0, label: { ...base.label, style: base.solid ? 'engraved' : 'raised' } } }
 }
 
 /** Bases could be left solid or hollow; every saved one stays as it was, which was solid only under relief. */
@@ -562,6 +575,7 @@ function isWorkspaceState(value: unknown, template: WorkspaceState): value is Wo
   return (
     SHAPES.has(workspace.base.shape) &&
     TEXTURE_PATTERNS.includes(workspace.base.texture.pattern) &&
+    ['raised', 'engraved'].includes(workspace.base.label.style) &&
     ['balanced', 'five-cross'].includes(workspace.shared.magnets.layout) &&
     [1, 2].includes(workspace.shared.magnets.patternVersion) &&
     workspace.stem.kind === 'stem' &&

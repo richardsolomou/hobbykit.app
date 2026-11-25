@@ -12,20 +12,20 @@ Hollow miniature bases with flush magnet pockets, in all the usual round, oval, 
 
 The underside of each base is hollow, with a pocket for every magnet. The magnets sit flush with the bottom, so the base holds itself down on a steel or magnetised tray. Small ribs run out to each pocket to keep the floor stiff, and the size is embossed inside, so you can still tell a 28.5 from a 32 once they're painted.
 
-Open Customize and pick a size from the list. There are 43 standard ones, covering the common rounds and ovals, The Old World and Kings of War rectangles, and hexes that fit in place of a round. Choose Custom if you need your own shape or size. The magnet count is picked for you from the base size and the magnet you use, but you can set it yourself.
+Open Customize and pick a size from the list. There are 51 standard ones, covering the common rounds and ovals, The Old World and Kings of War rectangles, one to four inch rounds and squares for roleplaying grids, and hexes that fit in place of a round. Choose Custom if you need your own shape or size. The magnet count is picked for you from the base size and the magnet you use, but you can set it yourself.
 
 You'll need neodymium disc magnets (5×2mm by default, and the preview shows how many) and a bit of superglue to hold them flush.
 
 What you can change:
 
-- Size: a standard size, or a custom round, oval, pill, rectangle or hex (3 to 12 sides), with corner rounding for rectangles
+- Size: a standard size, or a custom round, oval, pill, rectangle or hex (3 to 12 sides, turned any way), with corner rounding for rectangles
 - Magnets: diameter, thickness, count and pocket layout
-- Label: on or off, your own text, and its size
+- Label: on or off, your own text, its size, and raised or engraved letters
 - Body: height, wall, top thickness, and a taper, bevel, round or straight bottom edge
 - Internal supports (the ribs): count, thickness and height
 - Fit: magnet clearances, the wall around each pocket, and the label depth
 
-This is part of HobbyKit, a free generator I made. hobbykit.app also does textured tops (paving, plating, rock, rubble, snow) and exports a batch of sizes in one go.
+This is part of HobbyKit, a free generator I made. hobbykit.app also does textured tops (paving, planks, bricks, plating, rock, rubble, snow) and exports a batch of sizes in one go.
 
 ## Print settings
 

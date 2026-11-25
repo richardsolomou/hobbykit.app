@@ -62,10 +62,29 @@ export const cases: Case[] = [
     { ...round32, magnets: { ...round32.magnets, count: 0 }, ribs: { ...round32.ribs, count: 3 } },
     { standard_size: 'round-32', magnets_per_base: '0' },
   ),
-  custom('round-solid', { ...round32, solid: true }, { standard_size: 'round-32', solid: true }),
+  custom(
+    'round-solid',
+    { ...round32, solid: true, label: { ...round32.label, style: 'engraved' } },
+    { standard_size: 'round-32', solid: true },
+  ),
+  custom(
+    'round-engraved-label',
+    { ...round32, label: { ...round32.label, style: 'engraved' } },
+    { standard_size: 'round-32', label_style: 'engraved' },
+  ),
+  custom(
+    'round-solid-raised-label',
+    { ...round32, solid: true, label: { ...round32.label, style: 'raised' } },
+    { standard_size: 'round-32', solid: true, label_style: 'raised' },
+  ),
   custom(
     'round-60-solid-five-cross',
-    { ...round60, solid: true, magnets: { ...round60.magnets, layout: 'five-cross', count: 5 } },
+    {
+      ...round60,
+      solid: true,
+      label: { ...round60.label, style: 'engraved' },
+      magnets: { ...round60.magnets, layout: 'five-cross', count: 5 },
+    },
     {
       standard_size: 'round-60',
       solid: true,
@@ -74,7 +93,7 @@ export const cases: Case[] = [
   ),
   custom(
     'rect-solid-custom-label',
-    { ...rect, solid: true, label: { ...rect.label, text: 'Knight 12' } },
+    { ...rect, solid: true, label: { ...rect.label, style: 'engraved', text: 'Knight 12' } },
     { standard_size: 'rect-25x50', solid: true, label_text: 'Knight 12' },
   ),
   custom('rect-sharp', { ...rect, cornerRadius: 0.5 }, { standard_size: 'rect-25x50', corner_radius: 0.5 }),
@@ -82,6 +101,11 @@ export const cases: Case[] = [
     'octagon-custom',
     { ...resized(presetFor(standardSize('polygon', '40')), 44, 44), sides: 8 },
     { standard_size: 'custom', shape: 'polygon', width: 44, sides: 8 },
+  ),
+  custom(
+    'hex-rotated',
+    { ...presetFor(standardSize('polygon', '40')), rotation: 30 },
+    { standard_size: 'custom', shape: 'polygon', width: 40, rotation: 30 },
   ),
   custom('oval-custom', resized(presetFor(standardSize('oval', '75×42')), 70, 45), {
     standard_size: 'custom',
