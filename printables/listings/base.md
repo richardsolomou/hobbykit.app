@@ -20,18 +20,18 @@ The STLs cover the sizes most armies need, all with pockets for 5×2mm magnets:
 
 You'll need neodymium disc magnets (5×2mm, one to three per base as above) and a bit of superglue to hold them flush.
 
-For any other size, open `base.scad` in OpenSCAD and use the Customizer panel (Window › Customizer). It needs a recent development snapshot of OpenSCAD (2024 or later), because the 2021.01 release is too old, and the label uses Oswald Bold, so install that from Google Fonts first or the label falls back to another font. There are 43 standard sizes in the list, covering the common rounds and ovals, The Old World and Kings of War rectangles, and hexes that fit in place of a round. Choose Custom if you need your own shape or size. The magnet count is picked for you from the base size and the magnet you use, but you can set it yourself.
+For any other size, open `base.scad` in OpenSCAD and use the Customizer panel (Window › Customizer). It needs a recent development snapshot of OpenSCAD (2024 or later), because the 2021.01 release is too old, and the label uses Oswald Bold, so install that from Google Fonts first or the label falls back to another font. There are 51 standard sizes in the list, covering the common rounds and ovals, The Old World and Kings of War rectangles, one to four inch rounds and squares for roleplaying grids, and hexes that fit in place of a round. Choose Custom if you need your own shape or size. The magnet count is picked for you from the base size and the magnet you use, but you can set it yourself.
 
 What you can change in the .scad:
 
-- Size: a standard size, or a custom round, oval, pill, rectangle or hex (3 to 12 sides), with corner rounding for rectangles
+- Size: a standard size, or a custom round, oval, pill, rectangle or hex (3 to 12 sides, turned any way), with corner rounding for rectangles
 - Magnets: diameter, thickness, count and pocket layout
-- Label: on or off, your own text, and its size
+- Label: on or off, your own text, its size, and raised or engraved letters
 - Body: height, wall, top thickness, and a taper, bevel, round or straight bottom edge
 - Internal supports (the ribs): count, thickness and height
 - Fit: magnet clearances, the wall around each pocket, and the label depth
 
-This is part of HobbyKit, a free generator I made. hobbykit.app does all of this in a browser, plus textured tops (paving, plating, rock, rubble, snow) and a batch of sizes in one go.
+This is part of HobbyKit, a free generator I made. hobbykit.app does all of this in a browser, plus textured tops (paving, planks, bricks, plating, rock, rubble, snow) and a batch of sizes in one go.
 
 ## Print settings
 

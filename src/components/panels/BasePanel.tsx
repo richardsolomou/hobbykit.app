@@ -1,6 +1,7 @@
 import { Box, Download, Plus, Shuffle, Trash2 } from 'lucide-react'
 import {
   BASE_SHAPE_PICTURES,
+  LABEL_STYLE_PICTURES,
   MAGNET_LAYOUT_PICTURES,
   magnetCountPicture,
   PROFILE_PICTURES,
@@ -15,11 +16,13 @@ import { Input } from '@/components/ui/input'
 import { useTextSettingChanged } from '@/lib/analytics'
 import { supportsFivePocketCross } from '@/core/geometry/base'
 import { labelText } from '@/core/geometry/label'
-import { DEFAULT_TEXTURE, isRegular, isRelief, MAX_SEED, solidWithPattern, withPattern } from '@/core/geometry/texture'
+import { DEFAULT_TEXTURE, isRegular, isRelief, maxLabelDepth, MAX_SEED, solidWithPattern, withPattern } from '@/core/geometry/texture'
 import { defaultLabel, footprint, isElongated, sizeText, trimNumber } from '@/core/geometry/outline'
 import {
   automaticMagnetCount,
   DEFAULT_SIZE,
+  defaultLabelStyle,
+  labelStyleWithSolid,
   MAGNET_CHOICES,
   pinned,
   resized,
@@ -27,7 +30,7 @@ import {
   sizeDefaults,
   SIZES_BY_SHAPE,
 } from '@/core/geometry/presets'
-import type { BaseConfig, BasePinned, ShapeKind, TexturePattern } from '@/core/geometry/types'
+import type { BaseConfig, BasePinned, LabelStyle, ShapeKind, TexturePattern } from '@/core/geometry/types'
 import { addToBatch } from '@/lib/batch'
 import { posthog } from 'posthog-js'
 import type { ExportFormat } from '@/lib/useExport'
@@ -65,6 +68,7 @@ const TEXTURES: { value: TexturePattern; label: string; size: string }[] = [
   { value: 'tile', label: 'Square tile', size: 'Tile size' },
   { value: 'plank', label: 'Plank', size: 'Plank width' },
   { value: 'plate', label: 'Plate', size: 'Plate depth' },
+  { value: 'brick', label: 'Brick', size: 'Course height' },
   { value: 'herringbone', label: 'Herringbone', size: 'Brick width' },
   { value: 'diamond', label: 'Diamond plate', size: 'Diamond width' },
   { value: 'rock', label: 'Rock', size: 'Rock size' },
@@ -78,6 +82,11 @@ const TEXTURES: { value: TexturePattern; label: string; size: string }[] = [
 const TEXTURE_OPTIONS = TEXTURES.map((texture) => ({ ...texture, picture: texturePicture(texture.value) }))
 const PROFILE_OPTIONS = PROFILES.map((profile) => ({ ...profile, picture: PROFILE_PICTURES[profile.value] }))
 const MIN_TEXTURE_DEPTH = 0.2
+const LABEL_STYLES: { value: LabelStyle; label: string }[] = [
+  { value: 'raised', label: 'Raised' },
+  { value: 'engraved', label: 'Engraved' },
+]
+const LABEL_STYLE_OPTIONS = LABEL_STYLES.map((style) => ({ ...style, picture: LABEL_STYLE_PICTURES[style.value] }))
 
 const counts = (values: number[]) => values.map((value) => ({ value, label: value === 0 ? 'None' : String(value) }))
 const RIB_COUNTS = counts(RIB_CHOICES).map((option) => ({ ...option, picture: ribPicture(option.value) }))
@@ -158,6 +167,12 @@ export function BasePanel({
   /** Every way of changing the footprint takes this one path, so a standard size and the same size typed come out alike. */
   const setFootprint = (shape: ShapeKind, nextWidth: number, nextLength: number) =>
     setConfig(resized({ ...config, shape, label: { ...config.label } }, nextWidth, nextLength))
+
+  /** Changing solid carries the label style the way a pattern switch carries texture values. */
+  const solidChanges = (solid: boolean): Partial<BaseConfig> => ({
+    solid,
+    label: { ...config.label, style: labelStyleWithSolid(config.label.style, config.solid, solid) },
+  })
 
   const labelTextReport = useTextSettingChanged('Label', 'Text')
   /** Keeps the size where the new shape is measured the same way, and otherwise starts from the shape's usual footprint. */
@@ -266,8 +281,19 @@ export function BasePanel({
                 {...labelTextReport}
                 className="readout"
               />
-              <FieldDescription>Leave empty to emboss the exact size.</FieldDescription>
+              <FieldDescription>Leave empty to label the exact size.</FieldDescription>
             </Field>
+            {!(faceUp && hollow) && (
+              <PictureChoice
+                label="Letters"
+                advanced
+                value={config.label.style}
+                defaultValue={defaultLabelStyle(config.solid)}
+                options={LABEL_STYLE_OPTIONS}
+                columns={4}
+                onChange={(style) => patch({ label: { ...config.label, style } })}
+              />
+            )}
             <Dimension
               label="Label size"
               advanced
@@ -284,7 +310,7 @@ export function BasePanel({
               advanced
               value={config.label.emboss}
               min={0.2}
-              max={1.5}
+              max={Math.max(0.2, Math.floor((maxLabelDepth(config) + 1e-6) * 10) / 10)}
               step={0.1}
               defaultValue={BASE_DEFAULTS.label.emboss}
               onChange={(emboss) => patch({ label: { ...config.label, emboss } })}
@@ -303,7 +329,7 @@ export function BasePanel({
           onChange={(pattern) => {
             patch({
               texture: withPattern(config.texture, pattern),
-              solid: solidWithPattern(config.solid, config.texture.pattern, pattern),
+              ...solidChanges(solidWithPattern(config.solid, config.texture.pattern, pattern)),
             })
           }}
         />
@@ -383,7 +409,7 @@ export function BasePanel({
           automatic={follows('height')}
           onChange={(height) => setSized('height', height, { height })}
         />
-        <ToggleSetting label="Solid" checked={config.solid} defaultChecked={faceUp} onChange={(solid) => patch({ solid })} />
+        <ToggleSetting label="Solid" checked={config.solid} defaultChecked={faceUp} onChange={(solid) => patch(solidChanges(solid))} />
         {hollow && (
           <Dimension
             label="Top thickness"
@@ -451,6 +477,19 @@ export function BasePanel({
             unit=""
             defaultValue={BASE_DEFAULTS.sides}
             onChange={(sides) => patch({ sides })}
+          />
+        )}
+        {config.shape === 'polygon' && (
+          <Dimension
+            label="Rotation"
+            advanced
+            value={config.rotation}
+            min={0}
+            max={180}
+            step={1}
+            unit="°"
+            defaultValue={BASE_DEFAULTS.rotation}
+            onChange={(rotation) => patch({ rotation })}
           />
         )}
       </Section>

@@ -1,5 +1,8 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Vec2 } from 'manifold-3d'
 import type { Owner } from './build'
+import { pointInContours } from './label'
+import { profileInsetAt } from './profile'
+import { curveTolerance, partSegments } from './quality'
 import type { BaseConfig, TexturePattern, TextureSpec } from './types'
 
 /** Material kept between a joint's apex and the well, pockets or label above it. */
@@ -15,16 +18,19 @@ const APEX = 0.01
 const SEED_STRIDE = 97
 export const MAX_SEED = 9999
 
+/** Thickest label the panel offers. */
+export const MAX_LABEL_DEPTH = 1.5
+
 /** Highest relief offered; the base's own height already gives the pockets their roof. */
 const MAX_RELIEF = 4
 
 export type JointPattern = Extract<
   TexturePattern,
-  'flagstone' | 'cobblestone' | 'hex' | 'tile' | 'plank' | 'plate' | 'herringbone' | 'diamond'
+  'flagstone' | 'cobblestone' | 'hex' | 'tile' | 'plank' | 'plate' | 'brick' | 'herringbone' | 'diamond'
 >
 export type ReliefPattern = Extract<TexturePattern, 'rock' | 'earth' | 'rubble' | 'sand' | 'cracked' | 'snow' | 'roots'>
 
-const JOINTS: readonly JointPattern[] = ['flagstone', 'cobblestone', 'hex', 'tile', 'plank', 'plate', 'herringbone', 'diamond']
+const JOINTS: readonly JointPattern[] = ['flagstone', 'cobblestone', 'hex', 'tile', 'plank', 'plate', 'brick', 'herringbone', 'diamond']
 const RELIEFS: readonly ReliefPattern[] = ['rock', 'earth', 'rubble', 'sand', 'cracked', 'snow', 'roots']
 
 /** Every pattern a saved base may name. */
@@ -45,6 +51,7 @@ export const DEFAULT_TEXTURE: Record<TexturePattern, Omit<TextureSpec, 'pattern'
   tile: { scale: 8, depth: 0.5, irregularity: 0 },
   plank: { scale: 5, depth: 0.5, irregularity: 50 },
   plate: { scale: 8, depth: 0.5, irregularity: 0 },
+  brick: { scale: 3, depth: 0.5, irregularity: 30 },
   herringbone: { scale: 4, depth: 0.5, irregularity: 0 },
   diamond: { scale: 4, depth: 0.5, irregularity: 0 },
   rock: { scale: 8, depth: 2.5, irregularity: 50 },
@@ -78,10 +85,19 @@ export function solidWithPattern(solid: boolean, from: TexturePattern, to: Textu
  */
 export function maxTextureDepth(config: Pick<BaseConfig, 'floorThickness' | 'height' | 'magnets' | 'label' | 'solid' | 'texture'>) {
   if (isRelief(config.texture.pattern)) return MAX_RELIEF
-  if (!config.solid) return Math.max(0, config.floorThickness - MIN_TEXTURE_FLOOR)
+  if (!config.solid) return Math.max(0, config.floorThickness - MIN_TEXTURE_FLOOR - (engravesFloor(config) ? config.label.emboss : 0))
   const pockets = config.magnets.count > 0 ? config.magnets.thickness + config.magnets.depthClearance : 0
   const label = config.label.enabled ? config.label.emboss : 0
   return Math.max(0, config.height - Math.max(pockets, label) - MIN_TEXTURE_FLOOR)
+}
+
+/** A label engraved down into a hollow base's well floor, toward the joints cut up into the face below it. */
+const engravesFloor = (config: Pick<BaseConfig, 'label' | 'solid' | 'texture'>) =>
+  !config.solid && !isRelief(config.texture.pattern) && config.label.enabled && config.label.style === 'engraved'
+
+/** Deepest a label may be: engraved into a hollow base's floor it must leave the floor's minimum under it. */
+export function maxLabelDepth(config: Pick<BaseConfig, 'floorThickness' | 'label' | 'solid' | 'texture'>) {
+  return engravesFloor(config) ? Math.max(0, config.floorThickness - MIN_TEXTURE_FLOOR) : MAX_LABEL_DEPTH
 }
 
 /** A fixed hash, so the same footprint always gets the same pattern. */
@@ -309,14 +325,45 @@ export function textureCells(
               (row) => alignedJoint(halfLong, 2 * scale, (Math.abs(row) % 2) / 2 + offset(row)),
               () => 2 * scale,
             )
-          : courses(
-              scale,
-              halfLong,
-              halfShort,
-              (row) => -halfLong - 6 * scale * hash(row, 0, 2),
-              (row, piece) => scale * (3 + 6 * irregularity * hash(row, piece, 3)),
-            )
+          : pattern === 'brick'
+            ? courses(
+                scale,
+                halfLong,
+                halfShort,
+                (row) => alignedJoint(halfLong, 2 * scale, (Math.abs(row) % 2) / 2),
+                (row, piece) => 2 * scale * (1 + 0.4 * irregularity * (hash(row, piece, 5) - 0.5)),
+              )
+            : courses(
+                scale,
+                halfLong,
+                halfShort,
+                (row) => -halfLong - 6 * scale * hash(row, 0, 2),
+                (row, piece) => scale * (3 + 6 * irregularity * hash(row, piece, 3)),
+              )
   return along ? cells : cells.map((cell) => cell.map(([u, v]): Vec2 => [-v, u]))
+}
+
+/** A nail head's radius on the face; its pit narrows at 45° to a point. */
+const NAIL_RADIUS = 0.4
+/** How far each nail sits in from its plank's end joint, past the joint's own slope. */
+const NAIL_INSET = 0.8
+
+/**
+ * A nail near each corner of every plank wide and long enough to keep them clear of its joints, which slope `depth`
+ * into the plank on every side.
+ */
+export function nailHoles(cells: readonly Vec2[][], depth: number): Vec2[] {
+  const clear = depth + NAIL_RADIUS + 0.1
+  return cells.flatMap((cell) => {
+    if (cell.length !== 4) return []
+    const [p0, p1, , p3] = cell
+    const along: Vec2 = [p1[0] - p0[0], p1[1] - p0[1]]
+    const across: Vec2 = [p3[0] - p0[0], p3[1] - p0[1]]
+    const [length, width] = [Math.hypot(...along), Math.hypot(...across)]
+    if (width / 4 < clear || length / 2 < depth + NAIL_INSET + NAIL_RADIUS + width / 4) return []
+    const ends = [depth + NAIL_INSET, length - depth - NAIL_INSET].map((t) => t / length)
+    return ends.flatMap((t) => [0.25, 0.75].map((s): Vec2 => [p0[0] + along[0] * t + across[0] * s, p0[1] + along[1] * t + across[1] * s]))
+  })
 }
 
 /**
@@ -345,7 +392,8 @@ export function textureCut(wasm: ManifoldToplevel, config: BaseConfig, outline: 
   // Each stone is cut from a box by one plane per edge, so an edge that vanishes
   // partway down still leaves its neighbours at exactly 45°.
   const stones: Manifold[] = []
-  for (const cell of textureCells({ ...config.texture, pattern }, Math.max(-min[0], max[0]), Math.max(-min[1], max[1]))) {
+  const cells = textureCells({ ...config.texture, pattern }, Math.max(-min[0], max[0]), Math.max(-min[1], max[1]))
+  for (const cell of cells) {
     const xs = cell.map(([x]) => x)
     const ys = cell.map(([, y]) => y)
     const [x0, y0, x1, y1] = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
@@ -363,5 +411,19 @@ export function textureCut(wasm: ManifoldToplevel, config: BaseConfig, outline: 
     if (!stone.isEmpty()) stones.push(stone)
   }
   if (stones.length === 0) return undefined
-  return own(slab.subtract(own(Manifold.compose(stones))))
+  const joints = own(slab.subtract(own(Manifold.compose(stones))))
+  if (pattern !== 'plank') return joints
+
+  // Nail pits are cones standing on the face, so like the joints they roof at 45°. Only those clear of the edge
+  // profile are drilled, so none breaks through the lip.
+  const size = Math.max(config.width, config.length)
+  const radius = Math.min(NAIL_RADIUS, depth)
+  const lip = profileInsetAt(config.height, config.profile, config.profileSize, 0, curveTolerance(size, config.segments), true)
+  const face = own(outline.offset(-(lip + NAIL_RADIUS + 0.4), 'Miter', 2, config.segments)).toPolygons()
+  const segments = partSegments(size, config.segments)(2 * radius, 12)
+  const pit = own(own(Manifold.cylinder(radius + OVERCUT, radius + OVERCUT, 0, segments)).translate([0, 0, -OVERCUT]))
+  const pits = nailHoles(cells, depth)
+    .filter(([x, y]) => pointInContours(face, x, y))
+    .map(([x, y]) => own(pit.translate([x, y, 0])))
+  return pits.length === 0 ? joints : own(joints.add(own(Manifold.union(pits))))
 }

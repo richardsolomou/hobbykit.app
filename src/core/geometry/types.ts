@@ -34,13 +34,21 @@ interface RibSpec {
   height: number
 }
 
+/** Raised letters stand proud of the surface around them; engraved ones are cut into it. */
+export type LabelStyle = 'raised' | 'engraved'
+
 interface LabelSpec {
   enabled: boolean
+  /**
+   * Raised on a well's floor, or in a recess level with a solid base's face; engraved into either. A hollow relief
+   * base always engraves, because raised letters would hang from its well ceiling.
+   */
+  style: LabelStyle
   /** Defaults to the measured size, so a 28.5mm base reads "28.5". */
   text?: string
   /** Cap height in mm. */
   height: number
-  /** Raised height above the well floor. */
+  /** How far the letters stand proud or are cut in. */
   emboss: number
 }
 
@@ -52,6 +60,7 @@ export type TexturePattern =
   | 'tile'
   | 'plank'
   | 'plate'
+  | 'brick'
   | 'herringbone'
   | 'diamond'
   | 'rock'
@@ -88,6 +97,8 @@ export interface BaseConfig {
   cornerRadius: number
   /** Side count for polygon: 3 is a triangle, 6 a hex. */
   sides: number
+  /** Degrees a polygon turns anticlockwise from a corner on +x. */
+  rotation: number
   height: number
   profile: EdgeProfile
   /** Bevel/taper/round size, measured inwards from the top face. */

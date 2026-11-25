@@ -11,7 +11,8 @@ export function isElongated(shape: ShapeKind): boolean {
   return shape === 'oval' || shape === 'pill' || shape === 'rect'
 }
 
-export type OutlineSpec = Pick<BaseConfig, 'shape' | 'width' | 'length' | 'cornerRadius' | 'sides' | 'segments'>
+export type OutlineSpec = Pick<BaseConfig, 'shape' | 'width' | 'length' | 'cornerRadius' | 'sides' | 'segments'> &
+  Partial<Pick<BaseConfig, 'rotation'>>
 
 export function footprint(config: Pick<BaseConfig, 'shape' | 'width' | 'length'>): { width: number; length: number } {
   return { width: config.width, length: isElongated(config.shape) ? config.length : config.width }
@@ -62,7 +63,13 @@ export function baseOutline(wasm: ManifoldToplevel, config: OutlineSpec): CrossS
   }
 
   if (config.shape === 'polygon') {
-    return CrossSection.circle(width / 2, Math.max(3, Math.round(config.sides)))
+    const polygon = CrossSection.circle(width / 2, Math.max(3, Math.round(config.sides)))
+    if (!config.rotation) return polygon
+    try {
+      return polygon.rotate(config.rotation)
+    } finally {
+      polygon.delete()
+    }
   }
 
   // Rect: grown from an inner rectangle so the finished size is exactly width x length.

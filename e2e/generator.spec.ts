@@ -16,7 +16,7 @@ const sizeLabel = (page: Page) => page.getByLabel('Label text')
 const sizeOption = (page: Page, label: string) =>
   page
     .getByRole('radiogroup', { name: 'Standard base size' })
-    .getByRole('radio', { name: new RegExp(`^${label.replaceAll('.', '\\.')}\\b`) })
+    .getByRole('radio', { name: new RegExp(`^${label.replaceAll('.', '\\.')}\\s`) })
 
 async function pickSize(page: Page, label: string) {
   await sizeOption(page, label).click()
@@ -314,7 +314,7 @@ test('keeps shape and size independent while sharing matching magnet settings in
   await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('32')
   await pickChoice(page, 'Shape 1', 'Oval')
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: /^90×52\.5\b/ }).click()
+  await page.getByRole('option', { name: /^90×52\.5\s/ }).click()
   await expect(page.getByRole('combobox', { name: 'Standard base size 1' })).toContainText('90×52.5')
   await expect(page.getByLabel('Magnet diameter in mm')).toHaveValue('6.0')
   await expect(footer(page)).toContainText('10 × 6.2 mm hole')
@@ -323,7 +323,7 @@ test('keeps shape and size independent while sharing matching magnet settings in
   await expect(footer(page)).toContainText('10 × 7.2 mm hole')
   const ninetyByFiftyTwo = await triangles(page)
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: /^75×42\b/ }).click()
+  await page.getByRole('option', { name: /^75×42\s/ }).click()
   await rebuilt(page, ninetyByFiftyTwo)
 
   await page.getByRole('link', { name: 'Bases' }).click()
@@ -345,7 +345,7 @@ test('shares the selected pocket pattern between bases and holders', async ({ pa
 
   await page.getByRole('link', { name: 'Holders' }).click()
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: /^60\b/ }).click()
+  await page.getByRole('option', { name: /^60\s/ }).click()
   await expect(picked(page, 'Pocket layout', 'Balanced')).toBeChecked()
   await expect(footer(page)).toContainText('20 × 5.2 mm hole')
   await pickChoice(page, 'Pocket layout', 'Five-pocket cross')
@@ -1079,7 +1079,7 @@ test('frames every slot in a tall holder', async ({ page }) => {
   await visit(page, 'Holders')
   await setDimension(page, /^Quantity 1 in/, '4')
   await page.getByRole('combobox', { name: 'Standard base size 1' }).click()
-  await page.getByRole('option', { name: /^50\b/ }).click()
+  await page.getByRole('option', { name: /^50\s/ }).click()
   await expect(page.getByText('4/4 fitted')).toBeVisible()
   await expect(across(page)).toHaveText('83.5 × 209.5')
   await expect(across(page)).toBeInViewport()

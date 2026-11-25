@@ -6,7 +6,7 @@
 
 /* [Miniatures] */
 // Pick a standard base size, or Custom to use the shape and dimensions below.
-standard_size = "round-32"; // [custom:Custom, round-25:Round 25mm - Guardsmen & Gretchin & Kabalite Warriors, round-28.5:Round 28.5mm - Guardians & Kasrkin & Freeguild Fusiliers, round-32:Round 32mm - Intercessors & Necron Warriors & Ork Boyz, round-40:Round 40mm - Terminators & Custodian Guard & Captains, round-50:Round 50mm - Centurions & Obliterators & Kroxigor, round-60:Round 60mm - Dreadnoughts & Daemon Princes & Stormfiends, round-80:Round 80mm - Avatar of Khaine & Ghazghkull & Slann, round-90:Round 90mm - Redemptor and Brutalis Dreadnoughts, round-100:Round 100mm - Armiger Knights & Repulsor & Greater Daemons, round-120:Round 120mm - Wazdakka Gutsmek, round-130:Round 130mm - Great Unclean One & Onager & Nagash, round-160:Round 160mm - Monolith & Defilers & Archaon, oval-60x35.5:Oval 60×35.5mm - Rough Riders & Flesh Hounds & Hexwraiths, oval-75x42:Oval 75×42mm - Chaos Bikers & Vertus Praetors & Blood Knights, oval-90x52.5:Oval 90×52.5mm - Outriders & Bloodcrushers & Dracothian Guard, oval-105x70:Oval 105×70mm - Land Speeder & Carnifexes & Treelord, oval-120x92:Oval 120×92mm - Riptide & Wraithknight & Bloodthirster, oval-150x95:Oval 150×95mm - Ork buggies & Knight Destrier, oval-170x105:Oval 170×105mm - Stardrake & Black Coach & Mortek Crawler, oval-170x109:Oval 170×109mm - Imperial and Chaos Knights & Stormsurge, pill-50x25:Pill 50×25mm - Saga and Bolt Action cavalry, pill-60x35.5:Pill 60×35.5mm - In place of the matching GW oval, pill-75x42:Pill 75×42mm - In place of the matching GW oval, pill-90x52.5:Pill 90×52.5mm - In place of the matching GW oval, pill-105x70:Pill 105×70mm - In place of the matching GW oval, rect-20x20:Rectangle 20×20mm - Kings of War Infantry, rect-25x25:Rectangle 25×25mm - Old World infantry & KoW Heavy Infantry, rect-30x30:Rectangle 30×30mm - Old World Orcs & Chaos Warriors & Saurus, rect-25x50:Rectangle 25×50mm - Old World light cavalry & KoW Cavalry, rect-30x60:Rectangle 30×60mm - Old World knights and cavalry, rect-40x40:Rectangle 40×40mm - Ogres & Trolls & KoW Large Infantry, rect-40x60:Rectangle 40×60mm - Old World Pegasus Knights, rect-50x50:Rectangle 50×50mm - Minotaurs & KoW Large Cavalry and Monsters, rect-50x75:Rectangle 50×75mm - Old World Demigryphs and cannons, rect-50x100:Rectangle 50×100mm - Old World and KoW chariots, rect-60x100:Rectangle 60×100mm - Old World Steam Tank & Griffons & Dragons, rect-75x75:Rectangle 75×75mm - Kings of War Titans, rect-100x150:Rectangle 100×150mm - Old World Terrorgheist & Zombie Dragon, polygon-25:Hex 25mm - Fits a Ø25 round, polygon-32:Hex 32mm - Fits a Ø32 round, polygon-40:Hex 40mm - Fits a Ø40 round, polygon-50:Hex 50mm - Fits a Ø50 round, polygon-60:Hex 60mm - Fits a Ø60 round]
+standard_size = "round-32"; // [custom:Custom, round-25:Round 25mm - Guardsmen & Gretchin & Kabalite Warriors, round-25.4:Round 25.4mm - One inch for Small and Medium RPG creatures, round-28.5:Round 28.5mm - Guardians & Kasrkin & Freeguild Fusiliers, round-32:Round 32mm - Intercessors & Necron Warriors & Ork Boyz, round-40:Round 40mm - Terminators & Custodian Guard & Captains, round-50:Round 50mm - Centurions & Obliterators & Kroxigor, round-50.8:Round 50.8mm - Two inches for Large RPG creatures, round-60:Round 60mm - Dreadnoughts & Daemon Princes & Stormfiends, round-76.2:Round 76.2mm - Three inches for Huge RPG creatures, round-80:Round 80mm - Avatar of Khaine & Ghazghkull & Slann, round-90:Round 90mm - Redemptor and Brutalis Dreadnoughts, round-100:Round 100mm - Armiger Knights & Repulsor & Greater Daemons, round-101.6:Round 101.6mm - Four inches for Gargantuan RPG creatures, round-120:Round 120mm - Wazdakka Gutsmek, round-130:Round 130mm - Great Unclean One & Onager & Nagash, round-160:Round 160mm - Monolith & Defilers & Archaon, oval-60x35.5:Oval 60×35.5mm - Rough Riders & Flesh Hounds & Hexwraiths, oval-75x42:Oval 75×42mm - Chaos Bikers & Vertus Praetors & Blood Knights, oval-90x52.5:Oval 90×52.5mm - Outriders & Bloodcrushers & Dracothian Guard, oval-105x70:Oval 105×70mm - Land Speeder & Carnifexes & Treelord, oval-120x92:Oval 120×92mm - Riptide & Wraithknight & Bloodthirster, oval-150x95:Oval 150×95mm - Ork buggies & Knight Destrier, oval-170x105:Oval 170×105mm - Stardrake & Black Coach & Mortek Crawler, oval-170x109:Oval 170×109mm - Imperial and Chaos Knights & Stormsurge, pill-50x25:Pill 50×25mm - Saga and Bolt Action cavalry, pill-60x35.5:Pill 60×35.5mm - In place of the matching GW oval, pill-75x42:Pill 75×42mm - In place of the matching GW oval, pill-90x52.5:Pill 90×52.5mm - In place of the matching GW oval, pill-105x70:Pill 105×70mm - In place of the matching GW oval, rect-20x20:Rectangle 20×20mm - Kings of War Infantry, rect-25x25:Rectangle 25×25mm - Old World infantry & KoW Heavy Infantry, rect-25.4x25.4:Rectangle 25.4×25.4mm - One inch for Small and Medium RPG creatures, rect-30x30:Rectangle 30×30mm - Old World Orcs & Chaos Warriors & Saurus, rect-25x50:Rectangle 25×50mm - Old World light cavalry & KoW Cavalry, rect-30x60:Rectangle 30×60mm - Old World knights and cavalry, rect-40x40:Rectangle 40×40mm - Ogres & Trolls & KoW Large Infantry, rect-40x60:Rectangle 40×60mm - Old World Pegasus Knights, rect-50x50:Rectangle 50×50mm - Minotaurs & KoW Large Cavalry and Monsters, rect-50.8x50.8:Rectangle 50.8×50.8mm - Two inches for Large RPG creatures, rect-50x75:Rectangle 50×75mm - Old World Demigryphs and cannons, rect-50x100:Rectangle 50×100mm - Old World and KoW chariots, rect-60x100:Rectangle 60×100mm - Old World Steam Tank & Griffons & Dragons, rect-75x75:Rectangle 75×75mm - Kings of War Titans, rect-76.2x76.2:Rectangle 76.2×76.2mm - Three inches for Huge RPG creatures, rect-101.6x101.6:Rectangle 101.6×101.6mm - Four inches for Gargantuan RPG creatures, rect-100x150:Rectangle 100×150mm - Old World Terrorgheist & Zombie Dragon, polygon-25:Hex 25mm - Fits a Ø25 round, polygon-32:Hex 32mm - Fits a Ø32 round, polygon-40:Hex 40mm - Fits a Ø40 round, polygon-50:Hex 50mm - Fits a Ø50 round, polygon-60:Hex 60mm - Fits a Ø60 round]
 // Used only with a custom size.
 shape = "round"; // [round:Round, oval:Oval, pill:Pill, rect:Rectangle, polygon:Hex]
 // Custom size: the diameter of a round, the overall width otherwise. Hex sizes run across the corners.
@@ -80,14 +80,18 @@ RAND = 4294967296;
 // [key, shape, width, length]
 SIZES = [
   ["round-25", "round", 25, 25],
+  ["round-25.4", "round", 25.4, 25.4],
   ["round-28.5", "round", 28.5, 28.5],
   ["round-32", "round", 32, 32],
   ["round-40", "round", 40, 40],
   ["round-50", "round", 50, 50],
+  ["round-50.8", "round", 50.8, 50.8],
   ["round-60", "round", 60, 60],
+  ["round-76.2", "round", 76.2, 76.2],
   ["round-80", "round", 80, 80],
   ["round-90", "round", 90, 90],
   ["round-100", "round", 100, 100],
+  ["round-101.6", "round", 101.6, 101.6],
   ["round-120", "round", 120, 120],
   ["round-130", "round", 130, 130],
   ["round-160", "round", 160, 160],
@@ -106,16 +110,20 @@ SIZES = [
   ["pill-105x70", "pill", 105, 70],
   ["rect-20x20", "rect", 20, 20],
   ["rect-25x25", "rect", 25, 25],
+  ["rect-25.4x25.4", "rect", 25.4, 25.4],
   ["rect-30x30", "rect", 30, 30],
   ["rect-25x50", "rect", 25, 50],
   ["rect-30x60", "rect", 30, 60],
   ["rect-40x40", "rect", 40, 40],
   ["rect-40x60", "rect", 40, 60],
   ["rect-50x50", "rect", 50, 50],
+  ["rect-50.8x50.8", "rect", 50.8, 50.8],
   ["rect-50x75", "rect", 50, 75],
   ["rect-50x100", "rect", 50, 100],
   ["rect-60x100", "rect", 60, 100],
   ["rect-75x75", "rect", 75, 75],
+  ["rect-76.2x76.2", "rect", 76.2, 76.2],
+  ["rect-101.6x101.6", "rect", 101.6, 101.6],
   ["rect-100x150", "rect", 100, 150],
   ["polygon-25", "polygon", 25, 25],
   ["polygon-32", "polygon", 32, 32],
