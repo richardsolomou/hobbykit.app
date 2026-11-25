@@ -30,7 +30,7 @@ This is part of HobbyKit, a free generator I made. hobbykit.app can also put an 
 
 ## Print settings
 
-- The axle stands on one end, the plates lie flat and each dial stands on its narrow end, as the Customizer lays them out
+- The axle stands on one end, the plates lie flat and each dial stands with its rib up, as the Customizer lays them out
 - No supports
 - 0.2mm layers
 - For two colours, give the second-colour parts a second filament in the slicer
@@ -38,7 +38,7 @@ This is part of HobbyKit, a free generator I made. hobbykit.app can also put an 
 ## Assembly
 
 1. Press the axle into one plate.
-2. Slide the dials on, with the rib on each outer dial's wider end facing out.
+2. Slide the dials on, with the rib on each outer dial facing out.
 3. Press the other plate on to the axle.
 
 ## Print profiles

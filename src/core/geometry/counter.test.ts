@@ -202,6 +202,16 @@ describe('buildCounter', () => {
     expect(max[2] - min[2]).toBeCloseTo(height, 3)
   })
 
+  it.each([
+    ['a lone dial', { dials: 1 }, 0],
+    ['the middle dial of three', { dials: 3 }, 1],
+    ['an inner middle dial of four', { dials: 4 }, 2],
+  ] as const)('makes %s straight, as wide as the outer dials meet', (_name, changes, dial) => {
+    const { min, max } = bounds(part('dial', changes, dial).mesh)
+
+    expect(max[0] - min[0]).toBeCloseTo((34.95 * 16.64349) / 17.47501, 3)
+  })
+
   it.each([34.95, 28, 50])('makes each dial %smm across its flats at its widest', (size) => {
     const { min, max } = bounds(part('dial', { size }).mesh)
 
