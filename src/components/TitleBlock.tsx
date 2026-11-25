@@ -1,4 +1,4 @@
-import { counterDigitHeight } from '@/core/geometry/counter'
+import { counterRange } from '@/core/geometry/counter'
 import { Badge } from '@/components/ui/badge'
 import { defaultLabel, trimNumber } from '@/core/geometry/outline'
 import { paintingHandleDescription, paintingTrayLayout, paintingTrayMagnetPocketCount } from '@/core/geometry/paintingTray'
@@ -69,8 +69,7 @@ function PartRows({ config }: { config: PartConfig }) {
   if (config.kind === 'counter') {
     return (
       <>
-        <Row label="Counts" value="00–99" />
-        <Row label="Digits" value={`${counterDigitHeight(config).toFixed(1)} mm tall`} />
+        <Row label="Counts" value={counterRange(config)} />
       </>
     )
   }

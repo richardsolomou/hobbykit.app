@@ -1,6 +1,6 @@
 import type { Mesh } from 'manifold-3d'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { bounds, font } from './geometry.test.utils'
+import { bounds, discImage, font } from './geometry.test.utils'
 import { loadManifold } from './manifold'
 import { buildToken, defaultTokenConfig, tokenFaceInset, tokenHeight, tokenName } from './token'
 import type { EdgeProfile, TokenConfig, TokenImage, TokenShape } from './types'
@@ -12,17 +12,6 @@ beforeAll(async () => {
 })
 
 /** A white square image, with a dark disc in the middle unless it is blank, holed when `hole` is set. */
-function discImage(size = 64, blank = false, hole = 0): TokenImage {
-  const pixels = new Uint8Array(size * size)
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const r = Math.hypot(x - size / 2, y - size / 2)
-      pixels[y * size + x] = !blank && r < size / 3 && r >= hole ? 0 : 255
-    }
-  }
-  return { name: 'shield.png', width: size, height: size, luminance: Buffer.from(pixels).toString('base64') }
-}
-
 const build = (changes: Partial<TokenConfig> = {}) => buildToken(wasm, { ...defaultTokenConfig(), ...changes }, font)
 
 /** Vertices standing above the disc, which belong to the raised artwork. */

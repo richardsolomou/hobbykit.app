@@ -60,9 +60,8 @@ const SECTIONS: Record<Generator, [title: string, description: string][]> = {
     ['Relief', 'Raise the artwork in a second colour, or engrave it so tokens stack.'],
   ],
   counter: [
-    ['Layout', 'Choose what holds the dials: a case that shows only the count, open hubs, a frame and base, or hubs on legs.'],
-    ['Wheels', 'Size the dials and how firmly they click.'],
-    ['Digits', 'Press-in tiles, printed digits or engraved ones, and which filament they take.'],
+    ['Size', 'Scale the whole counter, keeping its fits the same.'],
+    ['Digits', 'Inlay the digits in a second colour, engrave them for paint, or raise them.'],
   ],
 }
 

@@ -2,47 +2,56 @@
 
 - **Script:** `counter.scad`
 - **Category:** Toys & Games › Board Games
-- **Tags:** dial counter, wound counter, wound caddy, battle tracker, life counter, score counter, counter, wargaming, board game, mtg, customizable, parametric, no supports
+- **Tags:** dial counter, life counter, wound counter, score counter, battle tracker, counter, mtg, commander, wargaming, board game, two colour, customizable, parametric, no supports
 
 ## Summary
 
-Slim dial counters that click from 00 to 99, with no hardware. Two ribbed dials turn on a fluted tube, about 44mm wide.
+Dial counters that click from number to number with no hardware: 00 to 99 on two dials, or any run you like.
 
 ## Description
 
-Two ten-sided wheels turn on a fluted tube pressed between two side pieces. Two spring arms cut into each wheel click it into place at every count and centre it so it does not rock, with no glue or hardware. An optional shield shows only the current count. It stands on its own foot.
+An axle presses into a plate at each end, and the dials turn on it between them. A spring arm inside each dial clicks it into place at every number, so it stays where you leave it. The count is the top row, between the marks on the two plates.
 
-The digits are press-in tiles in a second colour. They print on their own plate, so the whole set costs one filament change instead of dozens. If you'd rather paint, turn the tiles off and the digits are engraved instead.
+The digits are inlaid in a second colour by default. They're separate parts, so give them a second filament in the slicer, or switch to engraved digits to paint them instead.
 
 What you can change:
 
-- Part: everything on one plate, or each wheel, each side, the tube or the tiles on their own
-- Tiles: every tile, or one digit on its own, to reprint one that failed
-- Wheel diameter
-- Fit: the clearance around the tube
-- Click: raise it if the wheels turn too easily
-- Digits: press-in tiles, printed into the dial or engraved, and the tile clearance
+- Dials: one to four
+- Numbers on each dial, from 6 to 20, and the number they start from, so one dial can count 1 to 16
+- Count down, so rolling a dial forwards takes one off
+- Size, which scales the whole counter while the fits stay the same
+- Digits: inlaid, engraved for paint, or raised, and how deep
+- The mark over the top row: a bar, a pointer or none
+- Text on each plate's outer face
+- Fit: the axle's press fit, the dials' play, how firmly they click, and a lead-in that starts the press fit
+- Export: everything, or one part, its body or its second colour
 
-This is part of HobbyKit, a free generator I made. hobbykit.app can also give you a 3MF with the tiles already set to a second filament.
+This is part of HobbyKit, a free generator I made. hobbykit.app can also put an image on the plates and print them in a third colour.
 
 ## Print settings
 
-- Each side lies flat, each wheel stands on its outer face and the tube stands on one end
+- The axle stands on one end, the plates lie flat and each dial stands on its narrow end, as the Customizer lays them out
 - No supports
-- 0.2mm layers, 0.12mm for sharper digits
-- Tiles: one filament for the bases and another for the raised digits
+- 0.2mm layers
+- For two colours, give the second-colour parts a second filament in the slicer
 
 ## Assembly
 
-1. Press the tiles into their pockets: 0 to 9 round each wheel.
-2. Press the tube into one side and push the tens wheel on.
-3. Push the units wheel on, then press the other side on to the tube.
+1. Press the axle into one plate.
+2. Slide the dials on, with the rib on each outer dial's wider end facing out.
+3. Press the other plate on to the axle.
+
+## Print profiles
+
+- 00 to 99 on two dials, the default
+- 1 to 16 on one dial
 
 ## Real photos
 
-None yet of the slim caddy; the earlier photos show the drums-and-pointer design it replaced, so they need retaking.
+None yet of this design; the earlier photos show the side-piece design it replaced, so they need retaking.
 
 Worth adding:
 
+- The counter on the table, from the front
 - The parts laid out before assembly
-- Two counters side by side, in different colours
+- A one-dial counter next to a two-dial one

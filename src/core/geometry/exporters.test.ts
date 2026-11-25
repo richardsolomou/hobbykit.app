@@ -177,6 +177,17 @@ describe('needsBrim', () => {
 
     expect(config).toContain('<metadata key="brim_type" value="outer_only"/><metadata key="brim_width" value="6"/>')
   })
+  it("writes a part's own settings into its object", () => {
+    const config = new TextDecoder().decode(
+      unzipSync(to3mf([{ mesh: slab(30, 30), name: 'axle', settings: { elefant_foot_compensation: '0.3' } }], DEFAULT_FILAMENTS))[
+        'Metadata/model_settings.config'
+      ],
+    )
+
+    expect(config).toMatch(
+      /<object id="2"><metadata key="name" value="axle"\/><metadata key="extruder" value="1"\/><metadata key="elefant_foot_compensation" value="0.3"\/>/,
+    )
+  })
 })
 
 describe('project settings', () => {

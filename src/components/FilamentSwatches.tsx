@@ -43,19 +43,17 @@ export function FilamentSwatches({
           <PopoverContent align="center" className="w-auto">
             <div className="flex items-center justify-between gap-3">
               <PopoverTitle className="note">{label}</PopoverTitle>
-              <span className="flex items-center gap-2">
-                <span className="readout text-xs">{colourName(filaments[key])}</span>
-                {filaments[key] !== DEFAULT_FILAMENTS[key] && (
-                  <button
-                    type="button"
-                    aria-label={`Reset ${label} to ${colourName(DEFAULT_FILAMENTS[key])}`}
-                    onClick={() => pick(key, DEFAULT_FILAMENTS[key], 'reset')}
-                    className="text-modified transition-colors hover:text-modified/80"
-                  >
-                    <RotateCcw className="size-3.5" />
-                  </button>
-                )}
-              </span>
+              {filaments[key] !== DEFAULT_FILAMENTS[key] && (
+                <button
+                  type="button"
+                  aria-label={`Reset ${label} to ${colourName(DEFAULT_FILAMENTS[key])}`}
+                  title={`Reset to ${colourName(DEFAULT_FILAMENTS[key])}`}
+                  onClick={() => pick(key, DEFAULT_FILAMENTS[key], 'reset')}
+                  className="text-modified transition-colors hover:text-modified/80"
+                >
+                  <RotateCcw className="size-3.5" />
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-6 gap-1.5">
               {PLA_BASIC_COLOURS.map(({ name, hex }) => (

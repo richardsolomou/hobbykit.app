@@ -60,10 +60,11 @@ if (family === 'rack') {
 
 if (family === 'counter') {
   const config = defaultCounterConfig()
-  for (const { part, name } of counterParts(config)) {
-    const { mesh, stats } = buildCounter(wasm, forExport({ ...config, part }), font)
+  for (const { part, name, dial } of counterParts(config)) {
+    const { mesh, inserts, stats } = buildCounter(wasm, forExport({ ...config, part, dial }), font)
     const filename = `${counterName(config)}-${name}.stl`
     writeFileSync(join(outDir, filename), toStl(mesh, filename))
+    if (inserts) writeFileSync(join(outDir, `${counterName(config)}-${name}-colour.stl`), toStl(inserts, filename))
     console.log(`${filename}  ${stats.triangles} tris  ${stats.volume.toFixed(0)}mm3  ${stats.grams.toFixed(2)}g`)
   }
   process.exit(0)

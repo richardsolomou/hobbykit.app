@@ -12,7 +12,6 @@ import { PAGES } from '../src/lib/pages.ts'
 import { skipTours } from './skipTours.ts'
 import { socialCardPath } from '../src/lib/seo.ts'
 
-/** The counter stays out of the README until its design no longer derives from the model it began as. */
 const README = [
   { href: '/', path: 'docs/images/readme-bases.png' },
   { href: '/paint-racks', path: 'docs/images/readme-paint-racks.png' },

@@ -8,7 +8,8 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { useTextSettingChanged } from '@/lib/analytics'
 import { trimNumber } from '@/core/geometry/outline'
-import { defaultTokenConfig, maxTokenEdgeSize, MIN_TOKEN_TEXT_HEIGHT } from '@/core/geometry/token'
+import { MIN_TEXT_HEIGHT } from '@/core/geometry/artwork'
+import { defaultTokenConfig, maxTokenEdgeSize } from '@/core/geometry/token'
 import type { TokenConfig, TokenShape } from '@/core/geometry/types'
 import { Panel, PROFILES, type ResetAction } from './shared'
 
@@ -117,7 +118,7 @@ export function TokenPanel({ token, patchToken, addTokenImage, tokenImageError, 
           label="Text height"
           advanced
           value={token.textHeight}
-          min={MIN_TOKEN_TEXT_HEIGHT}
+          min={MIN_TEXT_HEIGHT}
           max={60}
           step={0.5}
           defaultValue={TOKEN_DEFAULTS.textHeight}

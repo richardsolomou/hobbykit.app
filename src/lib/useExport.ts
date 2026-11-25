@@ -8,14 +8,13 @@ import { paintingHandleConfig, paintingHandleName, paintingTrayName } from '@/co
 import { paintRackLayout, paintRackPieceName } from '@/core/geometry/paintRack'
 import { forExport } from '@/core/geometry/exportQuality'
 import { stemOverallHeight } from '@/core/geometry/stem'
-import { counterLayout, counterParts, counterTileLayout } from '@/core/geometry/counter'
+import { counterLayout, counterParts } from '@/core/geometry/counter'
 import type { BaseConfig, CounterConfig, PaintingTrayConfig, PartConfig } from '@/core/geometry/types'
 import type { FilamentColours } from '@/core/geometry/filaments'
 import { posthog } from 'posthog-js'
 import { designProperties } from './analytics'
 import { batchFileName } from './batch'
 import { buildMesh } from './buildMesh'
-import { counterProject } from './counterProject'
 import { asMeshLike, download } from './download'
 
 export type ExportFormat = 'stl' | '3mf' | 'batch-stl' | 'batch-3mf' | 'piece-stl'
@@ -95,16 +94,16 @@ export function useExport({ model, config, name, filaments, width, length, batch
     ]
   }
 
-  const buildCounterParts = (counter: CounterConfig, parts = counterParts(counter)) =>
+  const buildCounterParts = (counter: CounterConfig) =>
     Promise.all(
-      parts.map(async ({ part, name: partName, filament }): Promise<ExportPart> => {
-        const mesh = await buildMesh(forExport({ ...counter, part }))
+      counterParts(counter).map(async ({ part, name: partName, dial, filament, settings }): Promise<ExportPart> => {
+        const mesh = await buildMesh(forExport({ ...counter, part, dial }))
         return {
           mesh: asMeshLike(mesh),
           name: `${name}-${partName}`,
           ...(filament ? { filament } : {}),
+          ...(settings ? { settings } : {}),
           ...(mesh.inserts ? { secondFilament: { mesh: asMeshLike(mesh.inserts), name: `${name}-${partName}-marks` } } : {}),
-          ...(mesh.third ? { thirdFilament: { mesh: asMeshLike(mesh.third), name: `${name}-${partName}-digits` } } : {}),
         }
       }),
     )
@@ -133,10 +132,9 @@ export function useExport({ model, config, name, filaments, width, length, batch
         const parts = await buildCounterParts(config)
         downloadZip(
           name,
-          parts.flatMap(({ mesh, name: partName, secondFilament, thirdFilament }) => [
+          parts.flatMap(({ mesh, name: partName, secondFilament }) => [
             { mesh, name: partName },
             ...(secondFilament ? [secondFilament] : []),
-            ...(thirdFilament ? [thirdFilament] : []),
           ]),
         )
         return
@@ -176,21 +174,12 @@ export function useExport({ model, config, name, filaments, width, length, batch
         return
       }
       if (config.kind === 'counter') {
-        const pieces = counterParts(config).filter(({ part }) => part !== 'inserts')
-        const built = await buildCounterParts(config, pieces)
-        const bodies = built.filter((_part, index) => pieces[index].part !== 'bracket')
-        const brackets = built.filter((_part, index) => pieces[index].part === 'bracket')
-        const layout = config.digits === 'tiles' ? counterTileLayout(config) : []
-        const unique = [...new Set(layout.map(({ tile }) => tile))]
-        const meshes = new Map(
-          await Promise.all(
-            unique.map(async (tile) => {
-              const mesh = await buildMesh(forExport({ ...config, part: 'inserts' as const, tile }))
-              return [tile, { base: asMeshLike(mesh), mark: asMeshLike((mesh.inserts ?? mesh.third)!) }] as const
-            }),
-          ),
-        )
-        const { parts, plates } = counterProject(name, bodies, brackets, layout, (tile) => meshes.get(tile)!, config.digitFilament)
+        // Every part on one plate.
+        const parts = await buildCounterParts(config)
+        const plates = packPlates(
+          parts.map(({ mesh }) => mesh),
+          parts.map(() => 1),
+        ).map((items, index, all) => ({ name: all.length === 1 ? name : `${name}-plate-${index + 1}`, items }))
         download(`${name}.3mf`, to3mfPlates(parts, plates, filaments))
         return
       }

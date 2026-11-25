@@ -101,7 +101,18 @@ export function designProperties(config: PartConfig): DesignProperties {
         edge: config.profile,
       }
     case 'counter':
-      return { layout: config.layout, digits: config.digits, digit_filament: config.digitFilament, size: config.drumDiameter }
+      return {
+        size: config.size,
+        digits: config.digits,
+        dials: config.dials,
+        faces: config.faces,
+        first: config.first,
+        count_down: config.countDown,
+        mark: config.mark,
+        plate_filament: config.plateFilament,
+        plate_text: Boolean(config.left.text.trim() || config.right.text.trim()),
+        plate_image: Boolean(config.left.image || config.right.image),
+      }
     default: {
       const { width, length } = footprint(config)
       const standard = SIZES_BY_SHAPE[config.shape].find((size) => size.width === width && (size.length ?? size.width) === length)

@@ -4,7 +4,7 @@ import { workspaceSetup, type GeneratorSettings, type WorkspaceState } from './w
 
 const HASH_PREFIX = '#setup='
 const SHARE_VERSION = 1
-/** Past this a link stops pasting cleanly into chat apps, so a token image is left out. */
+/** Past this a link stops pasting cleanly into chat apps, so uploaded images are left out. */
 export const MAX_SHARE_URL_LENGTH = 8192
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -25,8 +25,15 @@ function linkFor(page: string, workspace: WorkspaceState, part: GeneratorSetting
 /** `page` is the generator's address without a hash; the setup travels in the hash so no server ever sees it. */
 export function shareLink(page: string, workspace: WorkspaceState, part: GeneratorSettings): { url: string; imageOmitted: boolean } {
   const url = linkFor(page, workspace, part)
-  if (url.length <= MAX_SHARE_URL_LENGTH || part !== 'token' || workspace.token.image === null) return { url, imageOmitted: false }
-  return { url: linkFor(page, { ...workspace, token: { ...workspace.token, image: null } }, part), imageOmitted: true }
+  const withoutImages = {
+    ...workspace,
+    token: { ...workspace.token, image: null },
+    counter: { ...workspace.counter, left: { ...workspace.counter.left, image: null }, right: { ...workspace.counter.right, image: null } },
+  }
+  const images =
+    part === 'token' ? [workspace.token.image] : part === 'counter' ? [workspace.counter.left.image, workspace.counter.right.image] : []
+  if (url.length <= MAX_SHARE_URL_LENGTH || images.every((image) => image === null)) return { url, imageOmitted: false }
+  return { url: linkFor(page, withoutImages, part), imageOmitted: true }
 }
 
 /** Decodes a share hash into an unvalidated setup, or undefined for any other or unreadable hash. */

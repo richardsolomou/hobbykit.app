@@ -305,39 +305,58 @@ export interface TokenConfig {
   segments: number
 }
 
-/** Each part of a counter, laid flat for printing on its own. */
-export type CounterPart = 'tens' | 'left' | 'right' | 'axle' | 'units' | 'stand' | 'frame' | 'knob' | 'bracket' | 'inserts'
-/** What holds the dials: a frame over the top row on a base plate, a hub on legs at each end, or a hub at each end that each dial clicks in and turns by a knob outside it. */
-export type CounterLayout = 'centre' | 'hubs' | 'knobs' | 'enclosure'
-/** One of the press-in tiles: a digit, alike on both wheels. */
-export type CounterDigits = 'tiles' | 'printed' | 'engraved'
-export type CounterTile = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+/** Each part of a counter, laid flat for printing on its own: the axle, a plate at each end, or one of the dials. */
+export type CounterPart = 'axle' | 'left' | 'right' | 'dial'
+/** Engraved and filled with the second filament under the engraving, engraved for paint, or raised in the second filament. */
+export type CounterDigits = 'inlaid' | 'engraved' | 'raised'
+/** What marks the top row on each plate: a raised bar, a pointer, or nothing. */
+export type CounterMark = 'bar' | 'pointer' | 'none'
+
+/** Text and an image inlaid in a plate's outer face. */
+export interface CounterPlateFace {
+  text: string
+  image: TokenImage | null
+  /** Luminance, from 0 to 1, below which pixels form the image silhouette. */
+  threshold: number
+  /** Use the light parts of the image instead of the dark ones. */
+  invert: boolean
+}
 
 export interface CounterConfig {
   kind: 'counter'
-  /** Across the corners of each ten-sided wheel. */
-  drumDiameter: number
-  layout: CounterLayout
-  /** Plain barrel added to each dial's outer end, past its digits, to get a thumb on. */
-  grip: number
-  /** A press-in tile on each face with its digit raised, the digit printed into the dial as a coloured part, or the digit engraved for paint. */
+  /** Across a ten-numbered dial's flats at its widest; the whole counter scales with it. */
+  size: number
+  dials: number
+  /** Faces round each dial, one number to a face. */
+  faces: number
+  /** The number on the first face; the rest follow on from it. */
+  first: number
+  /** Numbers run backwards, so rolling a dial forwards counts down. */
+  countDown: boolean
   digits: CounterDigits
-  /** The filament a tile's or a dial's digits print in, shared with the brackets or a third of their own. */
-  digitFilament: 2 | 3
-  /** Gap left all round each tile inside its pocket. */
-  insertClearance: number
-  /** Radial play between each wheel and the tube. */
-  clearance: number
-  /** How deep the troughs between the axle's lobes are, which is how far each spring arm flexes as a count passes. */
+  /** How deep the digits are engraved, or how far raised ones stand. */
+  relief: number
+  /** How far the second filament fills under inlaid digits. */
+  inlay: number
+  mark: CounterMark
+  left: CounterPlateFace
+  right: CounterPlateFace
+  /** The plates print in the body's filament or a third of their own. */
+  plateFilament: 1 | 3
+  /** Gap round the axle in each plate's socket, nothing by default for a press fit. */
+  pressFit: number
+  /** Radial play between each dial's bore and the axle's lobes. */
+  dialClearance: number
+  /** How much further each spring arm's bulb reaches into the axle's troughs than by default. */
   click: number
-  /** Settings someone set by hand; the click otherwise follows the wheel's size. */
-  pinned: 'click'[]
+  /** A 45° chamfer this deep on the axle's ends, and to match on each socket's mouth and boss, to start the press fit. */
+  leadIn: number
   segments: number
   /** Export-only: build one part flat on the plate instead of the assembly. */
   part?: CounterPart
-  /** Export-only, with the inserts part: build just this tile, which the 3MF makes an object of its own. */
-  tile?: CounterTile
-  /** Preview-only: spread the wheels along the axle and lift each tile out of its pocket. */
+  /** Export-only, with the dial part: which dial, from the left. */
+  dial?: number
+  /** Preview-only: spread the dials and plates along the axle. */
   exploded?: boolean
 }
 
